@@ -63,6 +63,42 @@ namespace ProjectExpedition.Tests
         }
 
         [UnityTest]
+        public IEnumerator PlayerController_ProjectsSharedPlayerStateAndUpgrades()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+            director.BeginRunSetup(1);
+            director.ConfirmCharacters(0, 1);
+            director.SelectMapAndStart(0);
+            var player = director.Player;
+
+            Assert.That(player.MaxHealth, Is.EqualTo(150f));
+            Assert.That(player.Health, Is.EqualTo(150f));
+            Assert.That(player.MoveSpeed, Is.EqualTo(4.45f));
+            Assert.That(player.Armor, Is.EqualTo(2f));
+            Assert.That(player.UltimateCooldown, Is.EqualTo(60f));
+            Assert.That(player.UltimateRemaining, Is.EqualTo(18f));
+
+            player.TakeDamage(10f);
+            player.AddMoveSpeed(0.46f);
+            player.AddArmor(1f);
+            player.AddMagnet(0.6f);
+            player.AddMaxHealth(24f);
+            player.ImproveUltimateCooldown();
+            player.ImproveUltimateDamage();
+
+            Assert.That(player.Health, Is.EqualTo(166f));
+            Assert.That(player.MaxHealth, Is.EqualTo(174f));
+            Assert.That(player.MoveSpeed, Is.EqualTo(4.91f).Within(0.0001f));
+            Assert.That(player.Armor, Is.EqualTo(3f));
+            Assert.That(player.MagnetRadius, Is.EqualTo(2.3f).Within(0.0001f));
+            Assert.That(player.UltimateCooldown, Is.EqualTo(54f).Within(0.0001f));
+            Assert.That(player.UltimateDamage, Is.EqualTo(188.5f).Within(0.0001f));
+
+            yield return DestroyDirector(director);
+        }
+
+        [UnityTest]
         public IEnumerator ReplayRun_PreservesSeedAndRestartsProgress()
         {
             yield return ClearDirectors();
