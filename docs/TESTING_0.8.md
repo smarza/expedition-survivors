@@ -16,7 +16,7 @@ The Test Runner menu is only registered after the project compiles and the Test 
 ## Run in the Editor
 
 1. Open **Window → General → Test Runner**.
-2. Select **EditMode**, choose **Run All** and confirm 17 passes with zero failures.
+2. Select **EditMode**, choose **Run All** and confirm 18 passes with zero failures.
 3. Select **PlayMode**, choose **Run All** and confirm 4 passes with zero failures.
 4. Run `python3 tools/validate_project.py` from the repository root.
 5. If any test fails, capture the test name, assertion, full stack trace and Unity Console errors before changing code.
@@ -33,9 +33,9 @@ Reusable `MonoBehaviour` test doubles live in the player-compatible `ProjectExpe
 | EditMode / builds and rewards | slot behavior, evolution prerequisites, deterministic recipients/items, XP and Ultimate cooldown bounds | 4 |
 | EditMode / persistence | legacy v1 migration and v2 envelope round-trip | 2 |
 | EditMode / shared run | initialization, clock/boss trigger, XP overflow, co-op reward turns and idempotent outcome | 5 |
-| EditMode / Online projection | stable snapshot phase bytes and shared-phase mapping | 1 |
+| EditMode / Online projection | stable snapshot phase bytes, shared-phase mapping and two-player host simulation gate | 2 |
 | PlayMode / expedition flow | foundation bootstrap, Solo level-up/resume, replay seed/reset, idempotent run result | 4 |
-| **Total** |  | **21** |
+| **Total** |  | **22** |
 
 ## Manual regression after shared gameplay changes
 
@@ -49,7 +49,7 @@ Reusable `MonoBehaviour` test doubles live in the player-compatible `ProjectExpe
 
 ## Acceptance rule
 
-The accepted Phase B baseline is 15 passing tests. The current Phase C gate is 21: all 17 EditMode and 4 PlayMode tests must pass on the target patched Editor, the static validator must pass and no existing manual smoke path may regress. Phase C commits must add or update tests when they change deterministic rules.
+The accepted Phase B baseline is 15 passing tests. The current Phase C gate is 22: all 18 EditMode and 4 PlayMode tests must pass on the target patched Editor, the static validator must pass and no existing manual smoke path may regress. Phase C commits must add or update tests when they change deterministic rules.
 
 ## Branch and PR workflow
 

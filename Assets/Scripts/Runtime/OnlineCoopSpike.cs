@@ -144,6 +144,9 @@ namespace ProjectExpedition
             }
         }
 
+        internal static bool ShouldSimulateHost(RunSimulationPhase phase, int connectedPlayerCount) =>
+            phase == RunSimulationPhase.Playing && connectedPlayerCount == 2;
+
         private void SyncHostRunProjection()
         {
             _phase = ProjectOnlinePhase(_onlineRunModel.Phase, _onlineRunModel.Outcome);
@@ -193,16 +196,26 @@ namespace ProjectExpedition
 
         private void UpdateHost()
         {
+            // Network callbacks and the MonoBehaviour update loop do not share a
+            // guaranteed frame boundary. Recover a full lobby whose run model has
+            // not started yet, then always derive the presentation phase from the
+            // authoritative model before deciding which systems may advance.
+            var connectedPlayerCount = _networkManager.ConnectedClientsIds.Count;
+            if (_onlineRunModel.Phase == RunSimulationPhase.Idle && connectedPlayerCount == 2)
+                BeginExpedition();
+            SyncHostRunProjection();
+
             if (_players.TryGetValue(NetworkManager.ServerClientId, out var host))
             {
-                host.Input = _phase == OnlinePhase.Playing && !_showBuildDetails
+                host.Input = ShouldSimulateHost(_onlineRunModel.Phase, connectedPlayerCount) && !_showBuildDetails
                     ? LocalInputRouter.ReadMovement(0, 1)
                     : Vector2.zero;
-                if (_phase == OnlinePhase.Playing && !_showBuildDetails && LocalInputRouter.UltimatePressed(0, 1))
+                if (ShouldSimulateHost(_onlineRunModel.Phase, connectedPlayerCount) &&
+                    !_showBuildDetails && LocalInputRouter.UltimatePressed(0, 1))
                     host.UltimateQueued = true;
             }
 
-            if (_phase == OnlinePhase.LevelUp)
+            if (_onlineRunModel.Phase == RunSimulationPhase.Reward)
             {
                 if (_rewardTurnPlayerIndex == 0)
                 {
@@ -210,12 +223,12 @@ namespace ProjectExpedition
                     if (choice >= 0) ResolveUpgrade(choice);
                 }
             }
-            else if (_phase == OnlinePhase.Victory || _phase == OnlinePhase.Defeat)
+            else if (_onlineRunModel.Phase == RunSimulationPhase.Completed)
             {
                 UpdateOnlineResultsInput();
                 if (!SessionActive) return;
             }
-            else if (_phase == OnlinePhase.Playing)
+            else if (ShouldSimulateHost(_onlineRunModel.Phase, connectedPlayerCount))
             {
                 SimulateRun(Time.unscaledDeltaTime);
             }
@@ -265,6 +278,10 @@ namespace ProjectExpedition
 
         private void SimulateRun(float deltaTime)
         {
+            if (_onlineRunModel.Phase != RunSimulationPhase.Playing ||
+                _networkManager == null || _networkManager.ConnectedClientsIds.Count != 2)
+                return;
+
             _onlineRunModel.Advance(deltaTime);
             SyncHostRunProjection();
             UpdatePlayers(deltaTime);

@@ -739,7 +739,7 @@ The next developer/agent should do the following, in order:
 
 1. Work on `agent/0.8.0-shared-simulation` and PR #1.
 2. Pull the Phase B test-harness commit and allow Unity `6000.5.4f1` to resolve Unity Test Framework `1.4.6`.
-3. Run all 17 EditMode and 4 PlayMode tests using `docs/TESTING_0.8.md`; report any failure with its full stack trace.
+3. Run all 18 EditMode and 4 PlayMode tests using `docs/TESTING_0.8.md`; report any failure with its full stack trace.
 4. Capture and commit only legitimate package-lock or serialization changes produced by the target Editor.
 5. Accept the Phase C Online-host slice, then extract player/enemy state incrementally without changing snapshot compatibility.
 6. Keep the game playable and run automated plus relevant Solo/Local/Online regressions after every extraction step.

@@ -112,6 +112,17 @@ namespace ProjectExpedition.Tests
                 Is.EqualTo(OnlineCoopSpike.OnlinePhase.Defeat));
         }
 
+        [Test]
+        public void OnlineHostSimulation_RequiresPlayingModelAndCompleteParty()
+        {
+            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Playing, 2), Is.True);
+            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Idle, 2), Is.False);
+            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Reward, 2), Is.False);
+            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Completed, 2), Is.False);
+            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Playing, 1), Is.False);
+            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Playing, 3), Is.False);
+        }
+
         private static SharedRunModel StartedModel(int players, int baseRequirement)
         {
             var model = new SharedRunModel();

@@ -19,7 +19,7 @@ Without Unity installed, run `python tools/validate_project.py` for fast reposit
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 17 deterministic domain, shared-run, network-projection, content, build, reward, pool, spatial-grid and save-migration tests.
+1. **EditMode** — 18 deterministic domain, shared-run, network-projection, online-host gating, content, build, reward, pool, spatial-grid and save-migration tests.
 2. **PlayMode** — 4 bootstrap, level-up, replay-seed and result-flow tests.
 
 The PlayMode tests explicitly disable persistence, so they do not overwrite the developer's local campaign save. The exact acceptance procedure and current manual regression matrix are in [`docs/TESTING_0.8.md`](docs/TESTING_0.8.md).

@@ -218,7 +218,8 @@ def main() -> int:
 
     online_shared_requirements = ("_onlineRunModel.Begin", "_onlineRunModel.Advance",
                                   "_onlineRunModel.AddExperience", "_onlineRunModel.CompleteReward",
-                                  "_onlineRunModel.Complete", "SyncHostRunProjection")
+                                  "_onlineRunModel.Complete", "SyncHostRunProjection",
+                                  "ShouldSimulateHost", "connectedPlayerCount == 2")
     if any(requirement not in online_source for requirement in online_shared_requirements):
         fail("Online host does not project the shared run model completely")
 
