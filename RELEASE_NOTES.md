@@ -9,7 +9,7 @@
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
 - Split production runtime, EditMode tests and PlayMode tests into explicit assemblies.
-- Added Unity Test Framework `1.4.6` and 38 EditMode regression tests for deterministic RNG, shared run/player/enemy/spawn/projectile/effect behavior, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
+- Added Unity Test Framework `1.4.6` and 41 EditMode regression tests for deterministic RNG, shared run/player/enemy/spawn/projectile/effect behavior, exact weapon level tables/descriptions, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
 - Added 7 disk-safe PlayMode smoke tests for bootstrap initialization, shared player/enemy/reward projection, Solo level-up, same-seed replay and terminal run results.
 - Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
 - Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
@@ -24,6 +24,11 @@
 - Extracted wave cadence, difficulty ramp, active-enemy cap, group growth and spawn-ring rules into `SharedSpawnModel`; `GameDirector` now only materializes the requested enemies.
 - Extracted Frost Axe and Raven Guard timing/statistics, upgrades, Ultimates and evolution effects into `SharedWeaponModel` and `SharedEffectPipeline` while preserving the existing balance values.
 - Routed reward application, projectile requests, area damage, healing and evolution explosions through the shared effect boundary; local components now provide targeting, collision and presentation adapters.
+- Clarified that item rewards grant the modifier for one specific level; reward cards now preview that exact modifier for every recipient.
+- Locked Frost Axe level 8 to two projectiles through both model and PlayMode adapter regressions.
+- Implemented the promised Raven Guard frequency improvements at levels 5 and 8 without removing its existing damage progression.
+- Expanded Expedition Build into complete Survivor, Frost Axe and Raven Guard live-stat panels with current/next item effects.
+- Added `docs/BUILD_AND_CONTENT_REFERENCE.md` as the complete character, power, build, reward, formula and future-content authoring contract.
 - Removed the experimental Online Co-op runtime, menu entry, Netcode package and Transport assembly dependencies from the active product scope.
 - Deferred Online multiplayer until the Solo/Local shared simulation is mature; the former POC remains recoverable from Git history and its future replacement must reuse the common gameplay core.
 - Added GitHub Actions continuous integration with static validation, Unity EditMode/PlayMode tests, a Web build and automatic GitHub Pages preview deployment.

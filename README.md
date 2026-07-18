@@ -2,7 +2,7 @@
 
 An original survivors-like prototype built for Unity 6 LTS. The milestone is intentionally self-contained: it has no purchased packages or external asset dependencies and bootstraps itself from an empty scene.
 
-For the complete product vision, technical roadmap, launch gates and new-chat handoff, read [`docs/PROJECT_MASTER_PLAN.md`](docs/PROJECT_MASTER_PLAN.md).
+For the complete product vision, technical roadmap, launch gates and new-chat handoff, read [`docs/PROJECT_MASTER_PLAN.md`](docs/PROJECT_MASTER_PLAN.md). Exact characters, weapons, level tables, gear, rewards, formulas and evolution rules are documented in [`docs/BUILD_AND_CONTENT_REFERENCE.md`](docs/BUILD_AND_CONTENT_REFERENCE.md).
 
 ## Play it
 
@@ -23,7 +23,7 @@ The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode a
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 38 deterministic domain, shared-run, shared-player, shared-enemy, shared-spawn, shared-projectile/effect, content, build, reward, pool, spatial-grid and save-migration tests.
+1. **EditMode** — 41 deterministic domain, shared-run, shared-player, shared-enemy, shared-spawn, shared-projectile/effect, content, build, reward, pool, spatial-grid and save-migration tests.
 2. **PlayMode** — 7 bootstrap, shared-model/reward projection, level-up, replay-seed and result-flow tests.
 
 The PlayMode tests explicitly disable persistence, so they do not overwrite the developer's local campaign save. The exact acceptance procedure and current manual regression matrix are in [`docs/TESTING_0.8.md`](docs/TESTING_0.8.md).
@@ -85,7 +85,9 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Startup foundation checks covering deterministic random sequences, spatial membership and stable content IDs.
 - Runtime, EditMode and PlayMode assembly boundaries that keep tests separate from production builds.
 - GitHub Actions gates for static validation, Unity tests, Web compilation and GitHub Pages deployment, with Windows builds reserved for `main` and milestone dispatches.
-- Thirty-eight EditMode regression tests for deterministic foundations, shared run/player/enemy/spawn/projectile/effect behavior, builds, rewards, balance and versioned save migration.
+- Forty-one EditMode regression tests for deterministic foundations, shared run/player/enemy/spawn/projectile/effect behavior, exact weapon level tables/descriptions, builds, rewards, balance and versioned save migration.
+- Reward cards expose the exact next-level modifier, and Expedition Build exposes complete Survivor, Frost Axe and Raven Guard live statistics.
+- A complete player/content reference documents every current character, power, weapon, gear item, boon, evolution and calculation.
 - Seven disk-safe PlayMode smoke tests for bootstrap, shared player/enemy/reward projection, Solo level-up, same-seed replay and terminal result flow.
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
 

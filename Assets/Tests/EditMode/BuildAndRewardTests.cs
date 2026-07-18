@@ -64,6 +64,17 @@ namespace ProjectExpedition.Tests
             Assert.That(BalanceRules.UltimateCooldown(60f, 100), Is.EqualTo(28f));
         }
 
+        [Test]
+        public void UpgradeDescriptions_MatchExactWeaponLevelEffects()
+        {
+            Assert.That(ItemCatalog.FrostAxe.EffectDescriptionAtLevel(6),
+                Is.EqualTo("+1 projectile per Frost Axe volley"));
+            Assert.That(ItemCatalog.RavenGuard.EffectDescriptionAtLevel(5),
+                Is.EqualTo("+42% Raven Guard damage and -14% interval"));
+            Assert.That(UpgradeDescriptions.Progression(ItemCatalog.FrostAxe),
+                Does.Contain("L8: +26% Frost Axe damage"));
+        }
+
         private static RewardOption[] GeneratePair(int seed)
         {
             var builds = new[] { new PlayerBuild(), new PlayerBuild() };

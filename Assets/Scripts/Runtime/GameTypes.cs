@@ -32,7 +32,8 @@ namespace ProjectExpedition
         CriticalRunes,
         UltimateCooldown,
         UltimateDamage,
-        Heal
+        Heal,
+        ShieldDamageAndSpeed
     }
 
     [Serializable]

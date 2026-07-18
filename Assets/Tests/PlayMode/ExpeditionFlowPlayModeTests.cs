@@ -153,6 +153,19 @@ namespace ProjectExpedition.Tests
             Assert.That(player.Weapons.AxeDamage,
                 Is.EqualTo(initialDamage * 1.26f).Within(0.0001f));
 
+            for (var level = 3; level <= ItemCatalog.FrostAxe.MaxLevel; level++)
+                Assert.That(RewardEffects.Apply(player, new RewardOption
+                {
+                    Item = ItemCatalog.FrostAxe,
+                    TargetPlayerIndex = 0
+                }), Is.True);
+
+            Assert.That(player.Build.Find(ItemCatalog.FrostAxe.Id).Level, Is.EqualTo(8));
+            Assert.That(player.Weapons.AxeCount, Is.EqualTo(2));
+            Assert.That(player.Weapons.AxePierce, Is.EqualTo(2));
+            Assert.That(player.Weapons.AxeCooldown,
+                Is.EqualTo(0.82f * Mathf.Pow(0.86f, 2f)).Within(0.0001f));
+
             yield return DestroyDirector(director);
         }
 

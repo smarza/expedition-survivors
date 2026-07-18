@@ -22,6 +22,7 @@ namespace ProjectExpedition
         public float UltimateCooldown => _model.UltimateCooldown;
         public bool UltimateReady => _model.UltimateReady;
         public float UltimateDamage => _model.UltimateDamage;
+        public float UltimateRadius => _model.UltimateRadius;
 
         private GameDirector _director;
         private SpriteRenderer _body;

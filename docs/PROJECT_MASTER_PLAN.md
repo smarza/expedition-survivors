@@ -1,7 +1,7 @@
 # Expedition Survivors — master plan and project handoff
 
 > **Document status:** living source of truth for product, engineering and release planning.  
-> **Last updated:** 2026-07-18  
+> **Last updated:** 2026-07-19
 > **Stable baseline:** `main` — `0.7.1-foundation-runtime-fixes`  
 > **Active development:** `agent/0.8.0-shared-simulation`  
 > **Active pull request:** [PR #1 — Start 0.8.0 shared simulation foundation](https://github.com/smarza/expedition-survivors/pull/1)
@@ -420,7 +420,7 @@ Release candidate implemented:
 - security policy and rebuild requirement;
 - successful patched-Editor import, compilation and Solo/Local manual smoke pass confirmed on 2026-07-18;
 - production runtime, EditMode and PlayMode assembly boundaries;
-- Unity Test Framework 1.4.6 with 38 EditMode and 7 PlayMode regressions enforced by GitHub Actions;
+- Unity Test Framework 1.4.6 with 41 EditMode and 7 PlayMode regressions enforced by GitHub Actions;
 - backward-compatible migration from legacy save payloads to versioned save envelope 2;
 - first Phase C extraction: local clock, phase, boss trigger, XP, reward turn and outcome now route through `SharedRunModel`;
 - Frost Axe flight, lifetime, collision-radius and pierce behavior are extracted into `SharedProjectileModel`;
@@ -432,6 +432,8 @@ Release candidate implemented:
 - successful development builds are published as a browser-playable GitHub Pages preview, while Windows builds remain milestone and `main` gates;
 - the experimental Online runtime, menu and networking packages are removed from active scope;
 - Solo and Local Co-op now resolve the current run, player, enemy, spawning, projectile, weapon, reward and effect rules from one shared source.
+- reward cards and Expedition Build expose exact level effects and complete live weapon statistics;
+- `BUILD_AND_CONTENT_REFERENCE.md` documents all current characters, powers, items, formulas, rewards and the acceptance template for future content.
 
 Final closeout pending:
 
@@ -594,7 +596,7 @@ Exit gate: Solo and Local Co-op resolve the same weapon/build/reward rules from 
 
 ### Phase F — Regression and milestone close
 
-Status: automated release-candidate validation pending. Manual owner acceptance, merge and tag follow only after static validation, 38 EditMode tests, 7 PlayMode tests, Web/Pages and Windows milestone compilation are green.
+Status: final clarity pass pending automated validation. Manual owner acceptance, merge and tag follow only after static validation, 41 EditMode tests, 7 PlayMode tests, Web/Pages and Windows milestone compilation are green.
 
 1. Run the manual mode matrix with keyboard, one gamepad and two gamepads.
 2. Validate reward ownership and device focus.
@@ -741,7 +743,7 @@ Expedition Survivors is not launch-ready merely because a run can be completed. 
 The next developer/agent should do the following, in order:
 
 1. Work on `agent/0.8.0-shared-simulation` and PR #1.
-2. Verify the release-candidate workflow: static validation, 38 EditMode tests, 7 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
+2. Verify the release-candidate workflow: static validation, 41 EditMode tests, 7 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
 3. Run the final Solo and Local Co-op matrix from `docs/TESTING_0.8.md` through the Pages preview, then use the Windows artifact for the native packaging/device check.
 4. Record any failure with its seed, mode, devices, reproduction steps and Console/log output.
 5. After explicit owner acceptance, merge PR #1 into `main` and tag `v0.8.0`.

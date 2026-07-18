@@ -14,6 +14,20 @@ namespace ProjectExpedition
         public float CriticalChance => Model.CriticalChance;
         public bool HasShieldPulse => Model.HasShieldPulse;
         public float ShieldDamage => Model.ShieldDamage;
+        public float ShieldCooldown => Model.ShieldCooldown;
+        public float ShieldRadius => Model.ShieldRadius;
+        public float ShieldKnockback => Model.ShieldKnockback;
+        public float ShieldHealingPerHit => Model.ShieldHealingPerHit;
+        public float ShieldHealingCap => Model.ShieldHealingCap;
+        public float AxeProjectileSpeed => Model.AxeProjectileSpeed;
+        public float AxeProjectileDuration => Model.AxeProjectileDuration;
+        public float AxeHitRadius => Model.AxeHitRadius;
+        public float CriticalAxeHitRadius => Model.CriticalAxeHitRadius;
+        public float AxeKnockback => Model.AxeKnockback;
+        public float CriticalAxeKnockback => Model.CriticalAxeKnockback;
+        public float CriticalDamageMultiplier => Model.CriticalDamageMultiplier;
+        public float CleaverExplosionDamageMultiplier => Model.CleaverExplosionDamageMultiplier;
+        public float CleaverExplosionRadius => Model.CleaverExplosionRadius;
         public bool FrostAxeEvolved => Model.FrostAxeEvolved;
         public bool RavenGuardEvolved => Model.RavenGuardEvolved;
 

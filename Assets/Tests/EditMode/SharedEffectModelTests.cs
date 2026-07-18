@@ -39,6 +39,42 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void FrostAxeLevelTable_ReachesTwoProjectilesAtMaximumLevel()
+        {
+            var model = new SharedWeaponModel();
+
+            for (var level = 2; level <= ItemCatalog.FrostAxe.MaxLevel; level++)
+                Assert.That(model.ApplyUpgrade(ItemCatalog.FrostAxe.EffectAtLevel(level)), Is.True);
+
+            Assert.That(ItemCatalog.FrostAxe.EffectAtLevel(6), Is.EqualTo(UpgradeId.ExtraAxe));
+            Assert.That(model.AxeDamage, Is.EqualTo(24f * Mathf.Pow(1.26f, 3f)).Within(0.0001f));
+            Assert.That(model.AxeCooldown, Is.EqualTo(0.82f * Mathf.Pow(0.86f, 2f)).Within(0.0001f));
+            Assert.That(model.AxeCount, Is.EqualTo(2));
+            Assert.That(model.AxePierce, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RavenGuardLevelTable_PreservesDamageAndAddsPromisedFrequency()
+        {
+            var player = StartedPlayer();
+            var weapons = new SharedWeaponModel();
+
+            for (var level = 2; level <= ItemCatalog.RavenGuard.MaxLevel; level++)
+                Assert.That(SharedEffectPipeline.ApplyUpgrade(player, weapons,
+                    ItemCatalog.RavenGuard.EffectAtLevel(level)), Is.True);
+
+            Assert.That(ItemCatalog.RavenGuard.EffectAtLevel(5),
+                Is.EqualTo(UpgradeId.ShieldDamageAndSpeed));
+            Assert.That(ItemCatalog.RavenGuard.EffectAtLevel(8),
+                Is.EqualTo(UpgradeId.ShieldDamageAndSpeed));
+            Assert.That(weapons.ShieldDamage,
+                Is.EqualTo(20f * Mathf.Pow(1.42f, 5f)).Within(0.0001f));
+            Assert.That(weapons.ShieldCooldown,
+                Is.EqualTo(5.2f * Mathf.Pow(0.86f, 2f)).Within(0.0001f));
+            Assert.That(player.Armor, Is.EqualTo(4f));
+        }
+
+        [Test]
         public void AxeVolley_ProducesSharedProjectileEffectsAndDirections()
         {
             var model = new SharedWeaponModel();

@@ -87,6 +87,7 @@ def main() -> int:
         ROOT / "Assets/Resources/Content/ProductionContent.asset",
         ROOT / "docs/ONLINE_EXPEDITION.md",
         ROOT / "docs/BUILD_AND_REWARD_0.6.md",
+        ROOT / "docs/BUILD_AND_CONTENT_REFERENCE.md",
         ROOT / "docs/PRODUCTION_FOUNDATION_0.7.md",
         ROOT / "docs/PROJECT_MASTER_PLAN.md",
         ROOT / "docs/TESTING_0.8.md",
@@ -183,6 +184,7 @@ def main() -> int:
     edit_test_requirements = ("RunRandom_SameSeedProducesSameSequence", "SpatialGrid_UpdatesAndRemovesMembership",
                               "ComponentPool_ReusesReleasedInstances", "PlayerBuild_EvolutionRequiresMaximumLevelAndCatalyst",
                               "RewardFactory_SameSeedProducesSameRecipientsAndItems", "LegacyV1Save_MigratesWithoutProgressLoss",
+                              "UpgradeDescriptions_MatchExactWeaponLevelEffects",
                               "Begin_InitializesDeterministicProgressionState", "Advance_TriggersBossExactlyOnceAtConfiguredTime",
                               "AddExperience_CarriesOverflowAndWaitsForRewardResolution", "RewardTurn_AlternatesAcrossTwoPlayers",
                               "Complete_IsIdempotentAndResetReturnsToIdle",
@@ -204,6 +206,8 @@ def main() -> int:
                               "CalculateSpawnPosition_UsesSharedRingBounds",
                               "Advance_PreservesAutomaticWeaponCadence",
                               "UpgradesAndEvolutions_PreserveExistingBalanceValues",
+                              "FrostAxeLevelTable_ReachesTwoProjectilesAtMaximumLevel",
+                              "RavenGuardLevelTable_PreservesDamageAndAddsPromisedFrequency",
                               "AxeVolley_ProducesSharedProjectileEffectsAndDirections",
                               "RavenGuard_ProducesSharedAreaEffectAndBoundedHealing",
                               "EffectPipeline_AppliesPlayerWeaponAndEvolutionState",
@@ -322,7 +326,12 @@ def main() -> int:
         "proportional UI canvas": "Mathf.Min(Screen.width / 1920f" in hud_source and "DrawLetterbox" in hud_source,
         "stable label hover": "SetAllTextColors" in hud_source and "style.hover.textColor = color" in hud_source,
         "opaque modal hierarchy": "case RunState.LevelUp: DrawLevelUp();" in hud_source and "case RunState.BuildDetails: DrawBuildDetails();" in hud_source,
-        "readable item grid": "visibleIndex % 3" in hud_source and "row * 94" in hud_source,
+        "readable item grid": "visibleIndex % 3" in hud_source and "row * 78" in hud_source,
+        "complete build statistics": all(token in hud_source for token in (
+            '"SURVIVOR"', '"FROST AXE"', '"RAVEN GUARD"', '"INTERVAL"',
+            '"PROJECTILES"', '"ULT RADIUS"')),
+        "exact reward preview": "RewardEffectPreview" in hud_source and
+            "EffectDescriptionAtLevel" in hud_source,
         "fully clickable rewards": "GUI.Button(rect, GUIContent.none, GUIStyle.none)" in hud_source,
         "separated character controls": "var ultimateRect" in hud_source and "rect.y + 592" in hud_source,
         "responsive map titles": "_mapTitle" in hud_source and "rect.y + 190, rect.width - 80, 78" in hud_source,
@@ -348,6 +357,29 @@ def main() -> int:
         fail("production core is incomplete: " + ", ".join(incomplete))
 
     content_asset = (ROOT / "Assets/Resources/Content/ProductionContent.asset").read_text(encoding="utf-8")
+    content_reference = (ROOT / "docs/BUILD_AND_CONTENT_REFERENCE.md").read_text(encoding="utf-8")
+    reference_requirements = (
+        "The most important level rule", "Haldor Stormborn", "Eira Raven-Sworn",
+        "Frost Axe", "Raven Guard", "Jotunn Cleaver", "Storm Aegis",
+        "Reward cards show the exact next-level effect", "Required template for future content",
+    )
+    if any(requirement not in content_reference for requirement in reference_requirements):
+        fail("build and content reference is missing required player or authoring rules")
+    weapon_level_tables = {
+        "weapon.frost_axe": [0, 1, 2, 4, 1, 3, 2, 1],
+        "weapon.raven_guard": [0, 10, 7, 10, 15, 7, 10, 15],
+    }
+    for item_id, expected_effects in weapon_level_tables.items():
+        record = re.search(
+            rf"- id: {re.escape(item_id)}\n.*?levelEffects:\n((?:\s+- \d+\n)+)",
+            content_asset,
+            flags=re.DOTALL,
+        )
+        effects = [int(value) for value in re.findall(r"- (\d+)", record.group(1))] if record else []
+        if effects != expected_effects:
+            fail(f"{item_id} production level table differs from its tested 0.8.0 contract")
+    if "Heal,\n        ShieldDamageAndSpeed" not in game_types_source:
+        fail("new serialized UpgradeId values must be appended without renumbering existing content")
     content_ids = re.findall(r"^\s+- id:\s*([^\s]+)\s*$", content_asset, flags=re.MULTILINE)
     required_content_ids = {
         "ravenbound.haldor", "ravenbound.eira", "frostbound.scout", "frostbound.saga",

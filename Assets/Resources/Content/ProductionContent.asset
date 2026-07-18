@@ -72,7 +72,8 @@ MonoBehaviour:
   - id: weapon.frost_axe
     displayName: Frost Axe
     shortName: AXE
-    description: Automatic rune axe. Levels improve damage, rate, pierce and projectile count.
+    description: Automatic rune axe. Each level grants the listed damage, interval,
+      pierce or projectile modifier.
     category: 0
     maxLevel: 8
     color: {r: 0.35, g: 0.88, b: 1, a: 1}
@@ -90,7 +91,8 @@ MonoBehaviour:
   - id: weapon.raven_guard
     displayName: Raven Guard
     shortName: GUARD
-    description: Automatic defensive shockwave. Levels improve damage, armor and frequency.
+    description: Automatic defensive shockwave. Each level grants the listed damage,
+      armor or interval modifier.
     category: 0
     maxLevel: 8
     color: {r: 0.55, g: 0.72, b: 0.9, a: 1}
@@ -99,10 +101,10 @@ MonoBehaviour:
     - 10
     - 7
     - 10
-    - 10
+    - 15
     - 7
     - 10
-    - 10
+    - 15
     evolutionOf: 
     catalystId: 
   - id: gear.longship_boots

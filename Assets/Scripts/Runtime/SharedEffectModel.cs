@@ -72,7 +72,7 @@ namespace ProjectExpedition
     {
         private const float InitialAxeDelay = 0.25f;
         private const float InitialPulseDelay = 4.5f;
-        private const float PulseCooldown = 5.2f;
+        private const float InitialPulseCooldown = 5.2f;
         private const float ProjectileSpeed = 9.5f;
         private const float ProjectileDuration = 3.2f;
 
@@ -86,8 +86,22 @@ namespace ProjectExpedition
         public float CriticalChance { get; private set; }
         public bool HasShieldPulse { get; private set; }
         public float ShieldDamage { get; private set; }
+        public float ShieldCooldown { get; private set; }
         public bool FrostAxeEvolved { get; private set; }
         public bool RavenGuardEvolved { get; private set; }
+        public float AxeProjectileSpeed => ProjectileSpeed;
+        public float AxeProjectileDuration => ProjectileDuration;
+        public float AxeHitRadius => 0.25f;
+        public float CriticalAxeHitRadius => 0.32f;
+        public float AxeKnockback => 0.18f;
+        public float CriticalAxeKnockback => 0.42f;
+        public float CriticalDamageMultiplier => 2f;
+        public float ShieldRadius => RavenGuardEvolved ? 3.35f : 2.55f;
+        public float ShieldKnockback => 0.72f;
+        public float ShieldHealingPerHit => RavenGuardEvolved ? 0.65f : 0f;
+        public float ShieldHealingCap => RavenGuardEvolved ? 9f : 0f;
+        public float CleaverExplosionDamageMultiplier => FrostAxeEvolved ? 0.42f : 0f;
+        public float CleaverExplosionRadius => FrostAxeEvolved ? 1.25f : 0f;
 
         public SharedWeaponModel() => Begin();
 
@@ -100,6 +114,7 @@ namespace ProjectExpedition
             CriticalChance = 0.08f;
             HasShieldPulse = true;
             ShieldDamage = 20f;
+            ShieldCooldown = InitialPulseCooldown;
             FrostAxeEvolved = false;
             RavenGuardEvolved = false;
             _axeTimer = InitialAxeDelay;
@@ -123,7 +138,7 @@ namespace ProjectExpedition
             }
             if (HasShieldPulse && _pulseTimer <= 0f)
             {
-                _pulseTimer = PulseCooldown;
+                _pulseTimer = ShieldCooldown;
                 result |= WeaponAdvanceResult.TriggerRavenGuard;
             }
             return result;
@@ -145,16 +160,19 @@ namespace ProjectExpedition
         public SharedEffectRequest CreateAxeEffect(bool critical) => new SharedEffectRequest(
             SharedEffectKind.Projectile, SharedEffectTarget.Enemies,
             SharedEffectStacking.Independent, AxeDamage * (critical ? 2f : 1f),
-            critical ? 0.32f : 0.25f, critical ? 0.42f : 0.18f,
+            critical ? CriticalAxeHitRadius : AxeHitRadius,
+            critical ? CriticalAxeKnockback : AxeKnockback,
             ProjectileSpeed, ProjectileDuration, AxePierce, critical, FrostAxeEvolved);
 
         public SharedEffectRequest CreateRavenGuardEffect() => new SharedEffectRequest(
             SharedEffectKind.AreaDamage, SharedEffectTarget.Enemies,
             SharedEffectStacking.Independent, ShieldDamage,
-            RavenGuardEvolved ? 3.35f : 2.55f, 0.72f, evolved: RavenGuardEvolved);
+            ShieldRadius, ShieldKnockback, evolved: RavenGuardEvolved);
 
         public float CalculateRavenGuardHealing(int hitCount) =>
-            RavenGuardEvolved && hitCount > 0 ? Mathf.Min(9f, hitCount * 0.65f) : 0f;
+            RavenGuardEvolved && hitCount > 0
+                ? Mathf.Min(ShieldHealingCap, hitCount * ShieldHealingPerHit)
+                : 0f;
 
         public bool ApplyUpgrade(UpgradeId id)
         {
@@ -168,6 +186,10 @@ namespace ProjectExpedition
                 case UpgradeId.AxePierce: AxePierce += 1; return true;
                 case UpgradeId.ShieldPulse: HasShieldPulse = true; _pulseTimer = 0.1f; return true;
                 case UpgradeId.ShieldDamage: ShieldDamage *= 1.42f; return true;
+                case UpgradeId.ShieldDamageAndSpeed:
+                    ShieldDamage *= 1.42f;
+                    ShieldCooldown = Mathf.Max(1.6f, ShieldCooldown * 0.86f);
+                    return true;
                 case UpgradeId.CriticalRunes:
                     CriticalChance = Mathf.Min(0.55f, CriticalChance + 0.09f);
                     return true;
