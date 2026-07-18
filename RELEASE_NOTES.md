@@ -14,6 +14,7 @@
 - Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
 - Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
 - Added the runtime assembly's direct `Unity.Networking.Transport` reference required by `OnlineCoopSpike` and Unity Transport's public `NetworkEndpoint` type.
+- Moved the pool test probe out of the Editor-only assembly so Unity can attach it to a `GameObject` during EditMode pool-reuse validation.
 
 # Milestone 0.7.1 — Foundation runtime fixes
 

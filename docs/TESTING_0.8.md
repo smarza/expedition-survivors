@@ -23,6 +23,8 @@ The Test Runner menu is only registered after the project compiles and the Test 
 
 PlayMode tests set `SaveService.PersistenceEnabled` to false and reset only in-memory test data. They do not write to `project-expedition-save-v1.json`.
 
+Reusable `MonoBehaviour` test doubles live in the player-compatible `ProjectExpedition.TestSupport` assembly. Unity cannot attach components compiled inside an Editor-only assembly to a `GameObject`.
+
 ## Automated inventory
 
 | Suite | Coverage | Expected |

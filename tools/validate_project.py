@@ -69,8 +69,9 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
         ROOT / "Assets/Tests/EditMode/DeterministicFoundationTests.cs",
         ROOT / "Assets/Tests/EditMode/BuildAndRewardTests.cs",
-        ROOT / "Assets/Tests/EditMode/PoolProbe.cs",
         ROOT / "Assets/Tests/EditMode/SaveMigrationTests.cs",
+        ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
+        ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
         ROOT / "Assets/Tests/PlayMode/ExpeditionFlowPlayModeTests.cs",
         ROOT / "Assets/Resources/Art/Haldor_Stormborn_KeyArt.png",
@@ -154,8 +155,15 @@ def main() -> int:
         fail("runtime assembly definition is missing its production package references")
 
     edit_assembly = json.loads((ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef").read_text(encoding="utf-8"))
-    if "Editor" not in edit_assembly.get("includePlatforms", []) or "ProjectExpedition.Runtime" not in edit_assembly.get("references", []):
-        fail("EditMode test assembly must be Editor-only and reference the runtime assembly")
+    edit_references = set(edit_assembly.get("references", []))
+    if "Editor" not in edit_assembly.get("includePlatforms", []) or not {
+        "ProjectExpedition.Runtime", "ProjectExpedition.TestSupport"
+    }.issubset(edit_references):
+        fail("EditMode test assembly must be Editor-only and reference runtime plus player-compatible test support")
+
+    support_assembly = json.loads((ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef").read_text(encoding="utf-8"))
+    if support_assembly.get("includePlatforms") or "ProjectExpedition.Runtime" not in support_assembly.get("references", []):
+        fail("test support must remain player-compatible and reference the runtime assembly")
 
     play_assembly = json.loads((ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef").read_text(encoding="utf-8"))
     if play_assembly.get("includePlatforms") or "ProjectExpedition.Runtime" not in play_assembly.get("references", []):
