@@ -66,6 +66,7 @@ def main() -> int:
         ROOT / "docs/ONLINE_EXPEDITION.md",
         ROOT / "docs/BUILD_AND_REWARD_0.6.md",
         ROOT / "docs/PRODUCTION_FOUNDATION_0.7.md",
+        ROOT / "docs/PROJECT_MASTER_PLAN.md",
         ROOT / "Packages/manifest.json",
         ROOT / "ProjectSettings/ProjectSettings.asset",
         ROOT / "ProjectSettings/ProjectVersion.txt",

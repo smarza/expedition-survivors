@@ -2,6 +2,8 @@
 
 An original survivors-like prototype built for Unity 6 LTS. The milestone is intentionally self-contained: it has no purchased packages or external asset dependencies and bootstraps itself from an empty scene.
 
+For the complete product vision, technical roadmap, launch gates and new-chat handoff, read [`docs/PROJECT_MASTER_PLAN.md`](docs/PROJECT_MASTER_PLAN.md).
+
 ## Play it
 
 1. Install Unity Hub and Unity `6000.5.4f1` or a newer supported patched release. Earlier builds must not be used for release artifacts because of CVE-2025-59489.
