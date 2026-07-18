@@ -10,13 +10,13 @@ namespace ProjectExpedition
         public PlayerController Player => Players.Count > 0 ? Players[0] : null;
         public readonly List<Enemy> Enemies = new List<Enemy>(384);
         public Transform RunRoot => _runRoot;
-        public int Level { get; private set; }
-        public int Experience { get; private set; }
-        public int ExperienceToNext { get; private set; }
+        public int Level => _runModel.Level;
+        public int Experience => _runModel.Experience;
+        public int ExperienceToNext => _runModel.ExperienceToNext;
         public int Kills { get; private set; }
         public int RunRenown { get; private set; }
-        public float Elapsed { get; private set; }
-        public bool BossSpawned { get; private set; }
+        public float Elapsed => _runModel.Elapsed;
+        public bool BossSpawned => _runModel.BossTriggered;
         public int RunSeed { get; private set; } = 1;
         public RunRandom Rng { get; private set; } = new RunRandom(1);
         public PerformanceMetrics Metrics { get; } = new PerformanceMetrics();
@@ -27,7 +27,9 @@ namespace ProjectExpedition
         public readonly CharacterDefinition[] SelectedCharacters =
             { ContentCatalog.Characters[0], ContentCatalog.Characters[1] };
         public IReadOnlyList<RewardOption> CurrentRewards => _currentRewards;
-        public int RewardTurnPlayerIndex { get; private set; }
+        public int RewardTurnPlayerIndex => _runModel.RewardTurnPlayerIndex;
+        public RunSimulationPhase SimulationPhase => _runModel.Phase;
+        public RunOutcome Outcome => _runModel.Outcome;
 
         private Transform _runRoot;
         private Camera _camera;
@@ -37,8 +39,8 @@ namespace ProjectExpedition
         private float _spawnTimer;
         private readonly List<RewardOption> _currentRewards = new List<RewardOption>(4);
         private readonly List<Enemy> _spatialScratch = new List<Enemy>(192);
-        private int _rewardTurnCounter;
         private bool _runRecorded;
+        private readonly SharedRunModel _runModel = new SharedRunModel();
         private Transform _poolRoot;
         private ComponentPool<Enemy> _enemyPool;
         private ComponentPool<AxeProjectile> _projectilePool;
@@ -95,7 +97,7 @@ namespace ProjectExpedition
             if (LocalInputRouter.PausePressed()) TogglePause();
             if (State != RunState.Playing) return;
 
-            Elapsed += Time.deltaTime;
+            _runModel.Advance(Time.deltaTime);
             _spawnTimer -= Time.deltaTime;
             CleanupEnemyList();
 
@@ -108,9 +110,8 @@ namespace ProjectExpedition
                     SelectedMap.BaseSpawnInterval - Elapsed * 0.0014f);
             }
 
-            if (!BossSpawned && Elapsed >= SelectedMap.BossSpawnTime)
+            if (_runModel.TryTriggerBoss(SelectedMap.BossSpawnTime))
             {
-                BossSpawned = true;
                 SpawnEnemy(true, difficulty);
                 _hud.SetAnnouncement("THE JOTUNN HAS FOUND YOU", 3.6f);
             }
@@ -176,17 +177,11 @@ namespace ProjectExpedition
                 player.Initialize(this, i, definition);
                 Players.Add(player);
             }
-            Level = 1;
-            Experience = 0;
-            ExperienceToNext = BalanceRules.ExperienceToNext(Level, playerCount);
+            _runModel.Begin(playerCount, BalanceRules.ExperienceToNext);
             Kills = 0;
             RunRenown = 0;
-            Elapsed = 0f;
-            BossSpawned = false;
             _spawnTimer = 0.2f;
             _runRecorded = false;
-            _rewardTurnCounter = 0;
-            RewardTurnPlayerIndex = 0;
             State = RunState.Playing;
             var expeditionLabel = playerCount > 1
                 ? $"{SelectedCharacters[0].Name.ToUpperInvariant()} + {SelectedCharacters[1].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}"
@@ -334,18 +329,12 @@ namespace ProjectExpedition
         public void AddExperience(int amount)
         {
             if (State != RunState.Playing) return;
-            Experience += amount;
-            if (Experience < ExperienceToNext) return;
-            Experience -= ExperienceToNext;
-            Level++;
-            ExperienceToNext = BalanceRules.ExperienceToNext(Level, Players.Count);
-            OfferLevelUp();
+            if (_runModel.AddExperience(amount)) OfferLevelUp();
         }
 
         private void OfferLevelUp()
         {
             _currentRewards.Clear();
-            RewardTurnPlayerIndex = Players.Count > 0 ? _rewardTurnCounter % Players.Count : 0;
             var builds = new PlayerBuild[Mathf.Max(1, Players.Count)];
             for (var i = 0; i < builds.Length; i++) builds[i] = Players[i].Build;
             _currentRewards.AddRange(RewardFactory.Generate(builds, RewardTurnPlayerIndex, Players.Count, Rng));
@@ -373,15 +362,15 @@ namespace ProjectExpedition
             var chooser = Players[Mathf.Clamp(RewardTurnPlayerIndex, 0, Players.Count - 1)].HeroName;
             var destination = option.Shared ? "THE TEAM" : (appliedNames.Count > 0 ? appliedNames[0].ToUpperInvariant() : "NO TARGET");
             _hud.SetAnnouncement($"{chooser.ToUpperInvariant()} CHOSE {option.Item.Name.ToUpperInvariant()} FOR {destination}", 3.2f);
-            _rewardTurnCounter++;
+            _runModel.CompleteReward();
             State = RunState.Playing;
             Time.timeScale = 1f;
         }
 
         public void EndRun(bool victory)
         {
-            if (State == RunState.Victory || State == RunState.GameOver) return;
-            State = victory ? RunState.Victory : RunState.GameOver;
+            if (!_runModel.Complete(victory)) return;
+            State = _runModel.Outcome == RunOutcome.Victory ? RunState.Victory : RunState.GameOver;
             Time.timeScale = 0f;
             if (!_runRecorded)
             {
@@ -394,6 +383,7 @@ namespace ProjectExpedition
         {
             Time.timeScale = 1f;
             if (_onlineSpike != null && _onlineSpike.Visible) _onlineSpike.Hide();
+            _runModel.Reset();
             State = RunState.MainMenu;
             LocalInputRouter.BeginSession(1);
             ReleasePooledSimulation();
@@ -407,6 +397,7 @@ namespace ProjectExpedition
         {
             Time.timeScale = 1f;
             LocalInputRouter.BeginSession(1);
+            _runModel.Reset();
             State = RunState.OnlineSpike;
             _onlineSpike.Show();
         }

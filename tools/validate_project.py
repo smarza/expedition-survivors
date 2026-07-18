@@ -63,6 +63,7 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/ContentAssets.cs",
         ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs",
         ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
         ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs",
@@ -70,6 +71,7 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/DeterministicFoundationTests.cs",
         ROOT / "Assets/Tests/EditMode/BuildAndRewardTests.cs",
         ROOT / "Assets/Tests/EditMode/SaveMigrationTests.cs",
+        ROOT / "Assets/Tests/EditMode/SharedRunModelTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -170,17 +172,21 @@ def main() -> int:
         fail("PlayMode test assembly must reference the runtime assembly and remain player-compatible")
 
     edit_tests = "\n".join((ROOT / "Assets/Tests/EditMode" / name).read_text(encoding="utf-8") for name in (
-        "DeterministicFoundationTests.cs", "BuildAndRewardTests.cs", "SaveMigrationTests.cs"))
+        "DeterministicFoundationTests.cs", "BuildAndRewardTests.cs", "SaveMigrationTests.cs", "SharedRunModelTests.cs"))
     edit_test_requirements = ("RunRandom_SameSeedProducesSameSequence", "SpatialGrid_UpdatesAndRemovesMembership",
                               "ComponentPool_ReusesReleasedInstances", "PlayerBuild_EvolutionRequiresMaximumLevelAndCatalyst",
-                              "RewardFactory_SameSeedProducesSameRecipientsAndItems", "LegacyV1Save_MigratesWithoutProgressLoss")
+                              "RewardFactory_SameSeedProducesSameRecipientsAndItems", "LegacyV1Save_MigratesWithoutProgressLoss",
+                              "Begin_InitializesDeterministicProgressionState", "Advance_TriggersBossExactlyOnceAtConfiguredTime",
+                              "AddExperience_CarriesOverflowAndWaitsForRewardResolution", "RewardTurn_AlternatesAcrossTwoPlayers",
+                              "Complete_IsIdempotentAndResetReturnsToIdle")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
     play_tests = (ROOT / "Assets/Tests/PlayMode/ExpeditionFlowPlayModeTests.cs").read_text(encoding="utf-8")
     play_test_requirements = ("GameDirector_InitializesProductionFoundation",
                               "SoloRun_LevelUpOffersFourRewardsAndResumes", "ReplayRun_PreservesSeedAndRestartsProgress",
-                              "RunOutcome_TransitionsOnceWithoutTouchingDisk")
+                              "RunOutcome_TransitionsOnceWithoutTouchingDisk", "RunSimulationPhase.Reward",
+                              "RunSimulationPhase.Completed")
     if any(requirement not in play_tests for requirement in play_test_requirements):
         fail("PlayMode expedition flow coverage is incomplete")
 
@@ -242,6 +248,7 @@ def main() -> int:
         "component pooling": "class ComponentPool" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReleasePooledSimulation" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "spatial partitioning": "class SpatialHashGrid" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "GetEnemiesInRadius" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "deterministic run seed": "class RunRandom" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReplayRun" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
+        "shared run progression": "class SharedRunModel" in (ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs").read_text(encoding="utf-8") and "_runModel.AddExperience" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8") and "_runModel.TryTriggerBoss" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "scriptable content database": "class ProductionContentDatabase : ScriptableObject" in database_source and "Resources.Load<ProductionContentDatabase>" in (ROOT / "Assets/Scripts/Runtime/ContentAssets.cs").read_text(encoding="utf-8"),
         "gamepad movement deadzone": "MovementDeadzone" in input_source and "ApplyMovementDeadzone" in input_source,
         "readable online lobby buttons": "var readable = new Color(0.88f, 0.94f, 0.96f)" in online_source and "var hostRect" in online_source,

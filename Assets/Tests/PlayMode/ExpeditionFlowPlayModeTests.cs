@@ -25,6 +25,7 @@ namespace ProjectExpedition.Tests
             var director = CreateDirector();
 
             Assert.That(director.State, Is.EqualTo(RunState.MainMenu));
+            Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Idle));
             Assert.That(director.FoundationStatus, Does.StartWith("READY"));
             Assert.That(director.CreatedPooledObjects, Is.GreaterThan(0));
 
@@ -41,18 +42,21 @@ namespace ProjectExpedition.Tests
             director.SelectMapAndStart(0);
 
             Assert.That(director.State, Is.EqualTo(RunState.Playing));
+            Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Playing));
             Assert.That(director.Players.Count, Is.EqualTo(1));
             Assert.That(director.Player.HeroName, Is.EqualTo("Haldor Stormborn"));
             Assert.That(director.ExperienceToNext, Is.GreaterThan(0));
 
             director.AddExperience(director.ExperienceToNext);
             Assert.That(director.State, Is.EqualTo(RunState.LevelUp));
+            Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Reward));
             Assert.That(director.CurrentRewards.Count, Is.EqualTo(4));
             Assert.That(director.RewardTurnPlayerIndex, Is.Zero);
             Assert.That(Time.timeScale, Is.Zero);
 
             director.ChooseReward(0);
             Assert.That(director.State, Is.EqualTo(RunState.Playing));
+            Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Playing));
             Assert.That(Time.timeScale, Is.EqualTo(1f));
 
             yield return DestroyDirector(director);
@@ -73,6 +77,7 @@ namespace ProjectExpedition.Tests
 
             Assert.That(director.RunSeed, Is.EqualTo(seed));
             Assert.That(director.State, Is.EqualTo(RunState.Playing));
+            Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Playing));
             Assert.That(director.Level, Is.EqualTo(1));
             Assert.That(director.Experience, Is.Zero);
             Assert.That(director.Players.Count, Is.EqualTo(1));
@@ -91,6 +96,8 @@ namespace ProjectExpedition.Tests
 
             director.EndRun(true);
             Assert.That(director.State, Is.EqualTo(RunState.Victory));
+            Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Completed));
+            Assert.That(director.Outcome, Is.EqualTo(RunOutcome.Victory));
             Assert.That(Time.timeScale, Is.Zero);
             Assert.That(SaveService.Data.RunsCompleted, Is.EqualTo(1));
             Assert.That(SaveService.Data.TotalRenown, Is.GreaterThanOrEqualTo(50));
