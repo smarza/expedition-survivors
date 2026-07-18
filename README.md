@@ -19,7 +19,7 @@ Without Unity installed, run `python tools/validate_project.py` for fast reposit
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 16 deterministic domain, shared-run, content, build, reward, pool, spatial-grid and save-migration tests.
+1. **EditMode** — 17 deterministic domain, shared-run, network-projection, content, build, reward, pool, spatial-grid and save-migration tests.
 2. **PlayMode** — 4 bootstrap, level-up, replay-seed and result-flow tests.
 
 The PlayMode tests explicitly disable persistence, so they do not overwrite the developer's local campaign save. The exact acceptance procedure and current manual regression matrix are in [`docs/TESTING_0.8.md`](docs/TESTING_0.8.md).
@@ -85,7 +85,7 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Toggleable production metrics with `F3` or gamepad Left Shoulder + View/Select.
 - Startup foundation checks covering deterministic random sequences, spatial membership and stable content IDs.
 - Runtime, EditMode and PlayMode assembly boundaries that keep tests separate from production builds.
-- Sixteen EditMode regression tests for deterministic foundations, shared run progression, builds, rewards, balance and versioned save migration.
+- Seventeen EditMode regression tests for deterministic foundations, shared run progression, snapshot phase compatibility, builds, rewards, balance and versioned save migration.
 - Four disk-safe PlayMode smoke tests for bootstrap, Solo level-up, same-seed replay and terminal result flow.
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
 
@@ -99,7 +99,7 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - `ContentAssets`: ScriptableObject authoring records, runtime loading, validation and enemy archetypes.
 - `BuildSystem`: item catalog, slots, reward generation, build state and evolution recipes.
 - `ProductionFoundation`: generic component pools, spatial hash, deterministic random source, performance metrics and startup checks.
-- `OnlineCoopSpike`: direct-IP/LAN host-authoritative expedition using compact custom messages.
+- `OnlineCoopSpike`: direct-IP/LAN adapter that projects host-authoritative shared run state through compact custom messages.
 - `WeaponSystem`: data-like runtime weapon state and automatic attacks.
 - `Enemy`, `AxeProjectile`, `ExperienceGem`: focused simulation actors.
 - `SaveService`: versioned local persistence with atomic temporary-file writes.

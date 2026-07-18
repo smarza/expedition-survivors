@@ -23,7 +23,7 @@ namespace ProjectExpedition
         private const float SnapshotRate = 15f;
         private const int MaximumEnemies = 96;
 
-        private enum OnlinePhase : byte
+        internal enum OnlinePhase : byte
         {
             Lobby,
             Playing,
@@ -124,19 +124,43 @@ namespace ProjectExpedition
         private readonly List<int> _enemyIdScratch = new List<int>(MaximumEnemies);
         private readonly List<NetEnemy> _onlineSpatialScratch = new List<NetEnemy>(MaximumEnemies);
         private readonly SpatialHashGrid<NetEnemy> _onlineEnemyGrid = new SpatialHashGrid<NetEnemy>(2.5f, enemy => enemy.Position);
+        private readonly SharedRunModel _onlineRunModel = new SharedRunModel();
         private ComponentPool<OnlineEnemyView> _onlineEnemyViewPool;
         private ComponentPool<OnlineAttackVisual> _onlineAttackPool;
         private ComponentPool<OnlinePulseVisual> _onlinePulsePool;
         private int _rewardTurnPlayerIndex;
-        private int _rewardTurnCounter;
 
         private MapDefinition OnlineMap => ContentCatalog.Map(_mapIndex);
+
+        internal static OnlinePhase ProjectOnlinePhase(RunSimulationPhase phase, RunOutcome outcome)
+        {
+            switch (phase)
+            {
+                case RunSimulationPhase.Playing: return OnlinePhase.Playing;
+                case RunSimulationPhase.Reward: return OnlinePhase.LevelUp;
+                case RunSimulationPhase.Completed:
+                    return outcome == RunOutcome.Victory ? OnlinePhase.Victory : OnlinePhase.Defeat;
+                default: return OnlinePhase.Lobby;
+            }
+        }
+
+        private void SyncHostRunProjection()
+        {
+            _phase = ProjectOnlinePhase(_onlineRunModel.Phase, _onlineRunModel.Outcome);
+            _elapsed = _onlineRunModel.Elapsed;
+            _level = _onlineRunModel.Level;
+            _experience = _onlineRunModel.Experience;
+            _experienceToNext = _onlineRunModel.ExperienceToNext;
+            _bossSpawned = _onlineRunModel.BossTriggered;
+            _rewardTurnPlayerIndex = _onlineRunModel.RewardTurnPlayerIndex;
+        }
 
         public void Initialize(GameDirector director) => _director = director;
 
         public void Show()
         {
             Visible = true;
+            _onlineRunModel.Reset();
             _phase = OnlinePhase.Lobby;
             _status = "Start a Host, then Join from the second instance";
             _inputReadyAt = Time.unscaledTime + 0.25f;
@@ -241,7 +265,8 @@ namespace ProjectExpedition
 
         private void SimulateRun(float deltaTime)
         {
-            _elapsed += deltaTime;
+            _onlineRunModel.Advance(deltaTime);
+            SyncHostRunProjection();
             UpdatePlayers(deltaTime);
             UpdateEnemies(deltaTime);
 
@@ -255,9 +280,9 @@ namespace ProjectExpedition
                     OnlineMap.BaseSpawnInterval - _elapsed * 0.0014f);
             }
 
-            if (!_bossSpawned && _elapsed >= OnlineMap.BossSpawnTime)
+            if (_onlineRunModel.TryTriggerBoss(OnlineMap.BossSpawnTime))
             {
-                _bossSpawned = true;
+                SyncHostRunProjection();
                 SpawnEnemy(true, 1f + _elapsed / OnlineMap.DifficultyRamp);
                 _status = "THE JOTUNN HAS ENTERED THE EXPEDITION";
             }
@@ -516,22 +541,17 @@ namespace ProjectExpedition
 
         private void AddExperience(int amount)
         {
-            if (_phase != OnlinePhase.Playing) return;
-            _experience += amount;
-            if (_experience < _experienceToNext) return;
-            _experience -= _experienceToNext;
-            _level++;
-            _experienceToNext = BalanceRules.ExperienceToNext(_level, 2);
-            OfferLevelUp();
+            if (_onlineRunModel.Phase != RunSimulationPhase.Playing) return;
+            var levelUp = _onlineRunModel.AddExperience(amount);
+            SyncHostRunProjection();
+            if (levelUp) OfferLevelUp();
         }
 
         private void OfferLevelUp()
         {
             _onlineRewards.Clear();
-            _rewardTurnPlayerIndex = _rewardTurnCounter % 2;
             var builds = new[] { PlayerByIndex(0).Build, PlayerByIndex(1).Build };
             _onlineRewards.AddRange(RewardFactory.Generate(builds, _rewardTurnPlayerIndex, 2));
-            _phase = OnlinePhase.LevelUp;
             _upgradeSelection = 0;
             _status = $"P{_rewardTurnPlayerIndex + 1} CHOOSES THE NEXT REWARD";
             SendSnapshot();
@@ -541,6 +561,7 @@ namespace ProjectExpedition
         {
             if (_phase != OnlinePhase.LevelUp || index < 0 || index >= _onlineRewards.Count) return;
             var option = _onlineRewards[index];
+            if (!_onlineRunModel.CompleteReward()) return;
             if (option.Shared)
             {
                 ApplyOnlineReward(PlayerByIndex(0), option.Item);
@@ -554,8 +575,7 @@ namespace ProjectExpedition
             _lastRewardTargetPlayerIndex = option.TargetPlayerIndex;
             _lastRewardChooserPlayerIndex = _rewardTurnPlayerIndex;
             _lastRewardShared = option.Shared;
-            _rewardTurnCounter++;
-            _phase = OnlinePhase.Playing;
+            SyncHostRunProjection();
             SendSnapshot();
         }
 
@@ -605,8 +625,8 @@ namespace ProjectExpedition
 
         private void EndRun(bool victory)
         {
-            if (_phase == OnlinePhase.Victory || _phase == OnlinePhase.Defeat) return;
-            _phase = victory ? OnlinePhase.Victory : OnlinePhase.Defeat;
+            if (!_onlineRunModel.Complete(victory)) return;
+            SyncHostRunProjection();
             _resultSelection = _networkManager != null && _networkManager.IsHost ? 0 : 1;
             _status = victory ? "A SAGA IS BORN" : "THE ICE CLAIMS THE EXPEDITION";
             if (!_runRecorded && _networkManager != null && _networkManager.IsHost)
@@ -634,18 +654,12 @@ namespace ProjectExpedition
                 _playerTargets[player.Id] = player.Position;
                 EnsurePlayerView(player.Id);
             }
-            _phase = OnlinePhase.Playing;
-            _elapsed = 0f;
-            _level = 1;
-            _experience = 0;
-            _experienceToNext = BalanceRules.ExperienceToNext(_level, 2);
+            _onlineRunModel.Begin(2, BalanceRules.ExperienceToNext);
+            SyncHostRunProjection();
             _kills = 0;
             _renown = 0;
-            _bossSpawned = false;
             _runRecorded = false;
             _nextEnemyId = 1;
-            _rewardTurnCounter = 0;
-            _rewardTurnPlayerIndex = 0;
             _lastRewardItemIndex = -1;
             _lastRewardTargetPlayerIndex = 0;
             _lastRewardChooserPlayerIndex = 0;
@@ -712,6 +726,7 @@ namespace ProjectExpedition
             _transport = null;
             _networkObject = null;
             ClearAllVisuals();
+            _onlineRunModel.Reset();
             _phase = OnlinePhase.Lobby;
             _status = "Session closed";
             _inputReadyAt = Time.unscaledTime + 0.25f;
@@ -779,6 +794,7 @@ namespace ProjectExpedition
             _playerViews.Remove(clientId);
             if (_networkManager != null && _networkManager.IsServer)
             {
+                _onlineRunModel.Reset();
                 _phase = OnlinePhase.Lobby;
                 _enemies.Clear();
                 _onlineEnemyGrid.Clear();
@@ -824,6 +840,7 @@ namespace ProjectExpedition
         private void SendSnapshot()
         {
             if (_networkManager == null || !_networkManager.IsServer) return;
+            SyncHostRunProjection();
             var capacity = 2048 + _players.Count * 160 + _enemies.Count * 16;
             using (var writer = new FastBufferWriter(capacity, Allocator.Temp))
             {

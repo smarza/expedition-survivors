@@ -178,7 +178,8 @@ def main() -> int:
                               "RewardFactory_SameSeedProducesSameRecipientsAndItems", "LegacyV1Save_MigratesWithoutProgressLoss",
                               "Begin_InitializesDeterministicProgressionState", "Advance_TriggersBossExactlyOnceAtConfiguredTime",
                               "AddExperience_CarriesOverflowAndWaitsForRewardResolution", "RewardTurn_AlternatesAcrossTwoPlayers",
-                              "Complete_IsIdempotentAndResetReturnsToIdle")
+                              "Complete_IsIdempotentAndResetReturnsToIdle",
+                              "OnlinePhaseProjection_PreservesSnapshotWireValues")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -214,6 +215,27 @@ def main() -> int:
     missing_online = [token for token in online_requirements if token not in online_source]
     if missing_online:
         fail("networked gameplay slice is incomplete: " + ", ".join(missing_online))
+
+    online_shared_requirements = ("_onlineRunModel.Begin", "_onlineRunModel.Advance",
+                                  "_onlineRunModel.AddExperience", "_onlineRunModel.CompleteReward",
+                                  "_onlineRunModel.Complete", "SyncHostRunProjection")
+    if any(requirement not in online_source for requirement in online_shared_requirements):
+        fail("Online host does not project the shared run model completely")
+
+    snapshot_start = online_source.index("private void SendSnapshot()")
+    snapshot_end = online_source.index("private void ReceiveSnapshot", snapshot_start)
+    snapshot_source = online_source[snapshot_start:snapshot_end]
+    snapshot_wire_order = ("writer.WriteValueSafe((byte)_phase)", "writer.WriteValueSafe((byte)_mapIndex)",
+                           "writer.WriteValueSafe(_elapsed)", "writer.WriteValueSafe(_level)",
+                           "writer.WriteValueSafe(_experience)", "writer.WriteValueSafe(_experienceToNext)",
+                           "writer.WriteValueSafe(_kills)", "writer.WriteValueSafe(_renown)",
+                           "writer.WriteValueSafe(_bossSpawned)", "writer.WriteValueSafe((byte)_rewardTurnPlayerIndex)")
+    cursor = -1
+    for field in snapshot_wire_order:
+        position = snapshot_source.find(field, cursor + 1)
+        if position < 0:
+            fail(f"snapshot v2 header field is missing or reordered: {field}")
+        cursor = position
 
     content_source = (ROOT / "Assets/Scripts/Runtime/ContentDefinitions.cs").read_text(encoding="utf-8")
     input_source = (ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs").read_text(encoding="utf-8")

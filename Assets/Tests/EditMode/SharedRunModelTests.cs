@@ -91,6 +91,27 @@ namespace ProjectExpedition.Tests
             Assert.That(model.Outcome, Is.EqualTo(RunOutcome.None));
         }
 
+        [Test]
+        public void OnlinePhaseProjection_PreservesSnapshotWireValues()
+        {
+            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Lobby, Is.EqualTo(0));
+            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Playing, Is.EqualTo(1));
+            Assert.That((byte)OnlineCoopSpike.OnlinePhase.LevelUp, Is.EqualTo(2));
+            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Victory, Is.EqualTo(3));
+            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Defeat, Is.EqualTo(4));
+
+            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Idle, RunOutcome.None),
+                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Lobby));
+            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Playing, RunOutcome.None),
+                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Playing));
+            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Reward, RunOutcome.None),
+                Is.EqualTo(OnlineCoopSpike.OnlinePhase.LevelUp));
+            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Completed, RunOutcome.Victory),
+                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Victory));
+            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Completed, RunOutcome.Defeat),
+                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Defeat));
+        }
+
         private static SharedRunModel StartedModel(int players, int baseRequirement)
         {
             var model = new SharedRunModel();

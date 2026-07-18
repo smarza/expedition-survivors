@@ -9,7 +9,7 @@
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
 - Split production runtime, EditMode tests and PlayMode tests into explicit assemblies.
-- Added Unity Test Framework `1.4.6` and 16 EditMode regression tests for deterministic RNG, shared run progression, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
+- Added Unity Test Framework `1.4.6` and 17 EditMode regression tests for deterministic RNG, shared run progression, snapshot phase compatibility, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
 - Added 4 disk-safe PlayMode smoke tests for bootstrap initialization, Solo level-up, same-seed replay and terminal run results.
 - Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
 - Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
@@ -19,6 +19,9 @@
 - Routed `GameDirector` progression through the shared model while retaining its existing GameObject, spawning, reward-effect and UI responsibilities.
 - Added five EditMode model tests and PlayMode phase-parity assertions for start, level-up, replay and result transitions.
 - Updated PlayMode object discovery to Unity 6000.5's unsorted `FindObjectsByType<T>()` overload, removing the deprecated `FindObjectsSortMode` warnings.
+- Routed the Online host's clock, boss trigger, XP, level-up ownership and terminal result through the same `SharedRunModel` used by Solo and Local Co-op.
+- Preserved the `expedition.snapshot.v2` wire phase values and field order; existing replicated fields are now a projection rather than a second source of authority.
+- Added an EditMode compatibility test that locks the numeric Online phase values used by current host/client snapshots.
 
 # Milestone 0.7.1 — Foundation runtime fixes
 
