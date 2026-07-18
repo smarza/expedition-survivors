@@ -21,9 +21,10 @@ The repository has one Pages site, so the latest successful development-branch d
 Windows remains the first commercial target, but it is no longer rebuilt for every development commit. `StandaloneWindows64` runs:
 
 - on every push to `main`;
-- from **Actions → Unity CI → Run workflow** when `Build the Windows acceptance player` is enabled.
+- from **Actions → Unity CI → Run workflow** when `Build the Windows acceptance player` is enabled;
+- on a development-branch push whose head commit contains the intentional `[windows]` milestone marker.
 
-Use the manual option before closing a milestone or whenever a change is likely to behave differently in the native player. Windows artifacts are retained for 14 days.
+Use the marker only on a milestone-closing commit; otherwise prefer the manual option when a change is likely to behave differently in the native player. Windows artifacts are retained for 14 days.
 
 New commits cancel an older in-progress run for the same branch. This prevents outdated builds from consuming runner time.
 

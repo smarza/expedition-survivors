@@ -132,6 +132,31 @@ namespace ProjectExpedition.Tests
         }
 
         [UnityTest]
+        public IEnumerator RewardPipeline_ProjectsSharedWeaponUpgrade()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+            director.BeginRunSetup(1);
+            director.ConfirmCharacters(0, 1);
+            director.SelectMapAndStart(0);
+            var player = director.Player;
+            var initialDamage = player.Weapons.AxeDamage;
+
+            var applied = RewardEffects.Apply(player, new RewardOption
+            {
+                Item = ItemCatalog.FrostAxe,
+                TargetPlayerIndex = 0
+            });
+
+            Assert.That(applied, Is.True);
+            Assert.That(player.Build.Find(ItemCatalog.FrostAxe.Id).Level, Is.EqualTo(2));
+            Assert.That(player.Weapons.AxeDamage,
+                Is.EqualTo(initialDamage * 1.26f).Within(0.0001f));
+
+            yield return DestroyDirector(director);
+        }
+
+        [UnityTest]
         public IEnumerator ReplayRun_PreservesSeedAndRestartsProgress()
         {
             yield return ClearDirectors();

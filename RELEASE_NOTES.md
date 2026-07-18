@@ -1,4 +1,4 @@
-# Milestone 0.8.0 — Shared simulation (in development)
+# Milestone 0.8.0 — Shared simulation (release candidate)
 
 - Pinned development to Unity `6000.5.4f1`, a supported release newer than the first patched Unity 6.0 LTS version for CVE-2025-59489.
 - Updated the Unity 6000.5 package matrix to Input System `1.19.0`, Rider Editor `3.0.40` and Visual Studio Editor `2.0.27`.
@@ -9,8 +9,8 @@
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
 - Split production runtime, EditMode tests and PlayMode tests into explicit assemblies.
-- Added Unity Test Framework `1.4.6` and 28 EditMode regression tests for deterministic RNG, shared run/player/enemy/projectile behavior, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
-- Added 6 disk-safe PlayMode smoke tests for bootstrap initialization, shared player/enemy projection, Solo level-up, same-seed replay and terminal run results.
+- Added Unity Test Framework `1.4.6` and 38 EditMode regression tests for deterministic RNG, shared run/player/enemy/spawn/projectile/effect behavior, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
+- Added 7 disk-safe PlayMode smoke tests for bootstrap initialization, shared player/enemy/reward projection, Solo level-up, same-seed replay and terminal run results.
 - Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
 - Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
 - Moved the pool test probe out of the Editor-only assembly so Unity can attach it to a `GameObject` during EditMode pool-reuse validation.
@@ -21,10 +21,13 @@
 - Extracted Frost Axe flight, lifetime, collision radius and pierce rules into the presentation-free `SharedProjectileModel` used by Solo and Local Co-op.
 - Extracted player attributes, movement requests, damage/armor, invulnerability, knockdown/revival and Ultimate rules into `SharedPlayerModel`; `PlayerController` now projects that shared state for both Solo and Local Co-op.
 - Extracted enemy derived attributes, pursuit movement, contact cadence, knockback and death into `SharedEnemyModel`; the pooled `Enemy` component now handles target selection, presentation, spatial updates and drops around that state.
+- Extracted wave cadence, difficulty ramp, active-enemy cap, group growth and spawn-ring rules into `SharedSpawnModel`; `GameDirector` now only materializes the requested enemies.
+- Extracted Frost Axe and Raven Guard timing/statistics, upgrades, Ultimates and evolution effects into `SharedWeaponModel` and `SharedEffectPipeline` while preserving the existing balance values.
+- Routed reward application, projectile requests, area damage, healing and evolution explosions through the shared effect boundary; local components now provide targeting, collision and presentation adapters.
 - Removed the experimental Online Co-op runtime, menu entry, Netcode package and Transport assembly dependencies from the active product scope.
 - Deferred Online multiplayer until the Solo/Local shared simulation is mature; the former POC remains recoverable from Git history and its future replacement must reuse the common gameplay core.
 - Added GitHub Actions continuous integration with static validation, Unity EditMode/PlayMode tests, a Web build and automatic GitHub Pages preview deployment.
-- Reserved Windows CI builds for `main` and explicit milestone dispatches so everyday gameplay validation can use the browser without weakening the native release gate.
+- Reserved Windows CI builds for `main`, explicit milestone dispatches and `[windows]` milestone commits so everyday gameplay validation can use the browser without weakening the native release gate.
 - Enabled Unity's Web decompression fallback for static hosting and retained downloadable Web artifacts alongside the live preview.
 - Added license preflight, isolated Unity Library caches, cancellation of superseded branch runs and 14-day test/build artifacts.
 - Removed the validator's external Pillow dependency by reading the PNG header directly, keeping the fast CI guard self-contained.

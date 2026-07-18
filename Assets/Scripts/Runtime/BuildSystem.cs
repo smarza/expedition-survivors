@@ -399,30 +399,8 @@ namespace ProjectExpedition
 
         public static void Apply(PlayerController player, BuildApplyResult result)
         {
-            if (result.Evolution)
-            {
-                if (result.Item == ItemCatalog.JotunnCleaver) player.Weapons.EvolveFrostAxe();
-                else if (result.Item == ItemCatalog.StormAegis) player.Weapons.EvolveRavenGuard();
-                return;
-            }
-            var effect = result.Item.EffectAtLevel(result.NewLevel);
-            switch (effect)
-            {
-                case UpgradeId.AxeDamage:
-                case UpgradeId.AxeSpeed:
-                case UpgradeId.ExtraAxe:
-                case UpgradeId.AxePierce:
-                case UpgradeId.ShieldDamage:
-                case UpgradeId.CriticalRunes:
-                    player.Weapons.Apply(effect);
-                    break;
-                case UpgradeId.MoveSpeed: player.AddMoveSpeed(0.46f); break;
-                case UpgradeId.MaxHealth: player.AddMaxHealth(24f); break;
-                case UpgradeId.Armor: player.AddArmor(1f); break;
-                case UpgradeId.UltimateCooldown: player.ImproveUltimateCooldown(); break;
-                case UpgradeId.UltimateDamage: player.ImproveUltimateDamage(); break;
-                case UpgradeId.Heal: player.Heal(24f); break;
-            }
+            if (player == null || result == null) return;
+            player.ApplyBuildResult(result);
         }
     }
 }

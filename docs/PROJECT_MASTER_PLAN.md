@@ -411,7 +411,7 @@ Implemented and manually accepted:
 
 ### 12.2 Active milestone: 0.8.0
 
-Started:
+Release candidate implemented:
 
 - repository migration and Git workflow;
 - patched Unity Editor requirement;
@@ -420,22 +420,23 @@ Started:
 - security policy and rebuild requirement;
 - successful patched-Editor import, compilation and Solo/Local manual smoke pass confirmed on 2026-07-18;
 - production runtime, EditMode and PlayMode assembly boundaries;
-- Unity Test Framework 1.4.6 with 28 EditMode and 6 PlayMode regressions enforced by GitHub Actions;
+- Unity Test Framework 1.4.6 with 38 EditMode and 7 PlayMode regressions enforced by GitHub Actions;
 - backward-compatible migration from legacy save payloads to versioned save envelope 2;
 - first Phase C extraction: local clock, phase, boss trigger, XP, reward turn and outcome now route through `SharedRunModel`;
 - Frost Axe flight, lifetime, collision-radius and pierce behavior are extracted into `SharedProjectileModel`;
 - player attributes, movement requests, damage/armor, invulnerability, knockdown/revival and Ultimate rules are extracted into `SharedPlayerModel`;
 - enemy derived attributes, pursuit movement, contact cadence, knockback and death are extracted into `SharedEnemyModel`;
+- wave cadence, difficulty ramp, active cap, group growth and spawn-ring rules are extracted into `SharedSpawnModel`;
+- automatic weapon timing, upgrades, Ultimates and evolution effects are extracted into `SharedWeaponModel` and `SharedEffectPipeline`;
 - the `SharedEnemyModel` extraction passed automated and owner gameplay validation on 2026-07-18;
 - successful development builds are published as a browser-playable GitHub Pages preview, while Windows builds remain milestone and `main` gates;
 - the experimental Online runtime, menu and networking packages are removed from active scope;
-- incremental shared simulation extraction in progress.
+- Solo and Local Co-op now resolve the current run, player, enemy, spawning, projectile, weapon, reward and effect rules from one shared source.
 
-Not yet completed:
+Final closeout pending:
 
-- rebuilding the final 0.8.0 Windows acceptance executables with the patched runtime;
-- shared simulation implementation;
-- further extraction of enemy spawning, remaining weapon and effect rules into testable shared models.
+- green release-candidate CI, including the patched Windows milestone build;
+- final owner gameplay acceptance, PR merge and `v0.8.0` tag.
 
 ## 13. Current technical architecture
 
@@ -446,10 +447,12 @@ Not yet completed:
 | `SharedRunModel` | Presentation-free run phase, clock, boss trigger, XP, reward turn and terminal outcome. |
 | `SharedPlayerModel` | Presentation-free attributes, movement requests, damage, knockdown/revival and Ultimate state. |
 | `SharedEnemyModel` | Presentation-free enemy attributes, pursuit, contact cadence, knockback and death state. |
+| `SharedSpawnModel` | Presentation-free wave cadence, difficulty ramp, active cap, group growth and spawn-ring rules. |
 | `SharedProjectileModel` | Presentation-free projectile flight, lifetime, collision radius and pierce budget. |
+| `SharedWeaponModel`, `SharedEffectPipeline` | Presentation-free automatic weapon timing, upgrades and validated combat/evolution effect requests. |
 | `PlayerController` | Local input and GameObject/presentation adapter for `SharedPlayerModel`. |
 | `Enemy` | Pooled GameObject/presentation, target selection, drops and spatial-index adapter for `SharedEnemyModel`. |
-| `WeaponSystem` | Runtime automatic weapon behavior. |
+| `WeaponSystem` | Local targeting, GameObject and presentation adapter for the shared weapon/effect model. |
 | `AxeProjectile`, `ExperienceGem` | Focused local simulation actors. |
 | `BuildSystem` | Catalog, build slots, levels, reward generation and evolution recipes. |
 | `ContentDefinitions` | Characters, maps, Ultimates and balance rules. |
@@ -473,7 +476,7 @@ Other significant debt:
 
 - IMGUI is not the final UI system;
 - current runtime-generated visuals are placeholders;
-- the initial Unity suite is accepted on the target Editor, but still needs CI automation and broader shared-simulation coverage;
+- shared simulation coverage is automated; broader content, UI and performance coverage remains future milestone work;
 - no production cloud-save integration;
 - save migration now covers legacy payload to envelope v2, but needs a durable migration chain and failure recovery before public progression begins;
 - no final audio architecture or asset pipeline;
@@ -556,7 +559,7 @@ Exit gate: critical deterministic rules fail automatically when regressed.
 
 ### Phase C — Extract shared run model
 
-Status: local run progression, player state, enemy state and Frost Axe projectile flight are implemented in presentation-free models. The enemy-model cut passed owner gameplay validation on 2026-07-18. Enemy spawning and remaining-weapon state extraction continue.
+Status: implemented. Run progression, player state, enemy state, spawning and Frost Axe projectile flight are presentation-free models used by both Solo and Local Co-op. The incremental cuts through the enemy model passed owner gameplay validation on 2026-07-18; the release candidate awaits its final matrix.
 
 1. Define commands, events and read-only state views.
 2. Move clock, phase, XP, reward-turn and outcome rules behind the shared boundary.
@@ -568,6 +571,8 @@ Exit gate: Solo and Local Co-op runs use the shared model with no feature loss.
 
 ### Phase D — Shared effects and builds
 
+Status: implemented. Existing Frost Axe, Raven Guard, Ultimate and evolution behavior now produces shared effect requests; reward application routes through the same player/weapon boundary while keeping current balance values.
+
 1. Introduce effect definitions and runtime instances.
 2. Reimplement Frost Axe, Raven Guard, both Ultimates and both evolutions through the shared pipeline.
 3. Preserve current balance values until behavior parity is proven.
@@ -576,6 +581,8 @@ Exit gate: Solo and Local Co-op runs use the shared model with no feature loss.
 Exit gate: existing content is data/effect-driven and no longer depends on director-specific branches.
 
 ### Phase E — Local adapters and presentation
+
+Status: implemented. Solo and Local Co-op remain player-count configurations of the same `GameDirector`, player, enemy, spawn, build, weapon and effect sources. Local components retain only input, GameObject, collision and presentation responsibilities needed by the current prototype.
 
 1. Route Local Co-op through the same simulation commands.
 2. Keep Solo and Local Co-op as player-count configurations rather than separate rule paths.
@@ -586,6 +593,8 @@ Exit gate: existing content is data/effect-driven and no longer depends on direc
 Exit gate: Solo and Local Co-op resolve the same weapon/build/reward rules from one source.
 
 ### Phase F — Regression and milestone close
+
+Status: automated release-candidate validation pending. Manual owner acceptance, merge and tag follow only after static validation, 38 EditMode tests, 7 PlayMode tests, Web/Pages and Windows milestone compilation are green.
 
 1. Run the manual mode matrix with keyboard, one gamepad and two gamepads.
 2. Validate reward ownership and device focus.
@@ -732,12 +741,10 @@ Expedition Survivors is not launch-ready merely because a run can be completed. 
 The next developer/agent should do the following, in order:
 
 1. Work on `agent/0.8.0-shared-simulation` and PR #1.
-2. Pull the Phase B test-harness commit and allow Unity `6000.5.4f1` to resolve Unity Test Framework `1.4.6`.
-3. Run all 28 EditMode and 6 PlayMode tests using `docs/TESTING_0.8.md`; report any failure with its full stack trace.
-4. Capture and commit only legitimate package-lock or serialization changes produced by the target Editor.
-5. Continue extracting enemy spawning, weapon and effect state incrementally for the shared Solo/Local implementation.
-6. Keep the game playable and run automated plus relevant Solo/Local regressions after every extraction step.
-7. Rebuild patched Windows acceptance executables before closing 0.8.0.
-8. Update this document whenever architecture, scope, platform or release decisions change.
+2. Verify the release-candidate workflow: static validation, 38 EditMode tests, 7 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
+3. Run the final Solo and Local Co-op matrix from `docs/TESTING_0.8.md` through the Pages preview, then use the Windows artifact for the native packaging/device check.
+4. Record any failure with its seed, mode, devices, reproduction steps and Console/log output.
+5. After explicit owner acceptance, merge PR #1 into `main` and tag `v0.8.0`.
+6. Begin 0.9.0 Presentation Foundation from the updated `main` on a new milestone branch and PR.
 
 Do not begin bulk content creation before the shared simulation and test boundary is credible. Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.

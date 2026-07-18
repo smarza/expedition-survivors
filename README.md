@@ -1,4 +1,4 @@
-# Project Expedition — Shared Simulation 0.8.0 (development)
+# Project Expedition — Shared Simulation 0.8.0 (release candidate)
 
 An original survivors-like prototype built for Unity 6 LTS. The milestone is intentionally self-contained: it has no purchased packages or external asset dependencies and bootstraps itself from an empty scene.
 
@@ -23,8 +23,8 @@ The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode a
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 28 deterministic domain, shared-run, shared-player, shared-enemy, shared-projectile, content, build, reward, pool, spatial-grid and save-migration tests.
-2. **PlayMode** — 6 bootstrap, shared-model projection, level-up, replay-seed and result-flow tests.
+1. **EditMode** — 38 deterministic domain, shared-run, shared-player, shared-enemy, shared-spawn, shared-projectile/effect, content, build, reward, pool, spatial-grid and save-migration tests.
+2. **PlayMode** — 7 bootstrap, shared-model/reward projection, level-up, replay-seed and result-flow tests.
 
 The PlayMode tests explicitly disable persistence, so they do not overwrite the developer's local campaign save. The exact acceptance procedure and current manual regression matrix are in [`docs/TESTING_0.8.md`](docs/TESTING_0.8.md).
 
@@ -85,8 +85,8 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Startup foundation checks covering deterministic random sequences, spatial membership and stable content IDs.
 - Runtime, EditMode and PlayMode assembly boundaries that keep tests separate from production builds.
 - GitHub Actions gates for static validation, Unity tests, Web compilation and GitHub Pages deployment, with Windows builds reserved for `main` and milestone dispatches.
-- Twenty-eight EditMode regression tests for deterministic foundations, shared run/player/enemy/projectile behavior, builds, rewards, balance and versioned save migration.
-- Six disk-safe PlayMode smoke tests for bootstrap, shared player/enemy projection, Solo level-up, same-seed replay and terminal result flow.
+- Thirty-eight EditMode regression tests for deterministic foundations, shared run/player/enemy/spawn/projectile/effect behavior, builds, rewards, balance and versioned save migration.
+- Seven disk-safe PlayMode smoke tests for bootstrap, shared player/enemy/reward projection, Solo level-up, same-seed replay and terminal result flow.
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
 
 ## Architecture
@@ -95,7 +95,9 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - `SharedRunModel`: presentation-free phase, clock, boss trigger, XP, reward-turn and outcome state.
 - `SharedPlayerModel`: presentation-free player attributes, movement requests, damage, knockdown/revival and Ultimate state.
 - `SharedEnemyModel`: presentation-free enemy attributes, movement, contact cadence, knockback and death state.
+- `SharedSpawnModel`: presentation-free wave cadence, difficulty ramp, active cap, group size and spawn-ring rules.
 - `SharedProjectileModel`: presentation-free Frost Axe flight, lifetime, collision radius and pierce state.
+- `SharedWeaponModel` / `SharedEffectPipeline`: presentation-free automatic weapon timing, derived combat requests, upgrades, Ultimates and evolutions.
 - `PlayerController`: local input and GameObject/presentation adapter for the shared player model.
 - `Enemy`: pooled GameObject/presentation, target selection, drops and spatial-index adapter for the shared enemy model.
 - `LocalInputRouter`: deterministic keyboard/gamepad ownership for Local Co-op.
@@ -103,7 +105,7 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - `ContentAssets`: ScriptableObject authoring records, runtime loading, validation and enemy archetypes.
 - `BuildSystem`: item catalog, slots, reward generation, build state and evolution recipes.
 - `ProductionFoundation`: generic component pools, spatial hash, deterministic random source, performance metrics and startup checks.
-- `WeaponSystem`: data-like runtime weapon state and automatic attacks.
+- `WeaponSystem`: local targeting, GameObject and presentation adapter for the shared weapon/effect model.
 - `AxeProjectile`, `ExperienceGem`: focused simulation actors.
 - `SaveService`: versioned local persistence with atomic temporary-file writes.
 - `SaveMigration`: backward-compatible deserialization and current save-envelope serialization.

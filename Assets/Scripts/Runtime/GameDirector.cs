@@ -278,17 +278,20 @@ namespace ProjectExpedition
                 : otherCenter + offset.normalized * maximumSeparation;
         }
 
-        public int DamageEnemiesInRadius(Vector2 center, float radius, float damage, float knockback)
+        public int ResolveAreaEffect(Vector2 center, SharedEffectRequest effect)
         {
+            if (effect.Kind != SharedEffectKind.AreaDamage ||
+                effect.Target != SharedEffectTarget.Enemies) return 0;
             var hitCount = 0;
-            GetEnemiesInRadius(center, radius + 0.9f, _spatialScratch);
+            GetEnemiesInRadius(center, effect.Radius + 0.9f, _spatialScratch);
             for (var i = _spatialScratch.Count - 1; i >= 0; i--)
             {
                 var enemy = _spatialScratch[i];
                 if (enemy == null || !enemy.Alive) continue;
-                if ((enemy.Position - center).sqrMagnitude <= (radius + enemy.Radius) * (radius + enemy.Radius))
+                if ((enemy.Position - center).sqrMagnitude <=
+                    (effect.Radius + enemy.Radius) * (effect.Radius + enemy.Radius))
                 {
-                    enemy.TakeDamage(damage, knockback, center);
+                    enemy.TakeDamage(effect.Damage, effect.Knockback, center);
                     hitCount++;
                 }
             }

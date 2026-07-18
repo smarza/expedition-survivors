@@ -103,9 +103,9 @@ namespace ProjectExpedition
         private void ActivateUltimate()
         {
             if (Definition == null || !_model.TryActivateUltimate()) return;
-            var radius = _model.UltimateRadius;
-            _director.DamageEnemiesInRadius(transform.position, radius, _model.UltimateDamage, 3.2f);
-            _director.ShowUltimate(transform.position, PlayerIndex, radius);
+            var effect = SharedEffectPipeline.CreateUltimate(_model);
+            _director.ResolveAreaEffect(transform.position, effect);
+            _director.ShowUltimate(transform.position, PlayerIndex, effect.Radius);
             _director.Announce($"{HeroName.ToUpperInvariant()} — {UltimateName.ToUpperInvariant()}", 2.2f);
         }
 
@@ -147,5 +147,17 @@ namespace ProjectExpedition
         public void ImproveUltimateDamage() => _model.ImproveUltimateDamage();
 
         public void AddMaxHealth(float amount) => _model.AddMaxHealth(amount);
+
+        public void ApplyBuildResult(BuildApplyResult result)
+        {
+            if (result == null || result.Item == null) return;
+            if (result.Evolution)
+            {
+                Weapons.Model.ApplyEvolution(result.Item.Id);
+                return;
+            }
+            SharedEffectPipeline.ApplyUpgrade(_model, Weapons.Model,
+                result.Item.EffectAtLevel(result.NewLevel));
+        }
     }
 }

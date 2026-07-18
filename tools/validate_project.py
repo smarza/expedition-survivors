@@ -67,6 +67,7 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedPlayerModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedEnemyModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedSpawnModel.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedEffectModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
         ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
@@ -77,6 +78,7 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SharedPlayerModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedEnemyModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedSpawnModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/SharedEffectModelTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -199,7 +201,13 @@ def main() -> int:
                               "Advance_UsesInitialDelayAndMapDifficultyRamp",
                               "Advance_GrowsGroupsAndClampsSpawnInterval",
                               "Advance_RespectsActiveCapButNeverSuppressesBoss",
-                              "CalculateSpawnPosition_UsesSharedRingBounds")
+                              "CalculateSpawnPosition_UsesSharedRingBounds",
+                              "Advance_PreservesAutomaticWeaponCadence",
+                              "UpgradesAndEvolutions_PreserveExistingBalanceValues",
+                              "AxeVolley_ProducesSharedProjectileEffectsAndDirections",
+                              "RavenGuard_ProducesSharedAreaEffectAndBoundedHealing",
+                              "EffectPipeline_AppliesPlayerWeaponAndEvolutionState",
+                              "UltimateAndEvolutionExplosion_UseSharedAreaRequests")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -235,6 +243,8 @@ def main() -> int:
     enemy_source = (ROOT / "Assets/Scripts/Runtime/Enemy.cs").read_text(encoding="utf-8")
     shared_enemy_source = (ROOT / "Assets/Scripts/Runtime/SharedEnemyModel.cs").read_text(encoding="utf-8")
     shared_spawn_source = (ROOT / "Assets/Scripts/Runtime/SharedSpawnModel.cs").read_text(encoding="utf-8")
+    shared_effect_source = (ROOT / "Assets/Scripts/Runtime/SharedEffectModel.cs").read_text(encoding="utf-8")
+    build_source = (ROOT / "Assets/Scripts/Runtime/BuildSystem.cs").read_text(encoding="utf-8")
     shared_enemy_requirements = (
         "class SharedEnemyModel",
         "EnemyAdvanceResult AdvanceTowards",
@@ -252,12 +262,24 @@ def main() -> int:
         requirement not in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8")
         for requirement in ("_spawnModel.Advance", "_spawnModel.Begin", "SharedSpawnModel.CalculateSpawnPosition")):
         fail("GameDirector must project the shared spawn scheduler instead of owning wave formulas")
+    weapon_source = (ROOT / "Assets/Scripts/Runtime/WeaponSystem.cs").read_text(encoding="utf-8")
+    if any(requirement not in shared_effect_source for requirement in (
+        "class SharedWeaponModel", "struct SharedEffectRequest", "class SharedEffectPipeline",
+        "WeaponAdvanceResult Advance", "CreateUltimate", "CreateJotunnCleaverExplosion")) or any(
+        requirement not in weapon_source for requirement in (
+            "internal SharedWeaponModel Model", "Model.Advance", "Model.CreateAxeEffect",
+            "Model.CreateRavenGuardEffect")):
+        fail("WeaponSystem must adapt the shared weapon/effect pipeline instead of owning combat rules")
+    if "switch (effect)" in build_source or "player.Weapons.Apply" in build_source:
+        fail("RewardEffects must route upgrades through the shared effect pipeline")
+    play_mode_source = (ROOT / "Assets/Tests/PlayMode/ExpeditionFlowPlayModeTests.cs").read_text(encoding="utf-8")
+    if "RewardPipeline_ProjectsSharedWeaponUpgrade" not in play_mode_source:
+        fail("PlayMode tests must cover the reward-to-shared-weapon adapter boundary")
 
     content_source = (ROOT / "Assets/Scripts/Runtime/ContentDefinitions.cs").read_text(encoding="utf-8")
     input_source = (ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs").read_text(encoding="utf-8")
     hud_source = (ROOT / "Assets/Scripts/Runtime/GameHUD.cs").read_text(encoding="utf-8")
     game_types_source = (ROOT / "Assets/Scripts/Runtime/GameTypes.cs").read_text(encoding="utf-8")
-    build_source = (ROOT / "Assets/Scripts/Runtime/BuildSystem.cs").read_text(encoding="utf-8")
     database_source = (ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs").read_text(encoding="utf-8")
     online_runtime = ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs"
     if online_runtime.exists() or "OnlineSpike" in game_types_source or "ONLINE CO-OP" in hud_source:
@@ -277,6 +299,7 @@ def main() -> int:
         '      - "agent/**"',
         "targetPlatform: StandaloneWindows64",
         "inputs.build_windows",
+        "github.event.head_commit.message",
         "python3 tools/validate_project.py",
         "UNITY_LICENSE:",
         "UNITY_SERIAL:",
@@ -313,6 +336,7 @@ def main() -> int:
         "shared player state": "class SharedPlayerModel" in shared_player_source and "readonly SharedPlayerModel _model" in player_source,
         "shared enemy state": "class SharedEnemyModel" in shared_enemy_source and "readonly SharedEnemyModel _model" in enemy_source,
         "shared spawning": "class SharedSpawnModel" in shared_spawn_source and "_spawnModel.Advance" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
+        "shared effects": "class SharedEffectPipeline" in shared_effect_source and "Model.CreateRavenGuardEffect" in weapon_source,
         "scriptable content database": "class ProductionContentDatabase : ScriptableObject" in database_source and "Resources.Load<ProductionContentDatabase>" in (ROOT / "Assets/Scripts/Runtime/ContentAssets.cs").read_text(encoding="utf-8"),
         "gamepad movement deadzone": "MovementDeadzone" in input_source and "ApplyMovementDeadzone" in input_source,
         "visible replay confirmation": "REPLAYING SEED" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
