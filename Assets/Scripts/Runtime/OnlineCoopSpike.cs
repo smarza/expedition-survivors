@@ -140,7 +140,7 @@ namespace ProjectExpedition
             _phase = OnlinePhase.Lobby;
             _status = "Start a Host, then Join from the second instance";
             _inputReadyAt = Time.unscaledTime + 0.25f;
-            _camera = FindFirstObjectByType<Camera>();
+            _camera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
             EnsureVisualRoot();
         }
 

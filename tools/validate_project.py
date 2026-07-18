@@ -46,6 +46,10 @@ def validate_csharp(path: Path) -> None:
             fail(f"{path.relative_to(ROOT)} has unbalanced {opening}{closing}")
     if re.search(r"\b(TODO|FIXME|NotImplementedException)\b", raw):
         fail(f"{path.relative_to(ROOT)} contains unfinished implementation markers")
+    obsolete_unity_65_apis = ("GetInstanceID(", "FindFirstObjectByType")
+    obsolete = [token for token in obsolete_unity_65_apis if token in clean]
+    if obsolete:
+        fail(f"{path.relative_to(ROOT)} uses Unity 6000.5 obsolete APIs: " + ", ".join(obsolete))
 
 
 def main() -> int:

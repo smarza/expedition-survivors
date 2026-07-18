@@ -14,7 +14,7 @@ namespace ProjectExpedition
         private float _radius;
         private bool _critical;
         private bool _evolved;
-        private readonly HashSet<int> _hits = new HashSet<int>();
+        private readonly HashSet<Enemy> _hits = new HashSet<Enemy>();
         private readonly List<Enemy> _nearby = new List<Enemy>(24);
         private SpriteRenderer _renderer;
 
@@ -54,10 +54,10 @@ namespace ProjectExpedition
             for (var i = _nearby.Count - 1; i >= 0; i--)
             {
                 var enemy = _nearby[i];
-                if (enemy == null || !enemy.Alive || _hits.Contains(enemy.GetInstanceID())) continue;
+                if (enemy == null || !enemy.Alive || _hits.Contains(enemy)) continue;
                 var range = _radius + enemy.Radius;
                 if (((Vector2)transform.position - enemy.Position).sqrMagnitude > range * range) continue;
-                _hits.Add(enemy.GetInstanceID());
+                _hits.Add(enemy);
                 enemy.TakeDamage(_damage, _critical ? 0.42f : 0.18f, transform.position);
                 if (_evolved) _director.DamageEnemiesInRadius(enemy.Position, 1.25f, _damage * 0.42f, 0.3f);
                 _pierce--;
