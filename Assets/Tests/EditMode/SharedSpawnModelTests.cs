@@ -12,7 +12,7 @@ namespace ProjectExpedition.Tests
             model.Begin();
 
             var waiting = model.Advance(0.19f, 46f, ContentCatalog.Maps[0], 0, false);
-            var spawning = model.Advance(0.01f, 46f, ContentCatalog.Maps[0], 0, false);
+            var spawning = model.Advance(0.02f, 46f, ContentCatalog.Maps[0], 0, false);
 
             Assert.That(waiting.RegularEnemyCount, Is.Zero);
             Assert.That(spawning.RegularEnemyCount, Is.EqualTo(2));
