@@ -29,7 +29,7 @@ New commits cancel an older in-progress run for the same branch. This prevents o
 
 ## GitHub Pages setup
 
-The repository must use **Settings → Pages → Build and deployment → Source: GitHub Actions**. The Web player enables Unity's decompression fallback because GitHub Pages does not expose custom compression headers. The workflow verifies `index.html`, adds `.nojekyll`, uploads a downloadable Web artifact and then publishes the same directory.
+The repository must use **Settings → Pages → Build and deployment → Source: GitHub Actions**. The Web player enables Unity's decompression fallback because GitHub Pages does not expose custom compression headers. The workflow verifies `index.html`, uploads a downloadable Web artifact and then publishes the same directory through the Pages artifact API, without a Jekyll build.
 
 ## Required repository secrets
 

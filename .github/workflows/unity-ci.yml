@@ -155,9 +155,7 @@ jobs:
 
       - name: Verify Web output
         shell: bash
-        run: |
-          test -f build/WebGL/ExpeditionSurvivors/index.html
-          touch build/WebGL/ExpeditionSurvivors/.nojekyll
+        run: test -f build/WebGL/ExpeditionSurvivors/index.html
 
       - name: Upload Web build
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
