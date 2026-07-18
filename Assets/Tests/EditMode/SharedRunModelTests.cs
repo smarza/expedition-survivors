@@ -92,38 +92,6 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
-        public void OnlinePhaseProjection_PreservesSnapshotWireValues()
-        {
-            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Lobby, Is.EqualTo(0));
-            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Playing, Is.EqualTo(1));
-            Assert.That((byte)OnlineCoopSpike.OnlinePhase.LevelUp, Is.EqualTo(2));
-            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Victory, Is.EqualTo(3));
-            Assert.That((byte)OnlineCoopSpike.OnlinePhase.Defeat, Is.EqualTo(4));
-
-            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Idle, RunOutcome.None),
-                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Lobby));
-            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Playing, RunOutcome.None),
-                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Playing));
-            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Reward, RunOutcome.None),
-                Is.EqualTo(OnlineCoopSpike.OnlinePhase.LevelUp));
-            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Completed, RunOutcome.Victory),
-                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Victory));
-            Assert.That(OnlineCoopSpike.ProjectOnlinePhase(RunSimulationPhase.Completed, RunOutcome.Defeat),
-                Is.EqualTo(OnlineCoopSpike.OnlinePhase.Defeat));
-        }
-
-        [Test]
-        public void OnlineHostSimulation_RequiresPlayingModelAndCompleteParty()
-        {
-            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Playing, 2), Is.True);
-            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Idle, 2), Is.False);
-            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Reward, 2), Is.False);
-            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Completed, 2), Is.False);
-            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Playing, 1), Is.False);
-            Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Playing, 3), Is.False);
-        }
-
-        [Test]
         public void SharedProjectile_TravelsAndConsumesTheSamePierceBudgetForEveryAdapter()
         {
             var projectile = new SharedProjectileModel();

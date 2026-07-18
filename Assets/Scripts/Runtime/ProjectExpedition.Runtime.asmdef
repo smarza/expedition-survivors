@@ -2,10 +2,7 @@
   "name": "ProjectExpedition.Runtime",
   "rootNamespace": "ProjectExpedition",
   "references": [
-    "Unity.Collections",
-    "Unity.InputSystem",
-    "Unity.Netcode.Runtime",
-    "Unity.Networking.Transport"
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

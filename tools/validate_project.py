@@ -67,7 +67,6 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedProjectileModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
-        ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs",
         ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
         ROOT / "Assets/Tests/EditMode/DeterministicFoundationTests.cs",
         ROOT / "Assets/Tests/EditMode/BuildAndRewardTests.cs",
@@ -97,15 +96,14 @@ def main() -> int:
         fail("Packages/manifest.json has no dependencies object")
     if "com.unity.inputsystem" not in manifest["dependencies"]:
         fail("Unity Input System package is required by the co-op input router")
-    if "com.unity.netcode.gameobjects" not in manifest["dependencies"]:
-        fail("Netcode for GameObjects is required by the online spike")
+    if "com.unity.netcode.gameobjects" in manifest["dependencies"]:
+        fail("Online Co-op is deferred; Netcode for GameObjects must not ship in the active runtime")
     if manifest["dependencies"].get("com.unity.test-framework") != "1.4.6":
         fail("Unity Test Framework 1.4.6 is required by the 0.8 automated suites")
     expected_unity_65_packages = {
         "com.unity.ide.rider": "3.0.40",
         "com.unity.ide.visualstudio": "2.0.27",
         "com.unity.inputsystem": "1.19.0",
-        "com.unity.netcode.gameobjects": "2.13.0",
     }
     mismatched_packages = [
         f"{package}={manifest['dependencies'].get(package)} (expected {version})"
@@ -119,7 +117,7 @@ def main() -> int:
             fail(f"{core_package} is a Unity 6000.5 core/transitive package and must not be pinned directly")
     for module in ("com.unity.modules.animation", "com.unity.modules.physics", "com.unity.modules.physics2d"):
         if module not in manifest["dependencies"]:
-            fail(f"Netcode compile dependency is missing: {module}")
+            fail(f"Unity runtime module is missing: {module}")
     project_settings = (ROOT / "ProjectSettings/ProjectSettings.asset").read_text(encoding="utf-8")
     if "activeInputHandler: 1" not in project_settings and "activeInputHandler: 2" not in project_settings:
         fail("Project Settings must enable the Unity Input System")
@@ -148,14 +146,11 @@ def main() -> int:
 
     runtime_assembly = json.loads((ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef").read_text(encoding="utf-8"))
     runtime_references = set(runtime_assembly.get("references", []))
-    required_runtime_references = {
-        "Unity.Collections",
-        "Unity.InputSystem",
-        "Unity.Netcode.Runtime",
-        "Unity.Networking.Transport",
-    }
+    required_runtime_references = {"Unity.InputSystem"}
     if runtime_assembly.get("name") != "ProjectExpedition.Runtime" or not required_runtime_references.issubset(runtime_references):
         fail("runtime assembly definition is missing its production package references")
+    if any(reference.startswith("Unity.Netcode") or reference == "Unity.Networking.Transport" for reference in runtime_references):
+        fail("deferred Online assemblies must not be referenced by the active runtime")
 
     edit_assembly = json.loads((ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef").read_text(encoding="utf-8"))
     edit_references = set(edit_assembly.get("references", []))
@@ -180,8 +175,6 @@ def main() -> int:
                               "Begin_InitializesDeterministicProgressionState", "Advance_TriggersBossExactlyOnceAtConfiguredTime",
                               "AddExperience_CarriesOverflowAndWaitsForRewardResolution", "RewardTurn_AlternatesAcrossTwoPlayers",
                               "Complete_IsIdempotentAndResetReturnsToIdle",
-                              "OnlinePhaseProjection_PreservesSnapshotWireValues",
-                              "OnlineHostSimulation_RequiresPlayingModelAndCompleteParty",
                               "SharedProjectile_TravelsAndConsumesTheSamePierceBudgetForEveryAdapter")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
@@ -194,67 +187,21 @@ def main() -> int:
     if any(requirement not in play_tests for requirement in play_test_requirements):
         fail("PlayMode expedition flow coverage is incomplete")
 
-    online_source = (ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs").read_text(encoding="utf-8")
-    if "_networkObject.transform.SetParent" in online_source:
-        fail("NetworkManager must be created on a root GameObject")
-    if "NetworkConfig = new NetworkConfig()" not in online_source:
-        fail("Runtime NetworkManager must initialize NetworkConfig explicitly")
-    if "ConnectionApproval = true" not in online_source or "ConnectedClientsIds.Count < 2" not in online_source:
-        fail("Online POC must enforce its two-player connection limit")
-    if "Destroy(managerObject, 0.5f)" not in online_source:
-        fail("Network transport must receive a graceful shutdown window")
-    online_requirements = [
-        "OnlinePhase.LevelUp",
-        "BeginExpedition()",
-        "SimulateRun(Time.unscaledDeltaTime)",
-        "DamageEnemiesInRadius",
-        "OfferLevelUp()",
-        "ResolveUpgrade",
-        "BossSpawnTime",
-        "MaximumEnemies = 96",
-        "enemy.Position.x * 100f",
-        "PulseMessage",
-    ]
-    missing_online = [token for token in online_requirements if token not in online_source]
-    if missing_online:
-        fail("networked gameplay slice is incomplete: " + ", ".join(missing_online))
-
-    online_shared_requirements = ("_onlineRunModel.Begin", "_onlineRunModel.Advance",
-                                  "_onlineRunModel.AddExperience", "_onlineRunModel.CompleteReward",
-                                  "_onlineRunModel.Complete", "SyncHostRunProjection",
-                                  "ShouldSimulateHost", "connectedPlayerCount == 2")
-    if any(requirement not in online_source for requirement in online_shared_requirements):
-        fail("Online host does not project the shared run model completely")
-    if "SharedProjectileModel" not in online_source or "UpdateProjectiles(deltaTime)" not in online_source:
-        fail("Online Frost Axe must use the shared travelling-projectile model")
     axe_source = (ROOT / "Assets/Scripts/Runtime/AxeProjectile.cs").read_text(encoding="utf-8")
     if "SharedProjectileModel" not in axe_source:
         fail("Local Frost Axe must use the shared travelling-projectile model")
-    fire_axes_start = online_source.index("private void FireAxes")
-    fire_axes_end = online_source.index("private NetEnemy FindNearestEnemy", fire_axes_start)
-    if "DamageEnemy(target" in online_source[fire_axes_start:fire_axes_end]:
-        fail("Online Frost Axe regressed to instantaneous hitscan damage")
-
-    snapshot_start = online_source.index("private void SendSnapshot()")
-    snapshot_end = online_source.index("private void ReceiveSnapshot", snapshot_start)
-    snapshot_source = online_source[snapshot_start:snapshot_end]
-    snapshot_wire_order = ("writer.WriteValueSafe((byte)_phase)", "writer.WriteValueSafe((byte)_mapIndex)",
-                           "writer.WriteValueSafe(_elapsed)", "writer.WriteValueSafe(_level)",
-                           "writer.WriteValueSafe(_experience)", "writer.WriteValueSafe(_experienceToNext)",
-                           "writer.WriteValueSafe(_kills)", "writer.WriteValueSafe(_renown)",
-                           "writer.WriteValueSafe(_bossSpawned)", "writer.WriteValueSafe((byte)_rewardTurnPlayerIndex)")
-    cursor = -1
-    for field in snapshot_wire_order:
-        position = snapshot_source.find(field, cursor + 1)
-        if position < 0:
-            fail(f"snapshot v2 header field is missing or reordered: {field}")
-        cursor = position
 
     content_source = (ROOT / "Assets/Scripts/Runtime/ContentDefinitions.cs").read_text(encoding="utf-8")
     input_source = (ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs").read_text(encoding="utf-8")
     hud_source = (ROOT / "Assets/Scripts/Runtime/GameHUD.cs").read_text(encoding="utf-8")
+    game_types_source = (ROOT / "Assets/Scripts/Runtime/GameTypes.cs").read_text(encoding="utf-8")
     build_source = (ROOT / "Assets/Scripts/Runtime/BuildSystem.cs").read_text(encoding="utf-8")
     database_source = (ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs").read_text(encoding="utf-8")
+    online_runtime = ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs"
+    if online_runtime.exists() or "OnlineSpike" in game_types_source or "ONLINE CO-OP" in hud_source:
+        fail("Online Co-op is deferred; its duplicate runtime, state and menu entry must remain outside the active product")
+    if "Wrap(_mainSelection + direction, 2)" not in hud_source:
+        fail("the active main menu must expose exactly Solo and Local Co-op")
     production_requirements = {
         "content catalog": "class CharacterDefinition" in content_source and "class MapDefinition" in content_source,
         "ultimate balance": "UltimateCooldown" in content_source and "Mathf.Max(28f" in content_source,
@@ -267,30 +214,25 @@ def main() -> int:
         "targeted co-op rewards": "TargetPlayerIndex" in build_source and "Shared" in build_source,
         "behavioral evolutions": "JotunnCleaver" in build_source and "StormAegis" in build_source,
         "build HUD": "DrawBuildTray" in hud_source and "DrawBuildDetails" in hud_source,
-        "online build synchronization": "LoadSnapshot" in online_source and "_rewardTurnPlayerIndex" in online_source,
         "proportional UI canvas": "Mathf.Min(Screen.width / 1920f" in hud_source and "DrawLetterbox" in hud_source,
         "stable label hover": "SetAllTextColors" in hud_source and "style.hover.textColor = color" in hud_source,
         "opaque modal hierarchy": "case RunState.LevelUp: DrawLevelUp();" in hud_source and "case RunState.BuildDetails: DrawBuildDetails();" in hud_source,
         "readable item grid": "visibleIndex % 3" in hud_source and "row * 94" in hud_source,
         "fully clickable rewards": "GUI.Button(rect, GUIContent.none, GUIStyle.none)" in hud_source,
-        "online UI parity": "DrawLetterbox" in online_source and "SetAllTextColors" in online_source,
         "separated character controls": "var ultimateRect" in hud_source and "rect.y + 592" in hud_source,
         "responsive map titles": "_mapTitle" in hud_source and "rect.y + 190, rect.width - 80, 78" in hud_source,
         "compact combat hint": "ULTIMATE  SPACE / RT" in hud_source and "PAUSE  ESC / START" in hud_source,
         "aligned local statistics": "DrawStatColumn" in hud_source and "_statValue" in hud_source,
         "safe result summary": "var summary = new Rect" in hud_source and "_director.SelectedMap.Name.ToUpperInvariant()" in hud_source,
-        "aligned online statistics": "DrawOnlineStatColumn" in online_source and "statValue" in online_source,
         "component pooling": "class ComponentPool" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReleasePooledSimulation" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "spatial partitioning": "class SpatialHashGrid" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "GetEnemiesInRadius" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "deterministic run seed": "class RunRandom" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReplayRun" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "shared run progression": "class SharedRunModel" in (ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs").read_text(encoding="utf-8") and "_runModel.AddExperience" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8") and "_runModel.TryTriggerBoss" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "scriptable content database": "class ProductionContentDatabase : ScriptableObject" in database_source and "Resources.Load<ProductionContentDatabase>" in (ROOT / "Assets/Scripts/Runtime/ContentAssets.cs").read_text(encoding="utf-8"),
         "gamepad movement deadzone": "MovementDeadzone" in input_source and "ApplyMovementDeadzone" in input_source,
-        "readable online lobby buttons": "var readable = new Color(0.88f, 0.94f, 0.96f)" in online_source and "var hostRect" in online_source,
         "visible replay confirmation": "REPLAYING SEED" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "runtime foundation checks": "ProductionFoundationChecks.Run" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "performance metrics": "DrawPerformancePanel" in hud_source and "MetricsPressed" in input_source,
-        "online pooled views": "ComponentPool<OnlineEnemyView>" in online_source and "_onlineEnemyGrid" in online_source,
     }
     incomplete = [name for name, passed in production_requirements.items() if not passed]
     if incomplete:

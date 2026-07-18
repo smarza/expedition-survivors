@@ -35,7 +35,6 @@ namespace ProjectExpedition
         private Camera _camera;
         private CameraFollow _cameraFollow;
         private GameHUD _hud;
-        private OnlineCoopSpike _onlineSpike;
         private float _spawnTimer;
         private readonly List<RewardOption> _currentRewards = new List<RewardOption>(4);
         private readonly List<Enemy> _spatialScratch = new List<Enemy>(192);
@@ -71,8 +70,6 @@ namespace ProjectExpedition
             CreateCamera();
             _hud = gameObject.AddComponent<GameHUD>();
             _hud.Initialize(this);
-            _onlineSpike = gameObject.AddComponent<OnlineCoopSpike>();
-            _onlineSpike.Initialize(this);
         }
 
         private void CreateCamera()
@@ -382,7 +379,6 @@ namespace ProjectExpedition
         public void ReturnToMenu()
         {
             Time.timeScale = 1f;
-            if (_onlineSpike != null && _onlineSpike.Visible) _onlineSpike.Hide();
             _runModel.Reset();
             State = RunState.MainMenu;
             LocalInputRouter.BeginSession(1);
@@ -391,15 +387,6 @@ namespace ProjectExpedition
             Enemies.Clear();
             Players.Clear();
             _camera.transform.position = new Vector3(0f, 0f, -10f);
-        }
-
-        public void EnterOnlineSpike()
-        {
-            Time.timeScale = 1f;
-            LocalInputRouter.BeginSession(1);
-            _runModel.Reset();
-            State = RunState.OnlineSpike;
-            _onlineSpike.Show();
         }
 
         public void TogglePause()

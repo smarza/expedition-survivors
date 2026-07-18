@@ -1,30 +1,26 @@
 # Milestone 0.8.0 — Shared simulation (in development)
 
 - Pinned development to Unity `6000.5.4f1`, a supported release newer than the first patched Unity 6.0 LTS version for CVE-2025-59489.
-- Updated the Unity 6000.5 package matrix to Input System `1.19.0`, Netcode for GameObjects `2.13.0`, Rider Editor `3.0.40` and Visual Studio Editor `2.0.27`; Transport and Collections now resolve through the Editor/Netcode dependency graph.
-- Added validation that rejects the older package combination that produced `EntityId`, `GetInstanceID` and `CreateAssetWithContent` compilation errors on Unity 6000.5.
+- Updated the Unity 6000.5 package matrix to Input System `1.19.0`, Rider Editor `3.0.40` and Visual Studio Editor `2.0.27`.
+- Added validation that rejects obsolete project APIs and package combinations that produced `GetInstanceID` and `CreateAssetWithContent` compilation errors on Unity 6000.5.
 - Replaced project usages of the Unity 6000.5-obsolete `GetInstanceID` and ordered object lookup APIs while preserving projectile hit tracking and main-camera selection behavior.
 - Disabled deprecated Dynamic Batching for Standalone builds while retaining Static Batching.
 - Added a repository security policy requiring patched-editor rebuilds for all distributable targets.
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
 - Split production runtime, EditMode tests and PlayMode tests into explicit assemblies.
-- Added Unity Test Framework `1.4.6` and 19 EditMode regression tests for deterministic RNG, shared run/projectile behavior, snapshot phase compatibility, Online host simulation gating, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
+- Added Unity Test Framework `1.4.6` and 17 EditMode regression tests for deterministic RNG, shared run/projectile behavior, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
 - Added 4 disk-safe PlayMode smoke tests for bootstrap initialization, Solo level-up, same-seed replay and terminal run results.
 - Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
 - Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
-- Added the runtime assembly's direct `Unity.Networking.Transport` reference required by `OnlineCoopSpike` and Unity Transport's public `NetworkEndpoint` type.
 - Moved the pool test probe out of the Editor-only assembly so Unity can attach it to a `GameObject` during EditMode pool-reuse validation.
 - Added the presentation-free `SharedRunModel` as the first Phase C extraction, owning local run phase, clock, boss trigger, XP, reward-turn alternation and terminal outcome.
 - Routed `GameDirector` progression through the shared model while retaining its existing GameObject, spawning, reward-effect and UI responsibilities.
 - Added five EditMode model tests and PlayMode phase-parity assertions for start, level-up, replay and result transitions.
 - Updated PlayMode object discovery to Unity 6000.5's unsorted `FindObjectsByType<T>()` overload, removing the deprecated `FindObjectsSortMode` warnings.
-- Routed the Online host's clock, boss trigger, XP, level-up ownership and terminal result through the same `SharedRunModel` used by Solo and Local Co-op.
-- Preserved the `expedition.snapshot.v2` wire phase values and field order; existing replicated fields are now a projection rather than a second source of authority.
-- Added an EditMode compatibility test that locks the numeric Online phase values used by current host/client snapshots.
-- Made the Online host derive its simulation gate directly from `SharedRunModel`, recover a complete two-player lobby if its network callback and update loop cross frame boundaries, and refuse to advance the swarm without both connected players.
-- Replaced Online's instantaneous hitscan Frost Axe damage with host-authoritative travelling projectiles; local and Online adapters now share flight, lifetime, collision-radius and pierce rules through `SharedProjectileModel`.
-- Restyled Online Frost Axe visuals as elongated rotating axes instead of XP-like square diamonds, and pooled the new host projectile records.
+- Extracted Frost Axe flight, lifetime, collision radius and pierce rules into the presentation-free `SharedProjectileModel` used by Solo and Local Co-op.
+- Removed the experimental Online Co-op runtime, menu entry, Netcode package and Transport assembly dependencies from the active product scope.
+- Deferred Online multiplayer until the Solo/Local shared simulation is mature; the former POC remains recoverable from Git history and its future replacement must reuse the common gameplay core.
 
 # Milestone 0.7.1 — Foundation runtime fixes
 

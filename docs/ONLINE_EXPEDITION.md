@@ -1,63 +1,40 @@
-# Online expedition — Milestone 0.6
+# Online multiplayer — deferred
 
-## What this milestone proves
+Online Co-op is not part of the active 0.8.0 product scope.
 
-Milestone 0.4 turns the validated transport POC into a real two-player survivors-like run. The host owns the complete simulation; the client sends commands and renders interpolated snapshots and combat events.
+The original direct-IP host/client implementation began as a networking POC and later accumulated its own player, enemy, weapon, effect and UI rules. Solo and Local Co-op already use one gameplay implementation, but the Online POC behaved as a second game and created a disproportionate testing burden.
 
-The host plays Haldor Stormborn. The joining player controls Eira Raven-Sworn. Character selection is deliberately deferred until the faction roster exists.
+The active runtime therefore contains:
 
-## Test on one computer
+- Solo;
+- two-player Local Co-op;
+- no Online menu entry;
+- no Netcode for GameObjects or Unity Transport dependency;
+- no Online simulation adapter.
 
-1. Open the project and make a Windows build from `Assets/Scenes/Bootstrap.unity`.
-2. Run the executable and choose **ONLINE CO-OP → START HOST — HALDOR**.
-3. In Unity, press Play and choose **ONLINE CO-OP**.
-4. Keep `127.0.0.1` and choose **JOIN — EIRA**.
-5. The expedition must start automatically in both instances.
-6. Move each survivor independently with WASD or its first gamepad.
-7. Charge and activate the character Ultimate with Space, right shoulder or right trigger.
-8. Confirm axes, pulses, enemies, health, XP and the timer remain synchronized.
-9. At level-up, confirm that four rewards appear and identify P1, P2 or P1+P2 as their destination.
-10. Only the instance named as chooser may select, using `1`–`4`, D-pad/stick + South/A, or West/North/East/right-shoulder.
-11. Confirm that the status line names the chooser, item and recipient after selection.
-12. Open build details with Tab or gamepad View/Select and confirm both builds match between instances.
-13. Disconnect the client and confirm the host resets to a one-player waiting lobby.
+The previous POC remains recoverable from Git history through the 0.3–0.8 commits. It must not be restored directly into the product runtime.
 
-## Test on two computers
+## Conditions for restarting Online development
 
-1. Use the same build on both computers and the same local network.
-2. Start the host and allow UDP port `7777` through the firewall.
-3. Enter the host computer's local IPv4 address on the client.
-4. Join and repeat the gameplay checks above.
+Online work may restart only after:
 
-## Authority model
+1. Solo and Local Co-op share stable player, enemy, weapon, effect, reward and run models.
+2. The shared simulation has deterministic automated coverage.
+3. Content can be added once and behave identically in both active modes.
+4. Performance budgets are established for enemies, projectiles and effects.
+5. The local gameplay loop and UI direction are approved.
 
-- The host simulates movement, party tether, attacks, enemy AI, damage, revival, spawning, XP, upgrades, boss and results.
-- The client sends movement at 30 Hz and discrete Ultimate/reward commands.
-- The host sends run snapshots at 15 Hz over unreliable-sequenced delivery.
-- Enemy IDs, positions and normalized health are quantized to keep the 96-enemy snapshot near a normal UDP MTU.
-- Frost Axe flight, lifetime, collision radius and pierce use the same `SharedProjectileModel` as Solo/Local. Axes and pulses remain lightweight presentation events on the client; damage is decided only by the host when the shared projectile reaches an enemy.
-- Only the host commits persistent renown and run results.
+## Required future architecture
 
-## Acceptance checklist
+The future Online layer must be an adapter around the same gameplay simulation:
 
-- The second player automatically starts the same run in both windows.
-- Haldor and Eira can move independently but cannot separate beyond the party tether.
-- Enemies target the nearest living survivor and match in both views.
-- Automatic attacks, Ultimates and Raven Guard cause host-authoritative damage.
-- Both health bars, knockdown and proximity revival synchronize.
-- XP and level are shared; reward ownership alternates between P1 and P2.
-- Only the active chooser's command is accepted by the host.
-- Four reward cards display their recipient and may benefit the chooser, teammate or both.
-- Per-player item levels, slots, combat statistics and evolutions match in both views.
-- The Jotunn spawns at 01:30; killing it synchronizes victory.
-- Both survivors down synchronizes defeat.
-- Snapshot payload stays below roughly 1.2 KB at the 96-enemy cap.
-- Client disconnect removes the ghost peer and resets the host lobby.
+- clients send player commands;
+- the host or server advances the shared simulation;
+- snapshots serialize read-only shared state;
+- client prediction, interpolation and reconciliation live outside gameplay rules;
+- transport, lobby, Relay, authentication and matchmaking remain replaceable services;
+- no Online-only copies of characters, enemies, weapons, rewards or balance formulas are allowed.
 
-## Deliberate limitations
+## Future acceptance boundary
 
-- The 0.8 extraction is incremental: run progression and Frost Axe projectile rules are shared, while Online player/enemy records and some effects still await migration out of `OnlineCoopSpike`.
-- Direct IP/LAN only; there is no Relay, room code, matchmaking or NAT traversal.
-- No reconnect, host migration, client prediction or rollback.
-- No production anti-cheat, authentication or save ownership protocol.
-- Final art, audio, pooling, spatial queries and production UI are future milestones.
+When Online returns, every gameplay rule test must run against the shared simulation without knowing whether the adapter is Solo, Local or Online. Networking tests then cover only commands, authority, serialization, latency, packet loss, reconnect and host/server lifecycle.

@@ -58,15 +58,14 @@ namespace ProjectExpedition
         private void UpdateMainMenu()
         {
             var direction = LocalInputRouter.AnyMenuHorizontalPressed();
-            if (direction != 0) _mainSelection = Wrap(_mainSelection + direction, 3);
+            if (direction != 0) _mainSelection = Wrap(_mainSelection + direction, 2);
             if (LocalInputRouter.AnyMenuSubmitPressed()) ActivateMainSelection();
         }
 
         private void ActivateMainSelection()
         {
             if (_mainSelection == 0) PrepareCharacterSelection(1);
-            else if (_mainSelection == 1) PrepareCharacterSelection(2);
-            else _director.EnterOnlineSpike();
+            else PrepareCharacterSelection(2);
         }
 
         private void PrepareCharacterSelection(int playerCount)
@@ -173,7 +172,6 @@ namespace ProjectExpedition
                 case RunState.Paused: DrawPause(); break;
                 case RunState.GameOver: DrawResults(false); break;
                 case RunState.Victory: DrawResults(true); break;
-                case RunState.OnlineSpike: break;
             }
 
             if (_announcementTimer > 0f && _director.State == RunState.Playing)
@@ -207,15 +205,13 @@ namespace ProjectExpedition
             GUI.Label(new Rect(735, 712, 950, 35),
                 $"Mastery {SaveService.Data.HaldorMastery}   •   Renown {SaveService.Data.TotalRenown}   •   Best {SaveService.Data.BestKills} kills", _small);
 
-            DrawSelectableButton(new Rect(680, 865, 350, 90), "SOLO", 0, ref _mainSelection, PrepareSolo);
-            DrawSelectableButton(new Rect(1050, 865, 350, 90), "LOCAL CO-OP", 1, ref _mainSelection, PrepareLocal);
-            DrawSelectableButton(new Rect(1420, 865, 380, 90), "ONLINE CO-OP", 2, ref _mainSelection, EnterOnline);
+            DrawSelectableButton(new Rect(720, 865, 500, 90), "SOLO", 0, ref _mainSelection, PrepareSolo);
+            DrawSelectableButton(new Rect(1260, 865, 500, 90), "LOCAL CO-OP", 1, ref _mainSelection, PrepareLocal);
             GUI.Label(new Rect(680, 965, 1120, 55), "KEYBOARD OR GAMEPAD   •   D-PAD/STICK NAVIGATES   •   A CONFIRMS   •   B RETURNS", _small);
         }
 
         private void PrepareSolo() => PrepareCharacterSelection(1);
         private void PrepareLocal() => PrepareCharacterSelection(2);
-        private void EnterOnline() => _director.EnterOnlineSpike();
 
         private void DrawCharacterSelect()
         {

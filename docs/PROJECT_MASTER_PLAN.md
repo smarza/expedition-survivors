@@ -38,7 +38,7 @@ It must preserve unrelated changes, work from the active milestone branch, valid
 
 Expedition Survivors is an original survivors-like action RPG built around expeditions undertaken by heroes from distinct cultures, eras and fictional factions. The player primarily controls movement and build decisions while weapons attack automatically. A small number of powerful character Ultimates may be activated manually, creating deliberate strategic moments without turning the game into a twin-stick shooter.
 
-The current prototype proves Solo, two-player Local Co-op and host-authoritative two-player Online Co-op. It also proves individual controller ownership, alternating co-op rewards, build slots, evolutions, deterministic seeds, object pooling and spatial queries. The project must now move from repeated proofs of concept to a shared, testable production architecture and a polished demonstration slice.
+The active prototype proves Solo and two-player Local Co-op through one gameplay implementation. It also proves individual controller ownership, alternating co-op rewards, build slots, evolutions, deterministic seeds, object pooling and spatial queries. An earlier Online POC was removed because it duplicated the game simulation. The project must now move from repeated proofs of concept to a shared, testable production architecture and a polished demonstration slice.
 
 ## 3. Non-negotiable product decisions
 
@@ -49,7 +49,7 @@ These decisions were explicitly established during development and must not be s
 3. **Manual powers are exceptional.** Direct activation is primarily reserved for high-impact Ultimates with long cooldowns. Cooldown improvement can become part of builds and progression.
 4. **The game must not become an endless collection of disconnected POCs.** New work must contribute to the launch architecture or to a clearly defined production risk reduction.
 5. **Every interface must remain readable.** Text clipping, overlapping regions, misleading hover states and low-contrast buttons are regressions.
-6. **Gamepads are first-class input devices.** Solo, Local Co-op, Online Co-op, menus and reward selection must all work with gamepads.
+6. **Gamepads are first-class input devices.** Solo, Local Co-op, menus and reward selection must all work with gamepads. A future Online mode inherits the same requirement.
 7. **Each local player owns an independent device.** With two gamepads, P1 and P2 each use their own controller. When a player must choose a reward, only that player's assigned device controls the choice.
 8. **Co-op rewards have explicit ownership.** A level-up turn belongs to one player. Options may target that player, the partner or both, and the UI must show the recipients with character/player icons.
 9. **Build growth must be legible.** The HUD and detail view must correlate weapons, gear, levels, stats, catalysts and evolutions.
@@ -82,7 +82,7 @@ These are planning assumptions, not final commercial commitments:
 - Steam Deck compatibility is a priority during the demonstration slice and MVP;
 - keyboard/mouse and common XInput/DualShock/DualSense-style gamepads;
 - Local Co-op is a core product feature;
-- production Online Co-op remains a scoped decision after shared simulation and network testing;
+- Online Co-op is deferred until the shared Solo/Local simulation is mature and is not part of the active runtime;
 - macOS, native Linux, consoles and mobile require separate business and certification decisions.
 
 ## 5. Core player experience
@@ -90,7 +90,7 @@ These are planning assumptions, not final commercial commitments:
 ### 5.1 Session flow
 
 1. Enter camp or main menu.
-2. Choose Solo, Local Co-op or Online Expedition.
+2. Choose Solo or Local Co-op.
 3. Each player chooses a survivor.
 4. P1/host chooses an expedition profile.
 5. Survive timed phases while collecting XP and resources.
@@ -141,7 +141,7 @@ Requirements:
 - long base cooldown;
 - controlled cooldown improvements from character mastery, gear or build effects;
 - no frequent activation that replaces automatic weapon play;
-- host authority and deterministic resolution in Online Co-op.
+- deterministic resolution in every active mode; a future Online adapter must add server/host authority without changing the Ultimate rule.
 
 Current examples:
 
@@ -280,18 +280,11 @@ Final launch quantity must be validated by playtime, build diversity and product
 - menu and reward focus must respect device ownership;
 - production expansion beyond two players is not committed.
 
-### 8.3 Online Co-op
+### 8.3 Online Co-op — deferred
 
-Current proof:
+The direct-IP POC was removed from the active runtime because it duplicated player, enemy, weapon, effect and UI rules. Its history remains in Git, but it must not be restored as a second simulation.
 
-- direct-IP/LAN host and one client;
-- Haldor host and Eira client;
-- host-authoritative players, enemies, combat, rewards and boss outcome;
-- 15 Hz compact enemy snapshots;
-- interpolation, payload and RTT instrumentation;
-- clean disconnect and two-peer limit.
-
-Production requirements before calling Online Co-op launch-ready:
+Requirements before Online development may restart:
 
 - shared simulation with Solo/Local rather than duplicated rules;
 - client prediction and reconciliation;
@@ -303,7 +296,7 @@ Production requirements before calling Online Co-op launch-ready:
 - save/reward authority and disconnect policy;
 - scalable QA matrix.
 
-Online Co-op may be scheduled for launch, Early Access or a post-launch update only after the 0.8 shared-simulation results provide a credible estimate.
+Online Co-op is a future initiative. It may be scheduled only after the shared Solo/Local simulation and content pipeline are mature enough that networking can be implemented as commands, authority, snapshots and presentation around the same game core.
 
 ## 9. Interface, input and accessibility
 
@@ -399,7 +392,6 @@ Telemetry must be privacy-conscious, opt-in where required, documented and separ
 Implemented and manually accepted:
 
 - Solo and two-player Local Co-op;
-- two-player direct-IP Online Co-op gameplay slice;
 - Haldor and Eira selection;
 - Frostbound Shore Scout and Long Night profiles;
 - automatic Frost Axe and Raven Guard;
@@ -423,25 +415,25 @@ Started:
 
 - repository migration and Git workflow;
 - patched Unity Editor requirement;
-- Unity 6000.5-compatible package matrix: Input System 1.19.0 and Netcode for GameObjects 2.13.0;
+- Unity 6000.5-compatible package matrix with Input System 1.19.0;
 - CVE-2025-59489 validation guard;
 - security policy and rebuild requirement;
-- successful patched-Editor import, compilation and Solo/Local/Online manual smoke pass confirmed on 2026-07-18;
+- successful patched-Editor import, compilation and Solo/Local manual smoke pass confirmed on 2026-07-18;
 - production runtime, EditMode and PlayMode assembly boundaries;
-- Unity Test Framework 1.4.6 with a 15-test accepted Phase B baseline and 8 additional shared-simulation tests pending target-Editor acceptance;
+- Unity Test Framework 1.4.6 with a 15-test accepted Phase B baseline and 6 additional shared-simulation tests pending target-Editor acceptance;
 - backward-compatible migration from legacy save payloads to versioned save envelope 2;
 - first Phase C extraction: local clock, phase, boss trigger, XP, reward turn and outcome now route through `SharedRunModel`;
-- Online host clock, boss trigger, XP, reward turn and outcome now use the same model while preserving snapshot v2 compatibility;
-- local and Online Frost Axes now share presentation-free flight, lifetime, collision-radius and pierce behavior through `SharedProjectileModel`;
+- Frost Axe flight, lifetime, collision-radius and pierce behavior are extracted into `SharedProjectileModel`;
+- the experimental Online runtime, menu and networking packages are removed from active scope;
 - incremental shared simulation extraction in progress.
 
 Not yet completed:
 
-- executing the eight new shared-simulation EditMode tests and updated PlayMode parity assertions on the target Unity Editor;
+- executing the six new shared-simulation EditMode tests and updated PlayMode parity assertions on the target Unity Editor;
 - committing any legitimate package-lock change generated by that first test import;
 - rebuilding the final 0.8.0 Windows acceptance executables with the patched runtime;
 - shared simulation implementation;
-- removal of local/online combat-rule duplication.
+- further extraction of local player, enemy, weapon and effect rules into testable shared models.
 
 ## 13. Current technical architecture
 
@@ -450,7 +442,7 @@ Not yet completed:
 | `GameBootstrap` | Creates the runtime prototype from the bootstrap scene. |
 | `GameDirector` | Local GameObject orchestration and adapter from shared state to presentation. |
 | `SharedRunModel` | Presentation-free run phase, clock, boss trigger, XP, reward turn and terminal outcome. |
-| `SharedProjectileModel` | Presentation-free projectile flight, lifetime, collision radius and pierce budget shared by local and Online adapters. |
+| `SharedProjectileModel` | Presentation-free projectile flight, lifetime, collision radius and pierce budget. |
 | `PlayerController` | Local movement, health, damage and character Ultimate. |
 | `WeaponSystem` | Runtime automatic weapon behavior. |
 | `Enemy`, `AxeProjectile`, `ExperienceGem` | Focused local simulation actors. |
@@ -461,7 +453,6 @@ Not yet completed:
 | `ProductionFoundation` | Pools, spatial hash, deterministic RNG, metrics and startup checks. |
 | `LocalInputRouter` | Keyboard/gamepad assignment, ownership and menu actions. |
 | `GameHUD` | Current local IMGUI menus, HUD, rewards, build and results. |
-| `OnlineCoopSpike` | Current host/client adapter, snapshot transport, online actors and online UI; run progression authority is delegated to `SharedRunModel`. |
 | `SaveService` | Versioned local JSON persistence with atomic replacement. |
 | `SaveMigration` | Legacy payload migration and current versioned save-envelope serialization. |
 | `RuntimeAssets` | Dependency-free prototype sprites and fallback art. |
@@ -471,16 +462,12 @@ Not yet completed:
 
 ### 13.1 Primary architectural debt
 
-Solo and Local Co-op already share `GameDirector`, `PlayerController`, `Enemy` and `WeaponSystem`; they are configurations of one implementation. Online began as an isolated networking POC and still duplicates `NetPlayer`, `NetEnemy`, parts of weapon/effect resolution and presentation inside `OnlineCoopSpike`. That split caused the Online-only flashing-enemy defect: its old Frost Axe applied hitscan damage immediately while showing an unrelated cosmetic diamond, whereas local modes simulated a travelling projectile.
-
-Run progression and Frost Axe projectile flight are now shared, but the remaining Online actor/effect duplication is still architectural debt. Adding every future weapon, status, evolution or character twice would create inconsistent balance, network bugs and unsustainable QA. Resolving that duplication—then reducing `OnlineCoopSpike` to commands, snapshots and presentation—is the main purpose of 0.8.0.
+Solo and Local Co-op share `GameDirector`, `PlayerController`, `Enemy` and `WeaponSystem`; they are configurations of one implementation. The former Online POC was deliberately removed after demonstrating that a duplicated simulation creates inconsistent behavior and an unsustainable QA matrix. A future Online mode must wrap the mature shared simulation and cannot introduce Online-only copies of gameplay rules.
 
 Other significant debt:
 
-- `OnlineCoopSpike` is too large and combines transport, simulation, snapshots, UI and session flow;
 - IMGUI is not the final UI system;
 - current runtime-generated visuals are placeholders;
-- direct IP is not a production discovery/invite experience;
 - the initial Unity suite is accepted on the target Editor, but still needs CI automation and broader shared-simulation coverage;
 - no production cloud-save integration;
 - save migration now covers legacy payload to envelope v2, but needs a durable migration chain and failure recovery before public progression begins;
@@ -505,13 +492,11 @@ A deterministic, host-capable gameplay domain should own:
 - seeded random decisions;
 - serializable snapshots/events where needed.
 
-The shared layer must not directly render UI, read physical input devices or send transport messages.
+The shared layer must not directly render UI or read physical input devices. If networking returns later, it also must not send transport messages directly.
 
 ### 14.2 Adapters
 
 - Local adapter: translates local input into simulation commands and presents state through local GameObjects/UI.
-- Online host adapter: translates client commands into the same simulation and emits snapshots/events.
-- Online client adapter: predicts approved local movement, reconciles authoritative state and presents remote state.
 - Presentation adapter: maps simulation events to pooled visual/audio objects.
 - Content adapter: resolves ScriptableObject records into validated runtime definitions.
 - Persistence adapter: converts durable progression into versioned save models.
@@ -538,16 +523,16 @@ Every effect must define authority, target rules, stacking behavior, duration, d
 
 ### Phase A — Secure Editor migration
 
-Status: manual import, compilation and Solo/Local/Online smoke testing accepted on 2026-07-18. A final patched-Editor Windows rebuild remains part of the 0.8.0 closeout.
+Status: manual import, compilation and Solo/Local smoke testing accepted on 2026-07-18. A final patched-Editor Windows rebuild remains part of the 0.8.0 closeout.
 
 1. Clone/switch to `agent/0.8.0-shared-simulation`.
 2. Open with Unity `6000.5.4f1`.
 3. Allow package resolution and asset reimport.
-4. Confirm Package Manager resolves Input System `1.19.0`, Netcode for GameObjects `2.13.0` and the Editor-bound Transport/Collections dependencies.
+4. Confirm Package Manager resolves Input System `1.19.0` and Unity Test Framework `1.4.6` without Netcode/Transport dependencies.
 5. Commit legitimate serialization/version/lockfile changes separately.
 6. Confirm zero compile errors and no old ScriptableObject warnings.
-7. Run Solo, Local and Online smoke tests.
-8. Rebuild Windows host/client executables.
+7. Run Solo and Local smoke tests.
+8. Rebuild the Windows acceptance executable.
 9. Mark all pre-patch executables non-release.
 
 Exit gate: the project imports and builds only with the patched supported Editor, and all existing modes still start successfully.
@@ -565,7 +550,7 @@ Exit gate: critical deterministic rules fail automatically when regressed.
 
 ### Phase C — Extract shared run model
 
-Status: local and Online-host run progression plus shared Frost Axe projectile flight are implemented in source. Target-Editor and host/client regression are pending while player/enemy/remaining-weapon state extraction continues.
+Status: local run progression and Frost Axe projectile flight are implemented in presentation-free models. Target-Editor regression is pending while player/enemy/remaining-weapon state extraction continues.
 
 1. Define commands, events and read-only state views.
 2. Move clock, phase, XP, reward-turn and outcome rules behind the shared boundary.
@@ -584,15 +569,15 @@ Exit gate: Solo and Local Co-op runs use the shared model with no feature loss.
 
 Exit gate: existing content is data/effect-driven and no longer depends on director-specific branches.
 
-### Phase E — Local and online adapters
+### Phase E — Local adapters and presentation
 
 1. Route Local Co-op through the same simulation commands.
-2. Replace host-side online duplicate rules with the shared simulation.
-3. Separate session/transport, snapshots, online UI and presentation from the simulation.
-4. Add artificial latency/jitter/loss profiles.
-5. Add basic client prediction/reconciliation for movement only after authority boundaries are tested.
+2. Keep Solo and Local Co-op as player-count configurations rather than separate rule paths.
+3. Separate gameplay state, local input and presentation responsibilities.
+4. Preserve independent device ownership and reward focus.
+5. Leave networking outside the active milestone.
 
-Exit gate: Solo, Local and Online resolve the same weapon/build/reward rules from one source.
+Exit gate: Solo and Local Co-op resolve the same weapon/build/reward rules from one source.
 
 ### Phase F — Regression and milestone close
 
@@ -609,12 +594,12 @@ Dates are intentionally absent until production velocity and asset capacity are 
 
 | Version | Theme | Primary deliverables | Exit criteria |
 | --- | --- | --- | --- |
-| 0.8.0 | Shared Simulation | Patched Unity, shared local/online rules, effect pipeline, tests, network adapters. | Existing modes use one rule source and pass regression. |
+| 0.8.0 | Shared Simulation | Patched Unity, shared Solo/Local rules, effect pipeline and tests; experimental Online removed. | Solo and Local Co-op use one rule source and pass regression. |
 | 0.9.0 | Presentation Foundation | Production UI framework, rebinding/glyphs, audio mixer, initial VFX/animation pipeline, Haldor polish pass. | Haldor/Frostbound run is readable and stylistically coherent on PC and Steam Deck. |
 | 0.10.0 | Demonstration Content | Three factions/heroes, 12 weapons, 12 gear items, 6 evolutions, polished biome and boss/objective route. | External player can complete the slice without developer instruction. |
 | 0.11.0 | Camp and Progression | Camp, unlocks, mastery, codex, tutorial/onboarding, versioned save migrations. | New player reaches a second meaningful run and understands unlock goals. |
 | 0.12.0 | MVP Content | Six heroes, three biomes, build variety, challenge/difficulty structure and content-authoring workflow. | Content supports repeated play without dominant mandatory build. |
-| 0.13.0 | Co-op Production | Local Co-op polish; online launch-scope decision; prediction, recovery, lobby/Relay if approved. | Chosen launch modes pass device/network matrices. |
+| 0.13.0 | Co-op Production | Local Co-op polish and a fresh Online feasibility decision after the shared core is mature. | Local Co-op passes its device matrix; any approved future Online architecture has a separate plan and test budget. |
 | 0.14.0 | Platform Services | Steam integration, Cloud, achievements, crash reporting, localization framework and telemetry policy. | Services survive offline/conflict/error scenarios without progression loss. |
 | 0.15.0 | Alpha | Feature complete, representative content, full progression and internal balance. | No missing launch-critical system; known issues triaged. |
 | 0.16.0 | Beta | Content lock, performance, accessibility, localization, compatibility and broad QA. | Target hardware/platform matrices and save migrations pass. |
@@ -630,7 +615,7 @@ Dates are intentionally absent until production velocity and asset capacity are 
 - no new placeholder TODO/FIXME/NotImplemented markers in shipped paths;
 - no unrelated file changes;
 - relevant Solo regression;
-- relevant Local and Online regression when shared systems change;
+- relevant Local Co-op regression when shared systems change;
 - keyboard and gamepad navigation for affected UI;
 - readable supported resolutions;
 - release notes for user-visible changes;
@@ -643,9 +628,8 @@ Provisional goals, to be finalized against target hardware:
 - 60 FPS target on supported desktop and Steam Deck presentation profiles;
 - stable frame pacing during representative maximum swarm density;
 - no steady-state Instantiate/Destroy churn for recurring enemies, projectiles, gems or pulse effects;
-- no unbounded pool, entity, peer or UI accumulation across replay/disconnect cycles;
-- snapshots remain under transport-safe payload targets;
-- metrics capture includes FPS, worst frame, actors, created/reused counts, spatial queries and network RTT/payload.
+- no unbounded pool, entity or UI accumulation across replay cycles;
+- metrics capture includes FPS, worst frame, actors, created/reused counts and spatial queries.
 
 ### 17.3 Determinism definition
 
@@ -708,7 +692,7 @@ These decisions must be made deliberately and recorded here:
 
 1. Final commercial title and trademark/domain availability.
 2. Exact identity and name of the woodland faction after research/sensitivity review.
-3. Whether Online Co-op is required for 1.0, Early Access or post-launch.
+3. Whether and when Online Co-op returns after the shared game core is mature; it is not in the current runtime or 0.8 scope.
 4. Steam Early Access versus full launch strategy.
 5. Final art style, animation technique and asset-production capacity.
 6. Final standard expedition duration and supported alternate modes.
@@ -743,10 +727,10 @@ The next developer/agent should do the following, in order:
 
 1. Work on `agent/0.8.0-shared-simulation` and PR #1.
 2. Pull the Phase B test-harness commit and allow Unity `6000.5.4f1` to resolve Unity Test Framework `1.4.6`.
-3. Run all 19 EditMode and 4 PlayMode tests using `docs/TESTING_0.8.md`; report any failure with its full stack trace.
+3. Run all 17 EditMode and 4 PlayMode tests using `docs/TESTING_0.8.md`; report any failure with its full stack trace.
 4. Capture and commit only legitimate package-lock or serialization changes produced by the target Editor.
-5. Accept the Phase C Online-host slice, then extract player/enemy state incrementally without changing snapshot compatibility.
-6. Keep the game playable and run automated plus relevant Solo/Local/Online regressions after every extraction step.
+5. Continue extracting player/enemy/effect state incrementally for the shared Solo/Local implementation.
+6. Keep the game playable and run automated plus relevant Solo/Local regressions after every extraction step.
 7. Rebuild patched Windows acceptance executables before closing 0.8.0.
 8. Update this document whenever architecture, scope, platform or release decisions change.
 
