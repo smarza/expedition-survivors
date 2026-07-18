@@ -62,6 +62,9 @@ namespace ProjectExpedition
             var nearest = _director.GetNearestEnemy(_owner.transform.position);
             if (nearest == null) return;
             var baseDirection = nearest.Position - (Vector2)_owner.transform.position;
+            _owner.PresentAttack(baseDirection);
+            _director.Present(PresentationCue.AxeThrow, _owner.transform.position,
+                _owner.Definition.Color, 0.5f);
             for (var i = 0; i < Model.AxeCount; i++)
             {
                 var critical = _director.Rng.Chance(Model.CriticalChance);

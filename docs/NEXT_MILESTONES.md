@@ -34,13 +34,13 @@
 
 - ScriptableObject content definitions with stable IDs. **Implemented in 0.7.0.**
 - Object pools and spatial partitioning. **Implemented in 0.7.0 for local simulation and online presentation/query paths.**
-- New Input System with rebinding and controller glyphs.
-- UI Toolkit/uGUI interface and accessibility settings.
-- Audio mixer, music state and prioritised SFX voices.
-- PlayMode/EditMode test suites and deterministic run seeds. **Deterministic local seeds and runtime/static foundation checks implemented; Unity Test Framework suites remain.**
+- New Input System with rebinding and controller glyphs. **Implemented in 0.9.0 for P1 keyboard and supported gamepad prompt families.**
+- Responsive presentation framework and accessibility settings. **Implemented in 0.9.0 as safe layout/theme/settings contracts around the code-driven HUD view.**
+- Audio mixer, music state and prioritised SFX voices. **Implemented as a dependency-free runtime foundation in 0.9.0; authored final assets remain future content work.**
+- PlayMode/EditMode test suites and deterministic run seeds. **Implemented through 0.8.0 and expanded for presentation in 0.9.0.**
 - Client prediction/reconciliation plus artificial latency, jitter and loss profiles.
 
-Implemented through 0.7.0: stable-ID ScriptableObject content, character/map selection, shared XP/map rules, strategic Ultimates, gamepad ownership/navigation, per-player build slots, targeted reward turns, item levels, behavioral evolutions, correlated build UI, deterministic local seeds, pooled actors, spatial queries and performance instrumentation. Next: consolidate more local/online simulation rules, add Unity Test Framework coverage and begin the demonstration-slice content expansion.
+Implemented through 0.9.0 release candidate: stable-ID content, one shared Solo/Local simulation, deterministic tests, presentation preferences, keyboard rebinding, controller prompts, audio buses/states, bounded SFX voices, pooled VFX, hero animation and Frostbound ambience. Next after owner acceptance: demonstration-slice content expansion.
 
 ## M5.1 — Shared simulation core (0.8.0 planned)
 
@@ -49,6 +49,14 @@ Implemented through 0.7.0: stable-ID ScriptableObject content, character/map sel
 - Add an extensible effect/status pipeline for future weapons, passives, Ultimates and evolutions.
 - Introduce Unity EditMode and PlayMode coverage for deterministic runs, pooling, content validation and save migrations.
 - Establish GitHub pull-request validation and keep release builds outside source control.
+
+## M5.2 — Presentation foundation (0.9.0 release candidate)
+
+- Persistent accessibility, audio and keyboard-binding settings.
+- Semantic active-device prompts for PC and Steam Deck controller families.
+- State-driven music, prioritized SFX voices and browser-safe playback.
+- Pooled feedback, Haldor/Eira animation and deterministic Frostbound ambience.
+- Safe-area contracts and automated presentation coverage.
 
 ## M6 — Demonstration slice
 

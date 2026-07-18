@@ -13,7 +13,8 @@ namespace ProjectExpedition
         BuildDetails,
         Paused,
         GameOver,
-        Victory
+        Victory,
+        Settings
     }
 
     public enum UpgradeId

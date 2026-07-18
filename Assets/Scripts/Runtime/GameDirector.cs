@@ -30,11 +30,14 @@ namespace ProjectExpedition
         public int RewardTurnPlayerIndex => _runModel.RewardTurnPlayerIndex;
         public RunSimulationPhase SimulationPhase => _runModel.Phase;
         public RunOutcome Outcome => _runModel.Outcome;
+        public PresentationDirector Presentation => _presentation;
 
         private Transform _runRoot;
         private Camera _camera;
         private CameraFollow _cameraFollow;
         private GameHUD _hud;
+        private PresentationDirector _presentation;
+        private RunState _settingsReturnState = RunState.MainMenu;
         private readonly List<RewardOption> _currentRewards = new List<RewardOption>(4);
         private readonly List<Enemy> _spatialScratch = new List<Enemy>(192);
         private bool _runRecorded;
@@ -66,8 +69,11 @@ namespace ProjectExpedition
             SelectedCharacters[0] = ContentCatalog.Character(0);
             SelectedCharacters[1] = ContentCatalog.Character(Mathf.Min(1, ContentCatalog.Characters.Length - 1));
             SaveService.Load();
+            PresentationPreferences.Load();
             InitializeProductionFoundation();
             CreateCamera();
+            _presentation = gameObject.AddComponent<PresentationDirector>();
+            _presentation.Initialize(this, _cameraFollow);
             _hud = gameObject.AddComponent<GameHUD>();
             _hud.Initialize(this);
         }
@@ -157,6 +163,7 @@ namespace ProjectExpedition
             _runRoot = new GameObject("Current Expedition").transform;
             _runRoot.SetParent(transform, false);
             CreateArena();
+            _presentation.AttachRunAmbience(_runRoot);
 
             playerCount = Mathf.Clamp(playerCount, 1, 2);
             for (var i = 0; i < playerCount; i++)
@@ -306,12 +313,16 @@ namespace ProjectExpedition
             var position = enemy.transform.position;
             var gem = _gemPool.Get(position);
             gem.Initialize(this, experienceValue);
+            Present(PresentationCue.EnemyDefeated, position,
+                boss ? new Color(1f, 0.45f, 0.22f) : new Color(0.5f, 0.82f, 0.9f),
+                boss ? 2.4f : 0.7f);
             ReleaseEnemy(enemy);
             if (boss) EndRun(true);
         }
 
         public void OnPlayerDowned(PlayerController player)
         {
+            Present(PresentationCue.PlayerDowned, player.transform.position, player.Definition.Color, 1.4f);
             var living = 0;
             for (var i = 0; i < Players.Count; i++)
                 if (Players[i] != null && Players[i].IsAlive) living++;
@@ -319,8 +330,11 @@ namespace ProjectExpedition
             else _hud.SetAnnouncement($"{player.HeroName.ToUpperInvariant()} IS DOWN — STAY CLOSE TO REVIVE", 3f);
         }
 
-        public void OnPlayerRevived(PlayerController player) =>
+        public void OnPlayerRevived(PlayerController player)
+        {
+            Present(PresentationCue.PlayerRevived, player.transform.position, player.Definition.Color, 1.1f);
             _hud.SetAnnouncement($"{player.HeroName.ToUpperInvariant()} RETURNS TO THE SAGA", 2.2f);
+        }
 
         public void AddExperience(int amount)
         {
@@ -336,6 +350,7 @@ namespace ProjectExpedition
             _currentRewards.AddRange(RewardFactory.Generate(builds, RewardTurnPlayerIndex, Players.Count, Rng));
             State = RunState.LevelUp;
             Time.timeScale = 0f;
+            Present(PresentationCue.LevelUp, GroupCenter, PresentationTheme.Accent);
         }
 
         public void ChooseReward(int index)
@@ -358,6 +373,7 @@ namespace ProjectExpedition
             var chooser = Players[Mathf.Clamp(RewardTurnPlayerIndex, 0, Players.Count - 1)].HeroName;
             var destination = option.Shared ? "THE TEAM" : (appliedNames.Count > 0 ? appliedNames[0].ToUpperInvariant() : "NO TARGET");
             _hud.SetAnnouncement($"{chooser.ToUpperInvariant()} CHOSE {option.Item.Name.ToUpperInvariant()} FOR {destination}", 3.2f);
+            Present(PresentationCue.Confirm, GroupCenter, option.Item.Color);
             _runModel.CompleteReward();
             State = RunState.Playing;
             Time.timeScale = 1f;
@@ -368,6 +384,8 @@ namespace ProjectExpedition
             if (!_runModel.Complete(victory)) return;
             State = _runModel.Outcome == RunOutcome.Victory ? RunState.Victory : RunState.GameOver;
             Time.timeScale = 0f;
+            Present(victory ? PresentationCue.Victory : PresentationCue.Defeat, GroupCenter,
+                victory ? PresentationTheme.Accent : new Color(0.65f, 0.2f, 0.22f), 2f);
             if (!_runRecorded)
             {
                 SaveService.RecordRun(Kills, RunRenown, Elapsed, victory);
@@ -416,9 +434,27 @@ namespace ProjectExpedition
             }
         }
 
+        public void OpenSettings()
+        {
+            if (State != RunState.MainMenu && State != RunState.Paused) return;
+            _settingsReturnState = State;
+            State = RunState.Settings;
+            Time.timeScale = 0f;
+        }
+
+        public void CloseSettings()
+        {
+            if (State != RunState.Settings) return;
+            LocalInputRouter.CancelRebind();
+            State = _settingsReturnState;
+            Time.timeScale = State == RunState.MainMenu ? 1f : 0f;
+        }
+
         public void ShowPulse(Vector2 position, int playerIndex)
         {
             _pulsePool.Get(position).Initialize(this, playerIndex);
+            Present(PresentationCue.RavenGuard, position,
+                playerIndex == 0 ? PresentationTheme.Frost : new Color(1f, 0.58f, 0.22f), 1f);
         }
 
         public void Announce(string message, float duration) => _hud.SetAnnouncement(message, duration);
@@ -426,7 +462,13 @@ namespace ProjectExpedition
         public void ShowUltimate(Vector2 position, int playerIndex, float radius)
         {
             _ultimatePulsePool.Get(position).Initialize(this, playerIndex, radius);
+            Present(PresentationCue.Ultimate, position,
+                playerIndex == 0 ? PresentationTheme.Frost : new Color(1f, 0.58f, 0.22f),
+                Mathf.Max(1f, radius / 4f));
         }
+
+        public void Present(PresentationCue cue, Vector2 position, Color color, float scale = 1f) =>
+            _presentation?.Notify(cue, position, color, scale);
 
         private void CleanupEnemyList()
         {
@@ -515,6 +557,10 @@ namespace ProjectExpedition
     public sealed class CameraFollow : MonoBehaviour
     {
         public GameDirector Director;
+        private float _trauma;
+
+        public void AddTrauma(float amount) => _trauma = Mathf.Clamp01(_trauma + amount);
+
         private void LateUpdate()
         {
             if (Director == null || Director.Players.Count == 0) return;
@@ -527,7 +573,11 @@ namespace ProjectExpedition
                 maximumDistance = Mathf.Max(maximumDistance, Vector2.Distance(center, player.transform.position));
             }
             var desired = new Vector3(center.x, center.y, -10f);
-            transform.position = Vector3.Lerp(transform.position, desired, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
+            var basePosition = Vector3.Lerp(transform.position, desired, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
+            _trauma = Mathf.Max(0f, _trauma - Time.unscaledDeltaTime * 1.8f);
+            var shake = _trauma * _trauma * PresentationPreferences.Data.ScreenShake;
+            var offset = new Vector3(Mathf.Sin(Time.unscaledTime * 73f), Mathf.Cos(Time.unscaledTime * 61f), 0f) * shake * 0.22f;
+            transform.position = basePosition + offset;
             var camera = GetComponent<Camera>();
             var targetSize = Mathf.Clamp(6f + maximumDistance * 0.62f, 6f, 9.5f);
             camera.orthographicSize = Mathf.Lerp(camera.orthographicSize, targetSize, 1f - Mathf.Exp(-5f * Time.unscaledDeltaTime));

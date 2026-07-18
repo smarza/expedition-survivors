@@ -70,6 +70,9 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedEffectModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
+        ROOT / "Assets/Scripts/Runtime/PresentationSettings.cs",
+        ROOT / "Assets/Scripts/Runtime/PresentationServices.cs",
+        ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs",
         ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
         ROOT / "Assets/Tests/EditMode/DeterministicFoundationTests.cs",
         ROOT / "Assets/Tests/EditMode/BuildAndRewardTests.cs",
@@ -79,6 +82,7 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SharedEnemyModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedSpawnModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedEffectModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/PresentationFoundationTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -92,6 +96,8 @@ def main() -> int:
         ROOT / "docs/PROJECT_MASTER_PLAN.md",
         ROOT / "docs/TESTING_0.8.md",
         ROOT / "docs/CONTINUOUS_INTEGRATION.md",
+        ROOT / "docs/PRESENTATION_FOUNDATION_0.9.md",
+        ROOT / "docs/TESTING_0.9.md",
         ROOT / ".github/workflows/unity-ci.yml",
         ROOT / "Packages/manifest.json",
         ROOT / "ProjectSettings/ProjectSettings.asset",
@@ -211,7 +217,13 @@ def main() -> int:
                               "AxeVolley_ProducesSharedProjectileEffectsAndDirections",
                               "RavenGuard_ProducesSharedAreaEffectAndBoundedHealing",
                               "EffectPipeline_AppliesPlayerWeaponAndEvolutionState",
-                              "UltimateAndEvolutionExplosion_UseSharedAreaRequests")
+                              "UltimateAndEvolutionExplosion_UseSharedAreaRequests",
+                              "Preferences_RoundTripAccessibilityAudioAndBindings",
+                              "Preferences_ClampUnsafePresentationValues",
+                              "Layout_PreservesReferenceAspectInsideDesktopAndSteamDeckSafeAreas",
+                              "Glyphs_ExposeKeyboardAndControllerSpecificPrompts",
+                              "AudioMix_UsesMasterBusAndProtectsImportantVoices",
+                              "MusicRouting_FollowsMenuRunBossRewardAndResultStates")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -221,7 +233,9 @@ def main() -> int:
                               "RunOutcome_TransitionsOnceWithoutTouchingDisk",
                               "PlayerController_ProjectsSharedPlayerStateAndUpgrades",
                               "EnemyAdapter_ProjectsSharedEnemyStateAndDamage", "RunSimulationPhase.Reward",
-                              "RunSimulationPhase.Completed")
+                              "RunSimulationPhase.Completed",
+                              "PresentationFoundation_InitializesAndFollowsRunState",
+                              "PresentationVfx_ReusesPoolAndSettingsReturnToTheirOwnerState")
     if any(requirement not in play_tests for requirement in play_test_requirements):
         fail("PlayMode expedition flow coverage is incomplete")
 
@@ -288,8 +302,8 @@ def main() -> int:
     online_runtime = ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs"
     if online_runtime.exists() or "OnlineSpike" in game_types_source or "ONLINE CO-OP" in hud_source:
         fail("Online Co-op is deferred; its duplicate runtime, state and menu entry must remain outside the active product")
-    if "Wrap(_mainSelection + direction, 2)" not in hud_source:
-        fail("the active main menu must expose exactly Solo and Local Co-op")
+    if "Wrap(_mainSelection + direction, 3)" not in hud_source or '"SETTINGS"' not in hud_source:
+        fail("the active main menu must expose Solo, Local Co-op and presentation settings")
 
     workflow_source = (ROOT / ".github/workflows/unity-ci.yml").read_text(encoding="utf-8")
     workflow_requirements = (
@@ -323,7 +337,7 @@ def main() -> int:
         "targeted co-op rewards": "TargetPlayerIndex" in build_source and "Shared" in build_source,
         "behavioral evolutions": "JotunnCleaver" in build_source and "StormAegis" in build_source,
         "build HUD": "DrawBuildTray" in hud_source and "DrawBuildDetails" in hud_source,
-        "proportional UI canvas": "Mathf.Min(Screen.width / 1920f" in hud_source and "DrawLetterbox" in hud_source,
+        "proportional UI canvas": "PresentationLayout.Calculate" in hud_source and "DrawLetterbox" in hud_source,
         "stable label hover": "SetAllTextColors" in hud_source and "style.hover.textColor = color" in hud_source,
         "opaque modal hierarchy": "case RunState.LevelUp: DrawLevelUp();" in hud_source and "case RunState.BuildDetails: DrawBuildDetails();" in hud_source,
         "readable item grid": "visibleIndex % 3" in hud_source and "row * 78" in hud_source,
@@ -335,7 +349,7 @@ def main() -> int:
         "fully clickable rewards": "GUI.Button(rect, GUIContent.none, GUIStyle.none)" in hud_source,
         "separated character controls": "var ultimateRect" in hud_source and "rect.y + 592" in hud_source,
         "responsive map titles": "_mapTitle" in hud_source and "rect.y + 190, rect.width - 80, 78" in hud_source,
-        "compact combat hint": "ULTIMATE  SPACE / RT" in hud_source and "PAUSE  ESC / START" in hud_source,
+        "compact combat hint": "Prompt(BindingAction.Ultimate)" in hud_source and "Prompt(BindingAction.Pause)" in hud_source,
         "aligned local statistics": "DrawStatColumn" in hud_source and "_statValue" in hud_source,
         "safe result summary": "var summary = new Rect" in hud_source and "_director.SelectedMap.Name.ToUpperInvariant()" in hud_source,
         "component pooling": "class ComponentPool" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReleasePooledSimulation" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
@@ -351,6 +365,13 @@ def main() -> int:
         "visible replay confirmation": "REPLAYING SEED" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "runtime foundation checks": "ProductionFoundationChecks.Run" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "performance metrics": "DrawPerformancePanel" in hud_source and "MetricsPressed" in input_source,
+        "presentation preferences": "PresentationPreferences.Data" in hud_source and "PresentationPreferences.Save" in input_source,
+        "keyboard rebinding": "PollRebind" in input_source and "RebindableActions" in hud_source,
+        "active device glyphs": "InputGlyphs.Prompt" in hud_source and "CurrentPromptDevice" in input_source,
+        "audio buses and priorities": "class PresentationAudioMixer" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "PresentationMix.Priority" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
+        "pooled presentation effects": "class PresentationVfxPool" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "ComponentPool<PresentationBurst>" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
+        "hero presentation": "class HeroPresentation" in (ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs").read_text(encoding="utf-8") and "BuildHaldorSilhouette" in (ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs").read_text(encoding="utf-8"),
+        "deterministic ambience": "class FrostboundAmbience" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "Hash01" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
     }
     incomplete = [name for name, passed in production_requirements.items() if not passed]
     if incomplete:

@@ -1,4 +1,4 @@
-# Project Expedition — Shared Simulation 0.8.0 (release candidate)
+# Project Expedition — Presentation Foundation 0.9.0 (release candidate)
 
 An original survivors-like prototype built for Unity 6 LTS. The milestone is intentionally self-contained: it has no purchased packages or external asset dependencies and bootstraps itself from an empty scene.
 
@@ -23,14 +23,14 @@ The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode a
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 41 deterministic domain, shared-run, shared-player, shared-enemy, shared-spawn, shared-projectile/effect, content, build, reward, pool, spatial-grid and save-migration tests.
-2. **PlayMode** — 7 bootstrap, shared-model/reward projection, level-up, replay-seed and result-flow tests.
+1. **EditMode** — 47 deterministic simulation, content, persistence, presentation-settings, safe-layout, glyph, audio-mix and music-routing tests.
+2. **PlayMode** — 9 bootstrap, shared-model/reward, presentation-service, VFX-pool, settings, level-up, replay-seed and result-flow tests.
 
-The PlayMode tests explicitly disable persistence, so they do not overwrite the developer's local campaign save. The exact acceptance procedure and current manual regression matrix are in [`docs/TESTING_0.8.md`](docs/TESTING_0.8.md).
+The PlayMode tests explicitly disable campaign persistence, so they do not overwrite the developer's local save. The current presentation acceptance matrix is in [`docs/TESTING_0.9.md`](docs/TESTING_0.9.md).
 
 ## Controls
 
-- Solo: `WASD` or arrows; Ultimate with `Space`. Any active gamepad works.
+- Solo: configurable P1 keyboard bindings (WASD/Space by default) or any active gamepad.
 - Local co-op P1: `WASD` plus `Space` for Ultimate.
 - Local co-op P2: arrows plus `Enter` for Ultimate.
 - Gamepad movement: left stick. Ultimate: right shoulder or right trigger.
@@ -40,6 +40,8 @@ The PlayMode tests explicitly disable persistence, so they do not overwrite the 
 - `F3` or gamepad Left Shoulder + View/Select: toggle production performance metrics.
 - `Esc`: pause.
 - Combat is otherwise automatic.
+
+Open **Settings** from the main or pause menu to rebind P1 keyboard actions and configure UI scale, contrast, reduced flashes, screen shake and master/music/SFX volume. Prompts follow the last active keyboard or controller family.
 
 Device assignment is intentionally predictable: with one gamepad in co-op, P1 uses the keyboard and P2 receives the gamepad; with two gamepads, each player receives one. During level-up, only the chooser's assigned device is active. Gamepad West/North/East/right-shoulder choose cards 1/2/3/4.
 
@@ -90,6 +92,11 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - A complete player/content reference documents every current character, power, weapon, gear item, boon, evolution and calculation.
 - Seven disk-safe PlayMode smoke tests for bootstrap, shared player/enemy/reward projection, Solo level-up, same-seed replay and terminal result flow.
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
+- Persistent presentation settings with 90–120% UI scale, high contrast, reduced flashes, screen shake and independent audio buses.
+- P1 keyboard rebinding plus active-device glyphs for keyboard, Xbox, PlayStation, Switch, Steam Deck and generic gamepads.
+- State-driven procedural prototype music, prioritised bounded SFX voices and browser-autoplay-safe startup.
+- Pooled Frost Axe trails, impacts and combat/result feedback with reduced-flash support.
+- Haldor/Eira silhouette animation, Frostbound ambient snow and accessible camera trauma.
 
 ## Architecture
 
@@ -102,7 +109,11 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - `SharedWeaponModel` / `SharedEffectPipeline`: presentation-free automatic weapon timing, derived combat requests, upgrades, Ultimates and evolutions.
 - `PlayerController`: local input and GameObject/presentation adapter for the shared player model.
 - `Enemy`: pooled GameObject/presentation, target selection, drops and spatial-index adapter for the shared enemy model.
-- `LocalInputRouter`: deterministic keyboard/gamepad ownership for Local Co-op.
+- `LocalInputRouter`: deterministic keyboard/gamepad ownership, persistent P1 rebinding and active-device tracking.
+- `PresentationDirector`: state-driven audio, VFX, ambience and camera-feedback adapter.
+- `PresentationPreferences` / `PresentationLayout` / `PresentationTheme`: persistent accessibility and renderer-independent UI contracts.
+- `PresentationAudioMixer`: bounded music/SFX buses and prioritised voice pool.
+- `PresentationVfxPool` / `HeroPresentation`: pooled feedback and character silhouette/animation.
 - `ContentDefinitions`: shared characters, maps, Ultimates and balance rules.
 - `ContentAssets`: ScriptableObject authoring records, runtime loading, validation and enemy archetypes.
 - `BuildSystem`: item catalog, slots, reward generation, build state and evolution recipes.
@@ -113,7 +124,7 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - `SaveMigration`: backward-compatible deserialization and current save-envelope serialization.
 - `RuntimeAssets`: dependency-free prototype sprites and fallback art.
 - `Assets/Resources/Art/Haldor_Stormborn_KeyArt.png`: original Haldor selection-screen key art.
-- `GameHUD`: complete prototype interface using Unity IMGUI.
+- `GameHUD`: code-driven view adapter using the presentation layout, theme, settings and glyph contracts.
 - `ProjectExpedition.Runtime`: production runtime assembly shared by the game and test suites.
 - `ProjectExpedition.EditModeTests` / `ProjectExpedition.PlayModeTests`: deterministic rule and expedition-flow regression assemblies.
 
