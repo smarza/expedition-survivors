@@ -108,6 +108,8 @@ def main() -> int:
     project_settings = (ROOT / "ProjectSettings/ProjectSettings.asset").read_text(encoding="utf-8")
     if "activeInputHandler: 1" not in project_settings and "activeInputHandler: 2" not in project_settings:
         fail("Project Settings must enable the Unity Input System")
+    if "m_BuildTarget: Standalone" not in project_settings or "m_DynamicBatching: 0" not in project_settings:
+        fail("Dynamic Batching is deprecated in Unity 6000.5 and must be disabled for Standalone")
 
     project_version = (ROOT / "ProjectSettings/ProjectVersion.txt").read_text(encoding="utf-8")
     editor_version = re.search(r"m_EditorVersion:\s*(\d+)\.(\d+)\.(\d+)f(\d+)", project_version)

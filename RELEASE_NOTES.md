@@ -4,6 +4,7 @@
 - Updated the Unity 6000.5 package matrix to Input System `1.19.0`, Netcode for GameObjects `2.13.0`, Rider Editor `3.0.40` and Visual Studio Editor `2.0.27`; Transport and Collections now resolve through the Editor/Netcode dependency graph.
 - Added validation that rejects the older package combination that produced `EntityId`, `GetInstanceID` and `CreateAssetWithContent` compilation errors on Unity 6000.5.
 - Replaced project usages of the Unity 6000.5-obsolete `GetInstanceID` and ordered object lookup APIs while preserving projectile hit tracking and main-camera selection behavior.
+- Disabled deprecated Dynamic Batching for Standalone builds while retaining Static Batching.
 - Added a repository security policy requiring patched-editor rebuilds for all distributable targets.
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
