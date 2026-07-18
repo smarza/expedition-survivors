@@ -21,6 +21,9 @@
 - Extracted Frost Axe flight, lifetime, collision radius and pierce rules into the presentation-free `SharedProjectileModel` used by Solo and Local Co-op.
 - Removed the experimental Online Co-op runtime, menu entry, Netcode package and Transport assembly dependencies from the active product scope.
 - Deferred Online multiplayer until the Solo/Local shared simulation is mature; the former POC remains recoverable from Git history and its future replacement must reuse the common gameplay core.
+- Added GitHub Actions continuous integration with static validation, Unity EditMode/PlayMode tests and a gated Windows build.
+- Added license preflight, isolated Unity Library caches, cancellation of superseded PR runs and 14-day test/build artifacts.
+- Removed the validator's external Pillow dependency by reading the PNG header directly, keeping the fast CI guard self-contained.
 
 # Milestone 0.7.1 — Foundation runtime fixes
 

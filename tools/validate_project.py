@@ -5,10 +5,9 @@ from __future__ import annotations
 
 import json
 import re
+import struct
 import sys
 from pathlib import Path
-
-from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -83,6 +82,8 @@ def main() -> int:
         ROOT / "docs/PRODUCTION_FOUNDATION_0.7.md",
         ROOT / "docs/PROJECT_MASTER_PLAN.md",
         ROOT / "docs/TESTING_0.8.md",
+        ROOT / "docs/CONTINUOUS_INTEGRATION.md",
+        ROOT / ".github/workflows/unity-ci.yml",
         ROOT / "Packages/manifest.json",
         ROOT / "ProjectSettings/ProjectSettings.asset",
         ROOT / "ProjectSettings/ProjectVersion.txt",
@@ -202,6 +203,20 @@ def main() -> int:
         fail("Online Co-op is deferred; its duplicate runtime, state and menu entry must remain outside the active product")
     if "Wrap(_mainSelection + direction, 2)" not in hud_source:
         fail("the active main menu must expose exactly Solo and Local Co-op")
+
+    workflow_source = (ROOT / ".github/workflows/unity-ci.yml").read_text(encoding="utf-8")
+    workflow_requirements = (
+        "game-ci/unity-test-runner@",
+        "testMode: All",
+        "game-ci/unity-builder@",
+        "targetPlatform: StandaloneWindows64",
+        "python3 tools/validate_project.py",
+        "UNITY_LICENSE:",
+        "UNITY_SERIAL:",
+        "cancel-in-progress: true",
+    )
+    if any(requirement not in workflow_source for requirement in workflow_requirements):
+        fail("Unity CI workflow is missing a required validation, test, build or license boundary")
     production_requirements = {
         "content catalog": "class CharacterDefinition" in content_source and "class MapDefinition" in content_source,
         "ultimate balance": "UltimateCooldown" in content_source and "Mathf.Max(28f" in content_source,
@@ -271,9 +286,12 @@ def main() -> int:
         fail("WeaponSystem still allocates projectile GameObjects during combat")
 
     art = ROOT / "Assets/Resources/Art/Haldor_Stormborn_KeyArt.png"
-    with Image.open(art) as image:
-        if image.format != "PNG" or image.width < 1024 or image.height < 1024:
-            fail("Haldor key art must be a PNG of at least 1024×1024")
+    header = art.read_bytes()[:24]
+    if len(header) < 24 or header[:8] != b"\x89PNG\r\n\x1a\n" or header[12:16] != b"IHDR":
+        fail("Haldor key art must be a valid PNG")
+    width, height = struct.unpack(">II", header[16:24])
+    if width < 1024 or height < 1024:
+        fail("Haldor key art must be at least 1024×1024")
 
     print(f"OK: {len(scripts)} C# files, bootstrap scene, package manifest and Haldor key art validated.")
     return 0

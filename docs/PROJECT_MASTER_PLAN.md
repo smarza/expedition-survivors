@@ -539,12 +539,13 @@ Exit gate: the project imports and builds only with the patched supported Editor
 
 ### Phase B — Test harness and assembly boundaries
 
-Status: accepted on the target development machine with 11 EditMode and 4 PlayMode tests passing.
+Status: accepted on the target development machine and automated through GitHub Actions with 17 EditMode tests, 4 PlayMode tests, static validation and a gated Windows build. Initial CI activation requires the repository's Unity license secrets.
 
 1. Add runtime and test assembly definitions where they reduce coupling.
 2. Add Unity Test Framework EditMode tests for RNG, content IDs, reward eligibility, build slots, evolution prerequisites, spatial membership and save migration.
 3. Add PlayMode smoke tests for bootstrap, run start, level-up, replay seed and result flow.
 4. Preserve `tools/validate_project.py` as a fast non-Unity guard.
+5. Require the GitHub Actions test and Windows-build checks before requesting manual owner validation.
 
 Exit gate: critical deterministic rules fail automatically when regressed.
 

@@ -15,6 +15,10 @@ If this branch was opened before the Unity 6000.5 package hotfix, close the Edit
 
 Without Unity installed, run `python tools/validate_project.py` for fast repository, syntax-balance, scene-reference and art checks.
 
+## Continuous integration
+
+The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode and PlayMode tests, and a Windows build before manual gameplay acceptance. Unity license secrets must be configured once in the repository. Setup and the development handoff contract are documented in [`docs/CONTINUOUS_INTEGRATION.md`](docs/CONTINUOUS_INTEGRATION.md).
+
 ## Automated tests
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
@@ -80,6 +84,7 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Toggleable production metrics with `F3` or gamepad Left Shoulder + View/Select.
 - Startup foundation checks covering deterministic random sequences, spatial membership and stable content IDs.
 - Runtime, EditMode and PlayMode assembly boundaries that keep tests separate from production builds.
+- GitHub Actions gates for static validation, Unity tests and Windows compilation, with retained reports and build artifacts.
 - Seventeen EditMode regression tests for deterministic foundations, shared run/projectile behavior, builds, rewards, balance and versioned save migration.
 - Four disk-safe PlayMode smoke tests for bootstrap, Solo level-up, same-seed replay and terminal result flow.
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
