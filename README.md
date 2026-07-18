@@ -15,6 +15,15 @@ If this branch was opened before the Unity 6000.5 package hotfix, close the Edit
 
 Without Unity installed, run `python tools/validate_project.py` for fast repository, syntax-balance, scene-reference and art checks.
 
+## Automated tests
+
+Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
+
+1. **EditMode** — 11 deterministic domain, content, build, reward, pool, spatial-grid and save-migration tests.
+2. **PlayMode** — 4 bootstrap, level-up, replay-seed and result-flow tests.
+
+The PlayMode tests explicitly disable persistence, so they do not overwrite the developer's local campaign save. The exact acceptance procedure and current manual regression matrix are in [`docs/TESTING_0.8.md`](docs/TESTING_0.8.md).
+
 ## Controls
 
 - Solo: `WASD` or arrows; Ultimate with `Space`. Any active gamepad works.
@@ -75,6 +84,10 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Deterministic local run seeds; results expose the seed and can replay the exact same sequence.
 - Toggleable production metrics with `F3` or gamepad Left Shoulder + View/Select.
 - Startup foundation checks covering deterministic random sequences, spatial membership and stable content IDs.
+- Runtime, EditMode and PlayMode assembly boundaries that keep tests separate from production builds.
+- Eleven EditMode regression tests for deterministic foundations, builds, rewards, balance and versioned save migration.
+- Four disk-safe PlayMode smoke tests for bootstrap, Solo level-up, same-seed replay and terminal result flow.
+- Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
 
 ## Architecture
 
@@ -89,12 +102,15 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - `WeaponSystem`: data-like runtime weapon state and automatic attacks.
 - `Enemy`, `AxeProjectile`, `ExperienceGem`: focused simulation actors.
 - `SaveService`: versioned local persistence with atomic temporary-file writes.
+- `SaveMigration`: backward-compatible deserialization and current save-envelope serialization.
 - `RuntimeAssets`: dependency-free prototype sprites and fallback art.
 - `Assets/Resources/Art/Haldor_Stormborn_KeyArt.png`: original Haldor selection-screen key art.
 - `GameHUD`: complete prototype interface using Unity IMGUI.
+- `ProjectExpedition.Runtime`: production runtime assembly shared by the game and test suites.
+- `ProjectExpedition.EditModeTests` / `ProjectExpedition.PlayModeTests`: deterministic rule and expedition-flow regression assemblies.
 
-The core content, pooling, spatial-query and deterministic-run foundations are now in place. Production development should next consolidate more local/online simulation rules, replace IMGUI with UI Toolkit/uGUI, add Unity Test Framework PlayMode coverage and introduce Relay/lobby services only after the direct host/client simulation remains stable under load.
+The core content, pooling, spatial-query, deterministic-run and first automated regression foundations are now in place. Production development should next extract the smallest shared run model, then consolidate local/online simulation rules, replace IMGUI with UI Toolkit/uGUI and introduce Relay/lobby services only after the direct host/client simulation remains stable under load.
 
 ## Milestone definition
 
-This repository is the first playable implementation, not the entire content-complete commercial game. See `docs/BUILD_AND_REWARD_0.6.md` for the acceptance pass and `docs/NEXT_MILESTONES.md` for the production path.
+This repository is the first playable implementation, not the entire content-complete commercial game. See [`docs/BUILD_AND_REWARD_0.6.md`](docs/BUILD_AND_REWARD_0.6.md) for the reward/build acceptance pass and [`docs/PROJECT_MASTER_PLAN.md`](docs/PROJECT_MASTER_PLAN.md) for the complete production path through launch.

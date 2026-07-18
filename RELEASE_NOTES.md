@@ -8,6 +8,11 @@
 - Added a repository security policy requiring patched-editor rebuilds for all distributable targets.
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
+- Split production runtime, EditMode tests and PlayMode tests into explicit assemblies.
+- Added Unity Test Framework `1.4.6` and 11 EditMode regression tests for deterministic RNG, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
+- Added 4 disk-safe PlayMode smoke tests for bootstrap initialization, Solo level-up, same-seed replay and terminal run results.
+- Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
+- Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
 
 # Milestone 0.7.1 — Foundation runtime fixes
 

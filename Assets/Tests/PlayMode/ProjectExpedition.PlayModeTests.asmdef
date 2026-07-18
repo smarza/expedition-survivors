@@ -1,0 +1,21 @@
+{
+  "name": "ProjectExpedition.PlayModeTests",
+  "rootNamespace": "ProjectExpedition.Tests",
+  "references": [
+    "UnityEngine.TestRunner",
+    "ProjectExpedition.Runtime"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

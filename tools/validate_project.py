@@ -31,7 +31,7 @@ def strip_csharp_literals(source: str) -> str:
 def validate_csharp(path: Path) -> None:
     raw = path.read_text(encoding="utf-8")
     clean = strip_csharp_literals(raw)
-    if "namespace ProjectExpedition" not in clean:
+    if path.name != "AssemblyInfo.cs" and "namespace ProjectExpedition" not in clean:
         fail(f"{path.relative_to(ROOT)} is outside the project namespace")
     for opening, closing in [("{", "}"), ("(", ")"), ("[", "]")]:
         depth = 0
@@ -63,14 +63,23 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/ContentAssets.cs",
         ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs",
         ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs",
+        ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
         ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs",
+        ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
+        ROOT / "Assets/Tests/EditMode/DeterministicFoundationTests.cs",
+        ROOT / "Assets/Tests/EditMode/BuildAndRewardTests.cs",
+        ROOT / "Assets/Tests/EditMode/PoolProbe.cs",
+        ROOT / "Assets/Tests/EditMode/SaveMigrationTests.cs",
+        ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
+        ROOT / "Assets/Tests/PlayMode/ExpeditionFlowPlayModeTests.cs",
         ROOT / "Assets/Resources/Art/Haldor_Stormborn_KeyArt.png",
         ROOT / "Assets/Resources/Content/ProductionContent.asset",
         ROOT / "docs/ONLINE_EXPEDITION.md",
         ROOT / "docs/BUILD_AND_REWARD_0.6.md",
         ROOT / "docs/PRODUCTION_FOUNDATION_0.7.md",
         ROOT / "docs/PROJECT_MASTER_PLAN.md",
+        ROOT / "docs/TESTING_0.8.md",
         ROOT / "Packages/manifest.json",
         ROOT / "ProjectSettings/ProjectSettings.asset",
         ROOT / "ProjectSettings/ProjectVersion.txt",
@@ -86,6 +95,8 @@ def main() -> int:
         fail("Unity Input System package is required by the co-op input router")
     if "com.unity.netcode.gameobjects" not in manifest["dependencies"]:
         fail("Netcode for GameObjects is required by the online spike")
+    if manifest["dependencies"].get("com.unity.test-framework") != "1.4.6":
+        fail("Unity Test Framework 1.4.6 is required by the 0.8 automated suites")
     expected_unity_65_packages = {
         "com.unity.ide.rider": "3.0.40",
         "com.unity.ide.visualstudio": "2.0.27",
@@ -125,11 +136,40 @@ def main() -> int:
     if not match or match.group(1) not in build_settings:
         fail("bootstrap scene GUID does not match build settings")
 
-    scripts = sorted((ROOT / "Assets/Scripts").rglob("*.cs"))
+    scripts = sorted((ROOT / "Assets").rglob("*.cs"))
     if len(scripts) < 8:
         fail("unexpectedly small runtime script set")
     for script in scripts:
         validate_csharp(script)
+
+    runtime_assembly = json.loads((ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef").read_text(encoding="utf-8"))
+    runtime_references = set(runtime_assembly.get("references", []))
+    required_runtime_references = {"Unity.Collections", "Unity.InputSystem", "Unity.Netcode.Runtime"}
+    if runtime_assembly.get("name") != "ProjectExpedition.Runtime" or not required_runtime_references.issubset(runtime_references):
+        fail("runtime assembly definition is missing its production package references")
+
+    edit_assembly = json.loads((ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef").read_text(encoding="utf-8"))
+    if "Editor" not in edit_assembly.get("includePlatforms", []) or "ProjectExpedition.Runtime" not in edit_assembly.get("references", []):
+        fail("EditMode test assembly must be Editor-only and reference the runtime assembly")
+
+    play_assembly = json.loads((ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef").read_text(encoding="utf-8"))
+    if play_assembly.get("includePlatforms") or "ProjectExpedition.Runtime" not in play_assembly.get("references", []):
+        fail("PlayMode test assembly must reference the runtime assembly and remain player-compatible")
+
+    edit_tests = "\n".join((ROOT / "Assets/Tests/EditMode" / name).read_text(encoding="utf-8") for name in (
+        "DeterministicFoundationTests.cs", "BuildAndRewardTests.cs", "SaveMigrationTests.cs"))
+    edit_test_requirements = ("RunRandom_SameSeedProducesSameSequence", "SpatialGrid_UpdatesAndRemovesMembership",
+                              "ComponentPool_ReusesReleasedInstances", "PlayerBuild_EvolutionRequiresMaximumLevelAndCatalyst",
+                              "RewardFactory_SameSeedProducesSameRecipientsAndItems", "LegacyV1Save_MigratesWithoutProgressLoss")
+    if any(requirement not in edit_tests for requirement in edit_test_requirements):
+        fail("EditMode deterministic foundation coverage is incomplete")
+
+    play_tests = (ROOT / "Assets/Tests/PlayMode/ExpeditionFlowPlayModeTests.cs").read_text(encoding="utf-8")
+    play_test_requirements = ("GameDirector_InitializesProductionFoundation",
+                              "SoloRun_LevelUpOffersFourRewardsAndResumes", "ReplayRun_PreservesSeedAndRestartsProgress",
+                              "RunOutcome_TransitionsOnceWithoutTouchingDisk")
+    if any(requirement not in play_tests for requirement in play_test_requirements):
+        fail("PlayMode expedition flow coverage is incomplete")
 
     online_source = (ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs").read_text(encoding="utf-8")
     if "_networkObject.transform.SetParent" in online_source:
