@@ -64,6 +64,7 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs",
         ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs",
         ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedProjectileModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
         ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs",
@@ -179,7 +180,9 @@ def main() -> int:
                               "Begin_InitializesDeterministicProgressionState", "Advance_TriggersBossExactlyOnceAtConfiguredTime",
                               "AddExperience_CarriesOverflowAndWaitsForRewardResolution", "RewardTurn_AlternatesAcrossTwoPlayers",
                               "Complete_IsIdempotentAndResetReturnsToIdle",
-                              "OnlinePhaseProjection_PreservesSnapshotWireValues")
+                              "OnlinePhaseProjection_PreservesSnapshotWireValues",
+                              "OnlineHostSimulation_RequiresPlayingModelAndCompleteParty",
+                              "SharedProjectile_TravelsAndConsumesTheSamePierceBudgetForEveryAdapter")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -222,6 +225,15 @@ def main() -> int:
                                   "ShouldSimulateHost", "connectedPlayerCount == 2")
     if any(requirement not in online_source for requirement in online_shared_requirements):
         fail("Online host does not project the shared run model completely")
+    if "SharedProjectileModel" not in online_source or "UpdateProjectiles(deltaTime)" not in online_source:
+        fail("Online Frost Axe must use the shared travelling-projectile model")
+    axe_source = (ROOT / "Assets/Scripts/Runtime/AxeProjectile.cs").read_text(encoding="utf-8")
+    if "SharedProjectileModel" not in axe_source:
+        fail("Local Frost Axe must use the shared travelling-projectile model")
+    fire_axes_start = online_source.index("private void FireAxes")
+    fire_axes_end = online_source.index("private NetEnemy FindNearestEnemy", fire_axes_start)
+    if "DamageEnemy(target" in online_source[fire_axes_start:fire_axes_end]:
+        fail("Online Frost Axe regressed to instantaneous hitscan damage")
 
     snapshot_start = online_source.index("private void SendSnapshot()")
     snapshot_end = online_source.index("private void ReceiveSnapshot", snapshot_start)

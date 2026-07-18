@@ -6,14 +6,7 @@ namespace ProjectExpedition
     public sealed class AxeProjectile : MonoBehaviour, IPoolableComponent
     {
         private GameDirector _director;
-        private Vector2 _direction;
-        private float _damage;
-        private float _speed;
-        private float _life;
-        private int _pierce;
-        private float _radius;
-        private bool _critical;
-        private bool _evolved;
+        private readonly SharedProjectileModel _flight = new SharedProjectileModel();
         private readonly HashSet<Enemy> _hits = new HashSet<Enemy>();
         private readonly List<Enemy> _nearby = new List<Enemy>(24);
         private SpriteRenderer _renderer;
@@ -29,14 +22,7 @@ namespace ProjectExpedition
         public void Initialize(GameDirector director, Vector2 direction, float damage, float speed, int pierce, bool critical, bool evolved = false)
         {
             _director = director;
-            _direction = direction.normalized;
-            _damage = damage;
-            _speed = speed;
-            _pierce = pierce;
-            _critical = critical;
-            _evolved = evolved;
-            _life = 3.2f;
-            _radius = critical ? 0.32f : 0.25f;
+            _flight.Begin(transform.position, direction, damage, speed, pierce, critical, evolved);
             _hits.Clear();
             transform.localScale = new Vector3(0.62f, 0.24f, 1f) * (critical ? 1.25f : 1f);
             gameObject.name = critical ? "Critical Frost Axe" : "Frost Axe";
@@ -46,30 +32,29 @@ namespace ProjectExpedition
         private void Update()
         {
             if (_director == null || _director.State != RunState.Playing) return;
-            transform.position += (Vector3)(_direction * _speed * Time.deltaTime);
+            _flight.Advance(Time.deltaTime);
+            transform.position = _flight.Position;
             transform.Rotate(0f, 0f, 740f * Time.deltaTime);
-            _life -= Time.deltaTime;
 
-            _director.GetEnemiesInRadius(transform.position, _radius + 0.9f, _nearby);
+            _director.GetEnemiesInRadius(transform.position, _flight.Radius + 0.9f, _nearby);
             for (var i = _nearby.Count - 1; i >= 0; i--)
             {
                 var enemy = _nearby[i];
                 if (enemy == null || !enemy.Alive || _hits.Contains(enemy)) continue;
-                var range = _radius + enemy.Radius;
-                if (((Vector2)transform.position - enemy.Position).sqrMagnitude > range * range) continue;
+                if (!_flight.Overlaps(enemy.Position, enemy.Radius)) continue;
                 _hits.Add(enemy);
-                enemy.TakeDamage(_damage, _critical ? 0.42f : 0.18f, transform.position);
-                if (_evolved) _director.DamageEnemiesInRadius(enemy.Position, 1.25f, _damage * 0.42f, 0.3f);
-                _pierce--;
-                if (_pierce < 0) { _director.ReleaseProjectile(this); return; }
+                enemy.TakeDamage(_flight.Damage, _flight.Critical ? 0.42f : 0.18f, transform.position);
+                if (_flight.Evolved) _director.DamageEnemiesInRadius(enemy.Position, 1.25f, _flight.Damage * 0.42f, 0.3f);
+                _flight.RegisterHit();
+                if (!_flight.Active) { _director.ReleaseProjectile(this); return; }
             }
-            if (_life <= 0f) _director.ReleaseProjectile(this);
+            if (!_flight.Active) _director.ReleaseProjectile(this);
         }
 
         public void OnReleasedToPool()
         {
             _director = null;
-            _life = 0f;
+            _flight.Stop();
             _hits.Clear();
             _nearby.Clear();
             transform.rotation = Quaternion.identity;

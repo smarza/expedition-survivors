@@ -123,6 +123,23 @@ namespace ProjectExpedition.Tests
             Assert.That(OnlineCoopSpike.ShouldSimulateHost(RunSimulationPhase.Playing, 3), Is.False);
         }
 
+        [Test]
+        public void SharedProjectile_TravelsAndConsumesTheSamePierceBudgetForEveryAdapter()
+        {
+            var projectile = new SharedProjectileModel();
+            projectile.Begin(UnityEngine.Vector2.zero, UnityEngine.Vector2.right,
+                24f, 10f, 1, false, false);
+
+            projectile.Advance(0.1f);
+
+            Assert.That(projectile.Position.x, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(projectile.Overlaps(new UnityEngine.Vector2(1.3f, 0f), 0.1f), Is.True);
+            projectile.RegisterHit();
+            Assert.That(projectile.Active, Is.True, "pierce 1 must allow a second impact");
+            projectile.RegisterHit();
+            Assert.That(projectile.Active, Is.False);
+        }
+
         private static SharedRunModel StartedModel(int players, int baseRequirement)
         {
             var model = new SharedRunModel();

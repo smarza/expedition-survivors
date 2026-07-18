@@ -9,7 +9,7 @@
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
 - Split production runtime, EditMode tests and PlayMode tests into explicit assemblies.
-- Added Unity Test Framework `1.4.6` and 18 EditMode regression tests for deterministic RNG, shared run progression, snapshot phase compatibility, Online host simulation gating, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
+- Added Unity Test Framework `1.4.6` and 19 EditMode regression tests for deterministic RNG, shared run/projectile behavior, snapshot phase compatibility, Online host simulation gating, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
 - Added 4 disk-safe PlayMode smoke tests for bootstrap initialization, Solo level-up, same-seed replay and terminal run results.
 - Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
 - Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
@@ -23,6 +23,8 @@
 - Preserved the `expedition.snapshot.v2` wire phase values and field order; existing replicated fields are now a projection rather than a second source of authority.
 - Added an EditMode compatibility test that locks the numeric Online phase values used by current host/client snapshots.
 - Made the Online host derive its simulation gate directly from `SharedRunModel`, recover a complete two-player lobby if its network callback and update loop cross frame boundaries, and refuse to advance the swarm without both connected players.
+- Replaced Online's instantaneous hitscan Frost Axe damage with host-authoritative travelling projectiles; local and Online adapters now share flight, lifetime, collision-radius and pierce rules through `SharedProjectileModel`.
+- Restyled Online Frost Axe visuals as elongated rotating axes instead of XP-like square diamonds, and pooled the new host projectile records.
 
 # Milestone 0.7.1 — Foundation runtime fixes
 

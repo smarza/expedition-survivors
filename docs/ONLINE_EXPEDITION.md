@@ -35,7 +35,7 @@ The host plays Haldor Stormborn. The joining player controls Eira Raven-Sworn. C
 - The client sends movement at 30 Hz and discrete Ultimate/reward commands.
 - The host sends run snapshots at 15 Hz over unreliable-sequenced delivery.
 - Enemy IDs, positions and normalized health are quantized to keep the 96-enemy snapshot near a normal UDP MTU.
-- Axes and pulses are lightweight presentation events; their damage is decided only by the host.
+- Frost Axe flight, lifetime, collision radius and pierce use the same `SharedProjectileModel` as Solo/Local. Axes and pulses remain lightweight presentation events on the client; damage is decided only by the host when the shared projectile reaches an enemy.
 - Only the host commits persistent renown and run results.
 
 ## Acceptance checklist
@@ -56,6 +56,7 @@ The host plays Haldor Stormborn. The joining player controls Eira Raven-Sworn. C
 
 ## Deliberate limitations
 
+- The 0.8 extraction is incremental: run progression and Frost Axe projectile rules are shared, while Online player/enemy records and some effects still await migration out of `OnlineCoopSpike`.
 - Direct IP/LAN only; there is no Relay, room code, matchmaking or NAT traversal.
 - No reconnect, host migration, client prediction or rollback.
 - No production anti-cheat, authentication or save ownership protocol.

@@ -73,6 +73,25 @@ namespace ProjectExpedition
             public bool Boss;
         }
 
+        private sealed class NetProjectile
+        {
+            public readonly SharedProjectileModel Flight = new SharedProjectileModel();
+            public readonly HashSet<int> Hits = new HashSet<int>();
+
+            public void Initialize(Vector2 position, Vector2 direction, float damage,
+                int pierce, bool critical, bool evolved)
+            {
+                Hits.Clear();
+                Flight.Begin(position, direction, damage, 9.5f, pierce, critical, evolved);
+            }
+
+            public void Reset()
+            {
+                Flight.Stop();
+                Hits.Clear();
+            }
+        }
+
         public bool Visible { get; private set; }
         public bool SessionActive => _networkManager != null && _networkManager.IsListening;
 
@@ -116,6 +135,8 @@ namespace ProjectExpedition
 
         private readonly Dictionary<ulong, NetPlayer> _players = new Dictionary<ulong, NetPlayer>();
         private readonly Dictionary<int, NetEnemy> _enemies = new Dictionary<int, NetEnemy>();
+        private readonly List<NetProjectile> _projectiles = new List<NetProjectile>(32);
+        private readonly Stack<NetProjectile> _availableProjectiles = new Stack<NetProjectile>(32);
         private readonly Dictionary<ulong, Vector2> _playerTargets = new Dictionary<ulong, Vector2>();
         private readonly Dictionary<int, Vector2> _enemyTargets = new Dictionary<int, Vector2>();
         private readonly Dictionary<ulong, GameObject> _playerViews = new Dictionary<ulong, GameObject>();
@@ -123,6 +144,7 @@ namespace ProjectExpedition
         private readonly List<RewardOption> _onlineRewards = new List<RewardOption>(4);
         private readonly List<int> _enemyIdScratch = new List<int>(MaximumEnemies);
         private readonly List<NetEnemy> _onlineSpatialScratch = new List<NetEnemy>(MaximumEnemies);
+        private readonly List<NetEnemy> _onlineProjectileSpatialScratch = new List<NetEnemy>(32);
         private readonly SpatialHashGrid<NetEnemy> _onlineEnemyGrid = new SpatialHashGrid<NetEnemy>(2.5f, enemy => enemy.Position);
         private readonly SharedRunModel _onlineRunModel = new SharedRunModel();
         private ComponentPool<OnlineEnemyView> _onlineEnemyViewPool;
@@ -286,6 +308,7 @@ namespace ProjectExpedition
             SyncHostRunProjection();
             UpdatePlayers(deltaTime);
             UpdateEnemies(deltaTime);
+            UpdateProjectiles(deltaTime);
 
             _spawnTimer -= deltaTime;
             if (_spawnTimer <= 0f && _enemies.Count < MaximumEnemies)
@@ -402,19 +425,17 @@ namespace ProjectExpedition
                 if (target == null) return;
                 alreadyTargeted.Add(target.Id);
                 var critical = Random.value < player.CriticalChance;
-                DamageEnemy(target, player.AxeDamage * (critical ? 2f : 1f));
+                var baseDirection = (target.Position - player.Position).normalized;
+                var offset = (axe - (player.AxeCount - 1) * 0.5f) * 10f;
+                var direction = Quaternion.Euler(0f, 0f, offset) * baseDirection;
+                var projectile = _availableProjectiles.Count > 0
+                    ? _availableProjectiles.Pop()
+                    : new NetProjectile();
+                projectile.Initialize(player.Position, direction,
+                    player.AxeDamage * (critical ? 2f : 1f),
+                    player.AxePierce, critical, player.FrostAxeEvolved);
+                _projectiles.Add(projectile);
                 BroadcastAttack(player.Position, target.Position, PlayerIndex(player.Id), critical);
-                if (player.FrostAxeEvolved) DamageEnemiesInRadius(target.Position, 1.25f, player.AxeDamage * 0.42f);
-
-                if (player.AxePierce > 1)
-                {
-                    var secondary = FindNearestEnemy(target.Position, alreadyTargeted);
-                    if (secondary != null && (secondary.Position - target.Position).sqrMagnitude < 3.5f * 3.5f)
-                    {
-                        alreadyTargeted.Add(secondary.Id);
-                        DamageEnemy(secondary, player.AxeDamage * 0.55f);
-                    }
-                }
             }
         }
 
@@ -448,6 +469,50 @@ namespace ProjectExpedition
                 }
                 _enemyTargets[enemy.Id] = enemy.Position;
             }
+        }
+
+        private void UpdateProjectiles(float deltaTime)
+        {
+            for (var projectileIndex = _projectiles.Count - 1; projectileIndex >= 0; projectileIndex--)
+            {
+                var projectile = _projectiles[projectileIndex];
+                projectile.Flight.Advance(deltaTime);
+                if (projectile.Flight.Active)
+                {
+                    _onlineEnemyGrid.QueryRadius(projectile.Flight.Position,
+                        projectile.Flight.Radius + 0.9f, _onlineProjectileSpatialScratch);
+                    for (var enemyIndex = _onlineProjectileSpatialScratch.Count - 1; enemyIndex >= 0; enemyIndex--)
+                    {
+                        var enemy = _onlineProjectileSpatialScratch[enemyIndex];
+                        if (enemy == null || !_enemies.ContainsKey(enemy.Id) || projectile.Hits.Contains(enemy.Id)) continue;
+                        if (!projectile.Flight.Overlaps(enemy.Position, enemy.Radius)) continue;
+                        projectile.Hits.Add(enemy.Id);
+                        var impactPosition = enemy.Position;
+                        DamageEnemy(enemy, projectile.Flight.Damage);
+                        if (projectile.Flight.Evolved)
+                            DamageEnemiesInRadius(impactPosition, 1.25f, projectile.Flight.Damage * 0.42f);
+                        projectile.Flight.RegisterHit();
+                        if (!projectile.Flight.Active) break;
+                    }
+                }
+                if (!projectile.Flight.Active)
+                {
+                    _projectiles.RemoveAt(projectileIndex);
+                    projectile.Reset();
+                    _availableProjectiles.Push(projectile);
+                }
+            }
+        }
+
+        private void ClearOnlineProjectiles()
+        {
+            for (var i = _projectiles.Count - 1; i >= 0; i--)
+            {
+                var projectile = _projectiles[i];
+                projectile.Reset();
+                _availableProjectiles.Push(projectile);
+            }
+            _projectiles.Clear();
         }
 
         private NetPlayer FindNearestLivingPlayer(Vector2 origin)
@@ -659,6 +724,7 @@ namespace ProjectExpedition
             ClearGameplayVisuals();
             _players.Clear();
             _enemies.Clear();
+            ClearOnlineProjectiles();
             _onlineEnemyGrid.Clear();
             _playerTargets.Clear();
             _enemyTargets.Clear();
@@ -814,6 +880,7 @@ namespace ProjectExpedition
                 _onlineRunModel.Reset();
                 _phase = OnlinePhase.Lobby;
                 _enemies.Clear();
+                ClearOnlineProjectiles();
                 _onlineEnemyGrid.Clear();
                 _enemyTargets.Clear();
                 ClearGameplayVisuals();
@@ -956,6 +1023,7 @@ namespace ProjectExpedition
                 ClearGameplayVisuals();
                 _players.Clear();
                 _enemies.Clear();
+                ClearOnlineProjectiles();
                 _playerTargets.Clear();
                 _enemyTargets.Clear();
                 _onlineEnemyGrid.Clear();
@@ -1356,6 +1424,7 @@ namespace ProjectExpedition
             _enemyViews.Clear();
             _players.Clear();
             _enemies.Clear();
+            ClearOnlineProjectiles();
             _onlineEnemyGrid.Clear();
             _playerTargets.Clear();
             _enemyTargets.Clear();
@@ -1980,6 +2049,7 @@ namespace ProjectExpedition
 
     public sealed class OnlineAttackVisual : MonoBehaviour, IPoolableComponent
     {
+        private const float TravelSpeed = 9.5f;
         private Vector2 _target;
         private float _life;
         private SpriteRenderer _renderer;
@@ -1996,17 +2066,17 @@ namespace ProjectExpedition
         {
             _owner = owner;
             _target = target;
-            _life = 0.3f;
+            _life = Vector2.Distance(transform.position, target) / TravelSpeed + 0.15f;
             gameObject.name = critical ? "Critical Network Axe" : "Network Frost Axe";
             _renderer.color = critical ? new Color(1f, 0.82f, 0.25f) :
                 (playerIndex == 0 ? new Color(0.42f, 0.91f, 1f) : new Color(1f, 0.62f, 0.25f));
-            transform.localScale = Vector3.one * (critical ? 0.34f : 0.24f);
+            transform.localScale = new Vector3(0.62f, 0.24f, 1f) * (critical ? 1.25f : 1f);
         }
 
         private void Update()
         {
             _life -= Time.unscaledDeltaTime;
-            transform.position = Vector3.MoveTowards(transform.position, _target, 20f * Time.unscaledDeltaTime);
+            transform.position = Vector3.MoveTowards(transform.position, _target, TravelSpeed * Time.unscaledDeltaTime);
             transform.Rotate(0f, 0f, 900f * Time.unscaledDeltaTime);
             if (_life <= 0f || ((Vector2)transform.position - _target).sqrMagnitude < 0.05f) _owner.ReleaseOnlineAttack(this);
         }
