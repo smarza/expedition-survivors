@@ -92,6 +92,14 @@ def main() -> int:
     if "activeInputHandler: 1" not in project_settings and "activeInputHandler: 2" not in project_settings:
         fail("Project Settings must enable the Unity Input System")
 
+    project_version = (ROOT / "ProjectSettings/ProjectVersion.txt").read_text(encoding="utf-8")
+    editor_version = re.search(r"m_EditorVersion:\s*(\d+)\.(\d+)\.(\d+)f(\d+)", project_version)
+    if not editor_version:
+        fail("ProjectVersion.txt does not contain a supported final Unity Editor version")
+    editor_tuple = tuple(int(part) for part in editor_version.groups())
+    if editor_tuple < (6000, 0, 58, 2):
+        fail("Unity Editor version is vulnerable to CVE-2025-59489; use 6000.0.58f2 or newer")
+
     scene_meta = (ROOT / "Assets/Scenes/Bootstrap.unity.meta").read_text(encoding="utf-8")
     build_settings = (ROOT / "ProjectSettings/EditorBuildSettings.asset").read_text(encoding="utf-8")
     match = re.search(r"^guid:\s*([a-f0-9]{32})$", scene_meta, flags=re.MULTILINE)

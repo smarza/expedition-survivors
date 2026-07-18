@@ -1,3 +1,10 @@
+# Milestone 0.8.0 — Shared simulation (in development)
+
+- Pinned development to Unity `6000.5.4f1`, a supported release newer than the first patched Unity 6.0 LTS version for CVE-2025-59489.
+- Added a repository security policy requiring patched-editor rebuilds for all distributable targets.
+- Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
+- Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
+
 # Milestone 0.7.1 — Foundation runtime fixes
 
 - Moved `ProductionContentDatabase` to a matching source file and repaired the asset's MonoScript reference, eliminating the misleading `CharacterContentRecord` warnings and `CODE FALLBACK` loading path.

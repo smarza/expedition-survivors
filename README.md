@@ -1,10 +1,10 @@
-# Project Expedition — Production Foundation 0.7.1
+# Project Expedition — Shared Simulation 0.8.0 (development)
 
 An original survivors-like prototype built for Unity 6 LTS. The milestone is intentionally self-contained: it has no purchased packages or external asset dependencies and bootstraps itself from an empty scene.
 
 ## Play it
 
-1. Install Unity Hub and Unity 6 LTS. The project is pinned to `6000.0.40f1`; a newer Unity 6 LTS patch may upgrade it safely.
+1. Install Unity Hub and Unity `6000.5.4f1` or a newer supported patched release. Earlier builds must not be used for release artifacts because of CVE-2025-59489.
 2. Add this folder through **Unity Hub → Add project from disk**.
 3. Open `Assets/Scenes/Bootstrap.unity`.
 4. Press **Play**.
