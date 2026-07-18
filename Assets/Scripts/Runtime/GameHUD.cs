@@ -21,6 +21,9 @@ namespace ProjectExpedition
         private GUIStyle _statSection;
         private GUIStyle _statLabel;
         private GUIStyle _statValue;
+        private GUIStyle _rewardEffect;
+        private GUIStyle _rewardDescription;
+        private GUIStyle _itemProgress;
         private string _announcement;
         private float _announcementTimer;
         private int _mainSelection;
@@ -58,15 +61,14 @@ namespace ProjectExpedition
         private void UpdateMainMenu()
         {
             var direction = LocalInputRouter.AnyMenuHorizontalPressed();
-            if (direction != 0) _mainSelection = Wrap(_mainSelection + direction, 3);
+            if (direction != 0) _mainSelection = Wrap(_mainSelection + direction, 2);
             if (LocalInputRouter.AnyMenuSubmitPressed()) ActivateMainSelection();
         }
 
         private void ActivateMainSelection()
         {
             if (_mainSelection == 0) PrepareCharacterSelection(1);
-            else if (_mainSelection == 1) PrepareCharacterSelection(2);
-            else _director.EnterOnlineSpike();
+            else PrepareCharacterSelection(2);
         }
 
         private void PrepareCharacterSelection(int playerCount)
@@ -173,7 +175,6 @@ namespace ProjectExpedition
                 case RunState.Paused: DrawPause(); break;
                 case RunState.GameOver: DrawResults(false); break;
                 case RunState.Victory: DrawResults(true); break;
-                case RunState.OnlineSpike: break;
             }
 
             if (_announcementTimer > 0f && _director.State == RunState.Playing)
@@ -207,15 +208,13 @@ namespace ProjectExpedition
             GUI.Label(new Rect(735, 712, 950, 35),
                 $"Mastery {SaveService.Data.HaldorMastery}   •   Renown {SaveService.Data.TotalRenown}   •   Best {SaveService.Data.BestKills} kills", _small);
 
-            DrawSelectableButton(new Rect(680, 865, 350, 90), "SOLO", 0, ref _mainSelection, PrepareSolo);
-            DrawSelectableButton(new Rect(1050, 865, 350, 90), "LOCAL CO-OP", 1, ref _mainSelection, PrepareLocal);
-            DrawSelectableButton(new Rect(1420, 865, 380, 90), "ONLINE CO-OP", 2, ref _mainSelection, EnterOnline);
+            DrawSelectableButton(new Rect(720, 865, 500, 90), "SOLO", 0, ref _mainSelection, PrepareSolo);
+            DrawSelectableButton(new Rect(1260, 865, 500, 90), "LOCAL CO-OP", 1, ref _mainSelection, PrepareLocal);
             GUI.Label(new Rect(680, 965, 1120, 55), "KEYBOARD OR GAMEPAD   •   D-PAD/STICK NAVIGATES   •   A CONFIRMS   •   B RETURNS", _small);
         }
 
         private void PrepareSolo() => PrepareCharacterSelection(1);
         private void PrepareLocal() => PrepareCharacterSelection(2);
-        private void EnterOnline() => _director.EnterOnlineSpike();
 
         private void DrawCharacterSelect()
         {
@@ -348,8 +347,11 @@ namespace ProjectExpedition
                 var build = _director.Players[option.TargetPlayerIndex].Build;
                 var nextLabel = option.Shared ? "TEAM UPGRADE" : build.NextLabel(option.Item);
                 GUI.Label(new Rect(rect.x + 30, rect.y + 150, rect.width - 60, 38), nextLabel, _cardTitle);
-                GUI.Label(new Rect(rect.x + 28, rect.y + 205, rect.width - 56, 115), option.Item.Description, _body);
-                GUI.Label(new Rect(rect.x + 28, rect.y + 320, rect.width - 56, 38), EvolutionHint(option.Item), _small);
+                GUI.Label(new Rect(rect.x + 28, rect.y + 198, rect.width - 56, 78),
+                    option.Item.Description, _rewardDescription);
+                GUI.Label(new Rect(rect.x + 28, rect.y + 278, rect.width - 56, 72),
+                    RewardEffectPreview(option), _rewardEffect);
+                GUI.Label(new Rect(rect.x + 28, rect.y + 350, rect.width - 56, 28), EvolutionHint(option.Item), _small);
                 if (GUI.Button(new Rect(rect.x + 28, rect.y + 385, rect.width - 56, 64), "CHOOSE REWARD", _button))
                     _director.ChooseReward(i);
                 if (GUI.Button(rect, GUIContent.none, GUIStyle.none)) _director.ChooseReward(i);
@@ -404,21 +406,26 @@ namespace ProjectExpedition
                 DrawPanel(rect, new Color(0.035f, 0.08f, 0.108f, 1f));
                 DrawPanel(new Rect(rect.x, rect.y, rect.width, 14), player.Definition.Color);
                 GUI.Label(new Rect(rect.x + 35, rect.y + 31, rect.width - 70, 55), $"P{playerIndex + 1} — {player.HeroName.ToUpperInvariant()}", _heading);
-                var statGap = 16f;
-                var statWidth = (rect.width - 76f - statGap) * 0.5f;
-                var survivorStats = new Rect(rect.x + 30, rect.y + 95, statWidth, 225);
-                var combatStats = new Rect(survivorStats.xMax + statGap, rect.y + 95, statWidth, 225);
+                var statGap = 10f;
+                var statWidth = (rect.width - 60f - statGap * 2f) / 3f;
+                var survivorStats = new Rect(rect.x + 30, rect.y + 95, statWidth, 310);
+                var axeStats = new Rect(survivorStats.xMax + statGap, rect.y + 95, statWidth, 310);
+                var guardStats = new Rect(axeStats.xMax + statGap, rect.y + 95, statWidth, 310);
                 DrawStatColumn(survivorStats, "SURVIVOR",
-                    new[] { "HEALTH", "ARMOR", "MOVE SPEED", "MAGNET", "ULTIMATE", "DAMAGE", "COOLDOWN" },
-                    new[] { $"{player.Health:0} / {player.MaxHealth:0}", $"{player.Armor:0.0}", $"{player.MoveSpeed:0.00}", $"{player.MagnetRadius:0.00}", player.UltimateName, $"{player.UltimateDamage:0}", $"{player.UltimateCooldown:0.0}s" },
+                    new[] { "HEALTH", "ARMOR", "MOVE SPEED", "XP MAGNET", "STATUS", "ULTIMATE", "ULT DAMAGE", "ULT RADIUS", "ULT INTERVAL", "ULT CHARGE" },
+                    new[] { $"{player.Health:0} / {player.MaxHealth:0}", $"{player.Armor:0.0}", $"{player.MoveSpeed:0.00}", $"{player.MagnetRadius:0.00}", player.IsDowned ? "DOWNED" : "ACTIVE", player.UltimateName, $"{player.UltimateDamage:0.0}", $"{player.UltimateRadius:0.00}", $"{player.UltimateCooldown:0.00}s", player.UltimateReady ? "READY" : $"{player.UltimateRemaining:0.0}s" },
                     player.Definition.Color);
-                DrawStatColumn(combatStats, "COMBAT",
-                    new[] { "WEAPON", "DAMAGE", "RATE", "PROJECTILES", "PIERCE", "CRITICAL", "RAVEN GUARD" },
-                    new[] { "FROST AXE", $"{player.Weapons.AxeDamage:0.0}", $"{1f / Mathf.Max(0.01f, player.Weapons.AxeCooldown):0.00}/s", $"{player.Weapons.AxeCount}", $"{player.Weapons.AxePierce}", $"{player.Weapons.CriticalChance * 100f:0}%", $"{player.Weapons.ShieldDamage:0.0}" },
+                DrawStatColumn(axeStats, "FROST AXE",
+                    new[] { "DAMAGE", "INTERVAL", "RATE", "PROJECTILES", "PIERCE", "CRITICAL", "CRIT DAMAGE", "PROJ SPEED", "LIFETIME", "HIT RADIUS", "KNOCKBACK", "EVOLUTION" },
+                    new[] { $"{player.Weapons.AxeDamage:0.0}", $"{player.Weapons.AxeCooldown:0.000}s", $"{1f / Mathf.Max(0.01f, player.Weapons.AxeCooldown):0.00}/s", $"{player.Weapons.AxeCount}", $"{player.Weapons.AxePierce}", $"{player.Weapons.CriticalChance * 100f:0}%", $"x{player.Weapons.CriticalDamageMultiplier:0.0}", $"{player.Weapons.AxeProjectileSpeed:0.0}", $"{player.Weapons.AxeProjectileDuration:0.0}s", $"{player.Weapons.AxeHitRadius:0.00}/{player.Weapons.CriticalAxeHitRadius:0.00}", $"{player.Weapons.AxeKnockback:0.00}/{player.Weapons.CriticalAxeKnockback:0.00}", player.Weapons.FrostAxeEvolved ? $"{player.Weapons.CleaverExplosionDamageMultiplier * 100f:0}% @ {player.Weapons.CleaverExplosionRadius:0.00}" : "NONE" },
                     new Color(0.54f, 0.72f, 0.9f));
+                DrawStatColumn(guardStats, "RAVEN GUARD",
+                    new[] { "DAMAGE", "INTERVAL", "RATE", "RADIUS", "KNOCKBACK", "HEAL / HIT", "HEAL CAP", "EVOLUTION" },
+                    new[] { $"{player.Weapons.ShieldDamage:0.0}", $"{player.Weapons.ShieldCooldown:0.000}s", $"{1f / Mathf.Max(0.01f, player.Weapons.ShieldCooldown):0.00}/s", $"{player.Weapons.ShieldRadius:0.00}", $"{player.Weapons.ShieldKnockback:0.00}", $"{player.Weapons.ShieldHealingPerHit:0.00}", $"{player.Weapons.ShieldHealingCap:0.0}", player.Weapons.RavenGuardEvolved ? "STORM AEGIS" : "NONE" },
+                    new Color(0.45f, 0.9f, 0.72f));
 
-                GUI.Label(new Rect(rect.x + 35, rect.y + 338, rect.width - 340, 38), "ITEMS AND SOURCES", _cardTitle);
-                GUI.Label(new Rect(rect.xMax - 310, rect.y + 342, 270, 30),
+                GUI.Label(new Rect(rect.x + 35, rect.y + 418, rect.width - 340, 38), "ITEMS AND LEVEL EFFECTS", _cardTitle);
+                GUI.Label(new Rect(rect.xMax - 310, rect.y + 422, 270, 30),
                     $"WEAPONS {player.Build.CountCategory(ItemCategory.Weapon)}/{player.Build.WeaponSlots}   •   GEAR {player.Build.CountCategory(ItemCategory.Gear)}/{player.Build.GearSlots}", _micro);
                 var items = player.Build.Items;
                 var visibleIndex = 0;
@@ -431,13 +438,14 @@ namespace ProjectExpedition
                     var row = visibleIndex / 3;
                     var gap = 12f;
                     var cardWidth = (rect.width - 84f - gap * 2f) / 3f;
-                    var itemRect = new Rect(rect.x + 30 + column * (cardWidth + gap), rect.y + 385 + row * 94, cardWidth, 90);
+                    var itemRect = new Rect(rect.x + 30 + column * (cardWidth + gap), rect.y + 462 + row * 78, cardWidth, 74);
                     DrawPanel(itemRect, new Color(0.018f, 0.05f, 0.07f, 1f));
                     DrawBorder(itemRect, state.IsEvolved ? new Color(0.98f, 0.68f, 0.22f) : item.Color, 3f);
                     var evolved = state.IsEvolved ? ItemCatalog.Find(state.EvolutionId) : null;
-                    GUI.Label(new Rect(itemRect.x + 10, itemRect.y + 5, itemRect.width - 20, 36),
+                    GUI.Label(new Rect(itemRect.x + 10, itemRect.y + 3, itemRect.width - 20, 28),
                         evolved != null ? $"{evolved.Name} — EVOLVED" : $"{item.Name} — LEVEL {state.Level}/{item.MaxLevel}", _itemTitle);
-                    GUI.Label(new Rect(itemRect.x + 10, itemRect.y + 40, itemRect.width - 20, 46), item.Description, _micro);
+                    GUI.Label(new Rect(itemRect.x + 10, itemRect.y + 31, itemRect.width - 20, 40),
+                        ItemProgressPreview(state, item, evolved), _itemProgress);
                     visibleIndex++;
                 }
             }
@@ -448,6 +456,43 @@ namespace ProjectExpedition
         {
             if (option.Shared) return "P1 + P2";
             return $"P{option.TargetPlayerIndex + 1}  {_director.Players[option.TargetPlayerIndex].HeroName.Split(' ')[0].ToUpperInvariant()}";
+        }
+
+        private static string ItemProgressPreview(ItemState state, ItemDefinition item,
+            ItemDefinition evolved)
+        {
+            if (evolved != null) return evolved.Description;
+            var current = item.EffectDescriptionAtLevel(state.Level);
+            if (state.Level >= item.MaxLevel) return $"MAX • {current}";
+            return $"CURRENT: {current}\nNEXT L{state.Level + 1}: {item.EffectDescriptionAtLevel(state.Level + 1)}";
+        }
+
+        private string RewardEffectPreview(RewardOption option)
+        {
+            if (option == null || option.Item == null) return string.Empty;
+            if (option.Item.IsEvolution) return $"EFFECT: {option.Item.Description}";
+            if (option.Item.Category == ItemCategory.Boon)
+                return $"EFFECT: {option.Item.EffectDescriptionAtLevel(1)}";
+
+            if (!option.Shared)
+                return PlayerRewardEffectPreview(option.TargetPlayerIndex, option.Item, false);
+
+            var preview = string.Empty;
+            for (var playerIndex = 0; playerIndex < _director.Players.Count; playerIndex++)
+            {
+                if (preview.Length > 0) preview += "\n";
+                preview += PlayerRewardEffectPreview(playerIndex, option.Item, true);
+            }
+            return preview;
+        }
+
+        private string PlayerRewardEffectPreview(int playerIndex, ItemDefinition item, bool showPlayer)
+        {
+            if (playerIndex < 0 || playerIndex >= _director.Players.Count) return string.Empty;
+            var state = _director.Players[playerIndex].Build.Find(item.Id);
+            var nextLevel = state == null ? 1 : Mathf.Min(item.MaxLevel, state.Level + 1);
+            var prefix = showPlayer ? $"P{playerIndex + 1}  " : "EFFECT: ";
+            return $"{prefix}L{nextLevel} — {item.EffectDescriptionAtLevel(nextLevel)}";
         }
 
         private void DrawRewardTargetIcons(RewardOption option, Rect rect)
@@ -519,7 +564,7 @@ namespace ProjectExpedition
             DrawPanel(new Rect(rect.x, rect.y, rect.width, 4), accent);
             GUI.Label(new Rect(rect.x + 14, rect.y + 7, rect.width - 28, 28), title, _statSection);
             var rowY = rect.y + 38f;
-            const float rowHeight = 25f;
+            const float rowHeight = 22f;
             var count = Mathf.Min(labels.Length, values.Length);
             for (var i = 0; i < count; i++)
             {
@@ -621,7 +666,7 @@ namespace ProjectExpedition
             _title = MakeStyle(48, FontStyle.Bold, new Color(0.78f, 0.91f, 0.96f), TextAnchor.MiddleCenter);
             _heading = MakeStyle(31, FontStyle.Bold, new Color(0.72f, 0.88f, 0.94f), TextAnchor.MiddleCenter);
             _cardTitle = MakeStyle(24, FontStyle.Bold, new Color(0.93f, 0.76f, 0.32f), TextAnchor.MiddleLeft);
-            _itemTitle = MakeStyle(15, FontStyle.Bold, new Color(0.96f, 0.78f, 0.34f), TextAnchor.UpperLeft);
+            _itemTitle = MakeStyle(13, FontStyle.Bold, new Color(0.96f, 0.78f, 0.34f), TextAnchor.UpperLeft);
             _itemTitle.wordWrap = true;
             _body = MakeStyle(22, FontStyle.Normal, new Color(0.85f, 0.89f, 0.9f), TextAnchor.UpperLeft);
             _body.wordWrap = true;
@@ -637,6 +682,12 @@ namespace ProjectExpedition
             _statSection = MakeStyle(14, FontStyle.Bold, new Color(0.93f, 0.76f, 0.32f), TextAnchor.MiddleLeft);
             _statLabel = MakeStyle(14, FontStyle.Bold, new Color(0.62f, 0.72f, 0.76f), TextAnchor.MiddleLeft);
             _statValue = MakeStyle(16, FontStyle.Bold, new Color(0.86f, 0.92f, 0.94f), TextAnchor.MiddleRight);
+            _rewardEffect = MakeStyle(16, FontStyle.Bold, new Color(0.96f, 0.76f, 0.3f), TextAnchor.UpperLeft);
+            _rewardEffect.wordWrap = true;
+            _rewardDescription = MakeStyle(18, FontStyle.Normal, new Color(0.85f, 0.89f, 0.9f), TextAnchor.UpperLeft);
+            _rewardDescription.wordWrap = true;
+            _itemProgress = MakeStyle(11, FontStyle.Bold, new Color(0.72f, 0.82f, 0.86f), TextAnchor.UpperLeft);
+            _itemProgress.wordWrap = true;
             _center = MakeStyle(22, FontStyle.Bold, new Color(0.82f, 0.9f, 0.93f), TextAnchor.MiddleCenter);
             _center.wordWrap = true;
             var buttonText = new Color(0.025f, 0.065f, 0.085f);

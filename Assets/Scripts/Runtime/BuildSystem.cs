@@ -47,6 +47,46 @@ namespace ProjectExpedition
             var index = level - 1;
             return index >= 0 && index < LevelEffects.Length ? LevelEffects[index] : UpgradeId.None;
         }
+
+        public string EffectDescriptionAtLevel(int level) =>
+            UpgradeDescriptions.For(EffectAtLevel(level));
+    }
+
+    public static class UpgradeDescriptions
+    {
+        public static string For(UpgradeId id)
+        {
+            switch (id)
+            {
+                case UpgradeId.AxeDamage: return "+26% Frost Axe damage";
+                case UpgradeId.AxeSpeed: return "-14% Frost Axe interval";
+                case UpgradeId.ExtraAxe: return "+1 projectile per Frost Axe volley";
+                case UpgradeId.AxePierce: return "+1 Frost Axe pierce";
+                case UpgradeId.MoveSpeed: return "+0.46 movement speed";
+                case UpgradeId.MaxHealth: return "+24 maximum and current health";
+                case UpgradeId.Armor: return "+1 armor";
+                case UpgradeId.Magnet: return "+0.55 XP pickup radius";
+                case UpgradeId.ShieldPulse: return "Activate Raven Guard";
+                case UpgradeId.ShieldDamage: return "+42% Raven Guard damage";
+                case UpgradeId.CriticalRunes: return "+9 percentage points critical chance";
+                case UpgradeId.UltimateCooldown: return "-10% base Ultimate cooldown";
+                case UpgradeId.UltimateDamage: return "+30% Ultimate damage and derived area";
+                case UpgradeId.Heal: return "Restore 24 health immediately";
+                case UpgradeId.ShieldDamageAndSpeed:
+                    return "+42% Raven Guard damage and -14% interval";
+                default: return "Base item level; no additional modifier";
+            }
+        }
+
+        public static string Progression(ItemDefinition item)
+        {
+            if (item == null || item.LevelEffects == null || item.LevelEffects.Length == 0)
+                return string.Empty;
+            var parts = new string[item.LevelEffects.Length];
+            for (var level = 1; level <= item.LevelEffects.Length; level++)
+                parts[level - 1] = $"L{level}: {item.EffectDescriptionAtLevel(level)}";
+            return string.Join("  •  ", parts);
+        }
     }
 
     public sealed class ItemState
@@ -173,16 +213,17 @@ namespace ProjectExpedition
         private static UpgradeId[] Effects(params UpgradeId[] effects) => effects;
 
         public static ItemDefinition FrostAxe { get; private set; } = new ItemDefinition(
-            "weapon.frost_axe", "Frost Axe", "AXE", "Automatic rune axe. Levels improve damage, rate, pierce and projectile count.",
+            "weapon.frost_axe", "Frost Axe", "AXE", "Automatic rune axe. Each level grants the listed damage, interval, pierce or projectile modifier.",
             ItemCategory.Weapon, 8, new Color(0.35f, 0.88f, 1f), Effects(
                 UpgradeId.None, UpgradeId.AxeDamage, UpgradeId.AxeSpeed, UpgradeId.AxePierce,
                 UpgradeId.AxeDamage, UpgradeId.ExtraAxe, UpgradeId.AxeSpeed, UpgradeId.AxeDamage));
 
         public static ItemDefinition RavenGuard { get; private set; } = new ItemDefinition(
-            "weapon.raven_guard", "Raven Guard", "GUARD", "Automatic defensive shockwave. Levels improve damage, armor and frequency.",
+            "weapon.raven_guard", "Raven Guard", "GUARD", "Automatic defensive shockwave. Each level grants the listed damage, armor or interval modifier.",
             ItemCategory.Weapon, 8, new Color(0.55f, 0.72f, 0.9f), Effects(
                 UpgradeId.None, UpgradeId.ShieldDamage, UpgradeId.Armor, UpgradeId.ShieldDamage,
-                UpgradeId.ShieldDamage, UpgradeId.Armor, UpgradeId.ShieldDamage, UpgradeId.ShieldDamage));
+                UpgradeId.ShieldDamageAndSpeed, UpgradeId.Armor, UpgradeId.ShieldDamage,
+                UpgradeId.ShieldDamageAndSpeed));
 
         public static ItemDefinition LongshipBoots { get; private set; } = Gear(
             "gear.longship_boots", "Longship Boots", "BOOTS", "Increases movement speed.", 5,
@@ -399,30 +440,8 @@ namespace ProjectExpedition
 
         public static void Apply(PlayerController player, BuildApplyResult result)
         {
-            if (result.Evolution)
-            {
-                if (result.Item == ItemCatalog.JotunnCleaver) player.Weapons.EvolveFrostAxe();
-                else if (result.Item == ItemCatalog.StormAegis) player.Weapons.EvolveRavenGuard();
-                return;
-            }
-            var effect = result.Item.EffectAtLevel(result.NewLevel);
-            switch (effect)
-            {
-                case UpgradeId.AxeDamage:
-                case UpgradeId.AxeSpeed:
-                case UpgradeId.ExtraAxe:
-                case UpgradeId.AxePierce:
-                case UpgradeId.ShieldDamage:
-                case UpgradeId.CriticalRunes:
-                    player.Weapons.Apply(effect);
-                    break;
-                case UpgradeId.MoveSpeed: player.AddMoveSpeed(0.46f); break;
-                case UpgradeId.MaxHealth: player.AddMaxHealth(24f); break;
-                case UpgradeId.Armor: player.AddArmor(1f); break;
-                case UpgradeId.UltimateCooldown: player.ImproveUltimateCooldown(); break;
-                case UpgradeId.UltimateDamage: player.ImproveUltimateDamage(); break;
-                case UpgradeId.Heal: player.Heal(24f); break;
-            }
+            if (player == null || result == null) return;
+            player.ApplyBuildResult(result);
         }
     }
 }

@@ -13,8 +13,7 @@ namespace ProjectExpedition
         BuildDetails,
         Paused,
         GameOver,
-        Victory,
-        OnlineSpike
+        Victory
     }
 
     public enum UpgradeId
@@ -33,7 +32,8 @@ namespace ProjectExpedition
         CriticalRunes,
         UltimateCooldown,
         UltimateDamage,
-        Heal
+        Heal,
+        ShieldDamageAndSpeed
     }
 
     [Serializable]
