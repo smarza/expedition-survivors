@@ -99,6 +99,39 @@ namespace ProjectExpedition.Tests
         }
 
         [UnityTest]
+        public IEnumerator EnemyAdapter_ProjectsSharedEnemyStateAndDamage()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+            var enemyObject = new GameObject("Shared Enemy Adapter Test");
+            enemyObject.transform.SetParent(director.transform, false);
+            enemyObject.transform.position = new Vector3(3f, -2f, 0f);
+            var enemy = enemyObject.AddComponent<Enemy>();
+
+            enemy.Initialize(director, 2f, false);
+            var initialHealth = EnemyCatalog.Draugr.BaseHealth +
+                2f * EnemyCatalog.Draugr.HealthPerDifficulty;
+
+            Assert.That(enemy.Alive, Is.True);
+            Assert.That(enemy.Boss, Is.False);
+            Assert.That(enemy.Position, Is.EqualTo(new Vector2(3f, -2f)));
+            Assert.That(enemy.Health, Is.EqualTo(initialHealth));
+            Assert.That(enemy.Speed, Is.InRange(
+                EnemyCatalog.Draugr.MinimumSpeed + 2f * EnemyCatalog.Draugr.SpeedPerDifficulty,
+                EnemyCatalog.Draugr.MaximumSpeed + 2f * EnemyCatalog.Draugr.SpeedPerDifficulty));
+            Assert.That(enemy.ExperienceValue, Is.InRange(
+                EnemyCatalog.Draugr.MinimumExperience,
+                EnemyCatalog.Draugr.MaximumExperienceExclusive - 1));
+
+            var damageResult = enemy.TakeDamage(5f, 0f, enemy.Position);
+            Assert.That((damageResult & EnemyDamageResult.Damaged) != 0, Is.True);
+            Assert.That(enemy.Health, Is.EqualTo(initialHealth - 5f));
+            Assert.That(enemy.Alive, Is.True);
+
+            yield return DestroyDirector(director);
+        }
+
+        [UnityTest]
         public IEnumerator ReplayRun_PreservesSeedAndRestartsProgress()
         {
             yield return ClearDirectors();

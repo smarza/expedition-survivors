@@ -65,6 +65,7 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedProjectileModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedPlayerModel.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedEnemyModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
         ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
@@ -73,6 +74,7 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SaveMigrationTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedRunModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedPlayerModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/SharedEnemyModelTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -172,7 +174,7 @@ def main() -> int:
 
     edit_tests = "\n".join((ROOT / "Assets/Tests/EditMode" / name).read_text(encoding="utf-8") for name in (
         "DeterministicFoundationTests.cs", "BuildAndRewardTests.cs", "SaveMigrationTests.cs",
-        "SharedRunModelTests.cs", "SharedPlayerModelTests.cs"))
+        "SharedRunModelTests.cs", "SharedPlayerModelTests.cs", "SharedEnemyModelTests.cs"))
     edit_test_requirements = ("RunRandom_SameSeedProducesSameSequence", "SpatialGrid_UpdatesAndRemovesMembership",
                               "ComponentPool_ReusesReleasedInstances", "PlayerBuild_EvolutionRequiresMaximumLevelAndCatalyst",
                               "RewardFactory_SameSeedProducesSameRecipientsAndItems", "LegacyV1Save_MigratesWithoutProgressLoss",
@@ -185,7 +187,12 @@ def main() -> int:
                               "Ultimate_RequiresChargeAndStartsCooldownAndInvulnerability",
                               "Damage_AppliesArmorMinimumDamageAndKnockdownExactlyOnce",
                               "Revival_RequiresNearbyRescuerAndRestoresProtectedHealth",
-                              "Upgrades_UpdateDerivedStatisticsAndPreserveUltimateChargeRatio")
+                              "Upgrades_UpdateDerivedStatisticsAndPreserveUltimateChargeRatio",
+                              "Begin_DerivesStatisticsFromDefinitionDifficultyAndExplicitRolls",
+                              "AdvanceTowards_MovesAndAppliesTheSharedContactInterval",
+                              "TakeDamage_AppliesKnockbackAndReportsDeathExactlyOnce",
+                              "Boss_UsesTheSameDifficultyScalingAndStateBoundary",
+                              "SameCommands_ProduceIdenticalEnemyStateForEveryAdapter")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -193,7 +200,8 @@ def main() -> int:
     play_test_requirements = ("GameDirector_InitializesProductionFoundation",
                               "SoloRun_LevelUpOffersFourRewardsAndResumes", "ReplayRun_PreservesSeedAndRestartsProgress",
                               "RunOutcome_TransitionsOnceWithoutTouchingDisk",
-                              "PlayerController_ProjectsSharedPlayerStateAndUpgrades", "RunSimulationPhase.Reward",
+                              "PlayerController_ProjectsSharedPlayerStateAndUpgrades",
+                              "EnemyAdapter_ProjectsSharedEnemyStateAndDamage", "RunSimulationPhase.Reward",
                               "RunSimulationPhase.Completed")
     if any(requirement not in play_tests for requirement in play_test_requirements):
         fail("PlayMode expedition flow coverage is incomplete")
@@ -216,6 +224,21 @@ def main() -> int:
             "readonly SharedPlayerModel _model", "_model.TakeDamage", "_model.AdvanceRevival",
             "_model.CalculateRequestedPosition", "_model.TryActivateUltimate")):
         fail("PlayerController must project the shared player state instead of owning duplicate player rules")
+
+    enemy_source = (ROOT / "Assets/Scripts/Runtime/Enemy.cs").read_text(encoding="utf-8")
+    shared_enemy_source = (ROOT / "Assets/Scripts/Runtime/SharedEnemyModel.cs").read_text(encoding="utf-8")
+    shared_enemy_requirements = (
+        "class SharedEnemyModel",
+        "EnemyAdvanceResult AdvanceTowards",
+        "EnemyDamageResult TakeDamage",
+        "ContactCooldownRemaining",
+        "EnemyDefinition definition",
+    )
+    if any(requirement not in shared_enemy_source for requirement in shared_enemy_requirements) or any(
+        requirement not in enemy_source for requirement in (
+            "readonly SharedEnemyModel _model", "_model.Begin", "_model.AdvanceTowards",
+            "_model.TakeDamage", "_model.Stop")):
+        fail("Enemy must project shared enemy state instead of owning duplicate movement and combat rules")
 
     content_source = (ROOT / "Assets/Scripts/Runtime/ContentDefinitions.cs").read_text(encoding="utf-8")
     input_source = (ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs").read_text(encoding="utf-8")
@@ -269,6 +292,7 @@ def main() -> int:
         "deterministic run seed": "class RunRandom" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReplayRun" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "shared run progression": "class SharedRunModel" in (ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs").read_text(encoding="utf-8") and "_runModel.AddExperience" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8") and "_runModel.TryTriggerBoss" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "shared player state": "class SharedPlayerModel" in shared_player_source and "readonly SharedPlayerModel _model" in player_source,
+        "shared enemy state": "class SharedEnemyModel" in shared_enemy_source and "readonly SharedEnemyModel _model" in enemy_source,
         "scriptable content database": "class ProductionContentDatabase : ScriptableObject" in database_source and "Resources.Load<ProductionContentDatabase>" in (ROOT / "Assets/Scripts/Runtime/ContentAssets.cs").read_text(encoding="utf-8"),
         "gamepad movement deadzone": "MovementDeadzone" in input_source and "ApplyMovementDeadzone" in input_source,
         "visible replay confirmation": "REPLAYING SEED" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),

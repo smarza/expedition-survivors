@@ -9,8 +9,8 @@
 - Added source-control hygiene for Unity caches, local settings, IDE files and build artifacts.
 - Added a validation guard that rejects vulnerable Unity 6.0 Editor versions.
 - Split production runtime, EditMode tests and PlayMode tests into explicit assemblies.
-- Added Unity Test Framework `1.4.6` and 23 EditMode regression tests for deterministic RNG, shared run/player/projectile behavior, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
-- Added 5 disk-safe PlayMode smoke tests for bootstrap initialization, shared player projection, Solo level-up, same-seed replay and terminal run results.
+- Added Unity Test Framework `1.4.6` and 28 EditMode regression tests for deterministic RNG, shared run/player/enemy/projectile behavior, pooling, spatial membership, content IDs, build slots, rewards, evolutions, balance and save migration.
+- Added 6 disk-safe PlayMode smoke tests for bootstrap initialization, shared player/enemy projection, Solo level-up, same-seed replay and terminal run results.
 - Added a backward-compatible save migration from the original unversioned payload to versioned envelope format 2 without changing the existing save-file path.
 - Expanded the fast repository validator to enforce assembly boundaries, package version and the critical automated-test inventory.
 - Moved the pool test probe out of the Editor-only assembly so Unity can attach it to a `GameObject` during EditMode pool-reuse validation.
@@ -20,6 +20,7 @@
 - Updated PlayMode object discovery to Unity 6000.5's unsorted `FindObjectsByType<T>()` overload, removing the deprecated `FindObjectsSortMode` warnings.
 - Extracted Frost Axe flight, lifetime, collision radius and pierce rules into the presentation-free `SharedProjectileModel` used by Solo and Local Co-op.
 - Extracted player attributes, movement requests, damage/armor, invulnerability, knockdown/revival and Ultimate rules into `SharedPlayerModel`; `PlayerController` now projects that shared state for both Solo and Local Co-op.
+- Extracted enemy derived attributes, pursuit movement, contact cadence, knockback and death into `SharedEnemyModel`; the pooled `Enemy` component now handles target selection, presentation, spatial updates and drops around that state.
 - Removed the experimental Online Co-op runtime, menu entry, Netcode package and Transport assembly dependencies from the active product scope.
 - Deferred Online multiplayer until the Solo/Local shared simulation is mature; the former POC remains recoverable from Git history and its future replacement must reuse the common gameplay core.
 - Added GitHub Actions continuous integration with static validation, Unity EditMode/PlayMode tests and a gated Windows build.

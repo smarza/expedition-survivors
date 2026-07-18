@@ -420,11 +420,12 @@ Started:
 - security policy and rebuild requirement;
 - successful patched-Editor import, compilation and Solo/Local manual smoke pass confirmed on 2026-07-18;
 - production runtime, EditMode and PlayMode assembly boundaries;
-- Unity Test Framework 1.4.6 with 23 EditMode and 5 PlayMode regressions enforced by GitHub Actions;
+- Unity Test Framework 1.4.6 with 28 EditMode and 6 PlayMode regressions enforced by GitHub Actions;
 - backward-compatible migration from legacy save payloads to versioned save envelope 2;
 - first Phase C extraction: local clock, phase, boss trigger, XP, reward turn and outcome now route through `SharedRunModel`;
 - Frost Axe flight, lifetime, collision-radius and pierce behavior are extracted into `SharedProjectileModel`;
 - player attributes, movement requests, damage/armor, invulnerability, knockdown/revival and Ultimate rules are extracted into `SharedPlayerModel`;
+- enemy derived attributes, pursuit movement, contact cadence, knockback and death are extracted into `SharedEnemyModel`;
 - the experimental Online runtime, menu and networking packages are removed from active scope;
 - incremental shared simulation extraction in progress.
 
@@ -432,7 +433,7 @@ Not yet completed:
 
 - rebuilding the final 0.8.0 Windows acceptance executables with the patched runtime;
 - shared simulation implementation;
-- further extraction of enemy, remaining weapon and effect rules into testable shared models.
+- further extraction of enemy spawning, remaining weapon and effect rules into testable shared models.
 
 ## 13. Current technical architecture
 
@@ -442,10 +443,12 @@ Not yet completed:
 | `GameDirector` | Local GameObject orchestration and adapter from shared state to presentation. |
 | `SharedRunModel` | Presentation-free run phase, clock, boss trigger, XP, reward turn and terminal outcome. |
 | `SharedPlayerModel` | Presentation-free attributes, movement requests, damage, knockdown/revival and Ultimate state. |
+| `SharedEnemyModel` | Presentation-free enemy attributes, pursuit, contact cadence, knockback and death state. |
 | `SharedProjectileModel` | Presentation-free projectile flight, lifetime, collision radius and pierce budget. |
 | `PlayerController` | Local input and GameObject/presentation adapter for `SharedPlayerModel`. |
+| `Enemy` | Pooled GameObject/presentation, target selection, drops and spatial-index adapter for `SharedEnemyModel`. |
 | `WeaponSystem` | Runtime automatic weapon behavior. |
-| `Enemy`, `AxeProjectile`, `ExperienceGem` | Focused local simulation actors. |
+| `AxeProjectile`, `ExperienceGem` | Focused local simulation actors. |
 | `BuildSystem` | Catalog, build slots, levels, reward generation and evolution recipes. |
 | `ContentDefinitions` | Characters, maps, Ultimates and balance rules. |
 | `ContentAssets` | Authoring records, runtime content load, validation and enemy catalog. |
@@ -539,7 +542,7 @@ Exit gate: the project imports and builds only with the patched supported Editor
 
 ### Phase B — Test harness and assembly boundaries
 
-Status: accepted on the target development machine and automated through GitHub Actions with 23 EditMode tests, 5 PlayMode tests, static validation and a gated Windows build.
+Status: accepted on the target development machine and automated through GitHub Actions with 28 EditMode tests, 6 PlayMode tests, static validation and a gated Windows build.
 
 1. Add runtime and test assembly definitions where they reduce coupling.
 2. Add Unity Test Framework EditMode tests for RNG, content IDs, reward eligibility, build slots, evolution prerequisites, spatial membership and save migration.
@@ -551,7 +554,7 @@ Exit gate: critical deterministic rules fail automatically when regressed.
 
 ### Phase C — Extract shared run model
 
-Status: local run progression, player state and Frost Axe projectile flight are implemented in presentation-free models. Enemy and remaining-weapon state extraction continues.
+Status: local run progression, player state, enemy state and Frost Axe projectile flight are implemented in presentation-free models. Enemy spawning and remaining-weapon state extraction continue.
 
 1. Define commands, events and read-only state views.
 2. Move clock, phase, XP, reward-turn and outcome rules behind the shared boundary.
@@ -728,9 +731,9 @@ The next developer/agent should do the following, in order:
 
 1. Work on `agent/0.8.0-shared-simulation` and PR #1.
 2. Pull the Phase B test-harness commit and allow Unity `6000.5.4f1` to resolve Unity Test Framework `1.4.6`.
-3. Run all 23 EditMode and 5 PlayMode tests using `docs/TESTING_0.8.md`; report any failure with its full stack trace.
+3. Run all 28 EditMode and 6 PlayMode tests using `docs/TESTING_0.8.md`; report any failure with its full stack trace.
 4. Capture and commit only legitimate package-lock or serialization changes produced by the target Editor.
-5. Continue extracting enemy/weapon/effect state incrementally for the shared Solo/Local implementation.
+5. Continue extracting enemy spawning, weapon and effect state incrementally for the shared Solo/Local implementation.
 6. Keep the game playable and run automated plus relevant Solo/Local regressions after every extraction step.
 7. Rebuild patched Windows acceptance executables before closing 0.8.0.
 8. Update this document whenever architecture, scope, platform or release decisions change.

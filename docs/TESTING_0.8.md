@@ -16,8 +16,8 @@ The Test Runner menu is only registered after the project compiles and the Test 
 ## Run in the Editor
 
 1. Open **Window → General → Test Runner**.
-2. Select **EditMode**, choose **Run All** and confirm 23 passes with zero failures.
-3. Select **PlayMode**, choose **Run All** and confirm 5 passes with zero failures.
+2. Select **EditMode**, choose **Run All** and confirm 28 passes with zero failures.
+3. Select **PlayMode**, choose **Run All** and confirm 6 passes with zero failures.
 4. Run `python3 tools/validate_project.py` from the repository root.
 5. If any test fails, capture the test name, assertion, full stack trace and Unity Console errors before changing code.
 
@@ -35,8 +35,9 @@ Reusable `MonoBehaviour` test doubles live in the player-compatible `ProjectExpe
 | EditMode / shared run | initialization, clock/boss trigger, XP overflow, co-op reward turns and idempotent outcome | 5 |
 | EditMode / shared projectile | travel, collision radius and pierce-budget parity across adapters | 1 |
 | EditMode / shared player | attributes, movement, damage/armor, invulnerability, knockdown/revival, Ultimate timing and upgrades | 6 |
-| PlayMode / expedition flow | foundation bootstrap, Solo level-up/resume, player-model projection, replay seed/reset, idempotent run result | 5 |
-| **Total** |  | **28** |
+| EditMode / shared enemy | derived stats, movement/contact cadence, knockback, death, boss scaling and adapter parity | 5 |
+| PlayMode / expedition flow | foundation bootstrap, Solo level-up/resume, player/enemy model projection, replay seed/reset, idempotent run result | 6 |
+| **Total** |  | **34** |
 
 ## Manual regression after shared gameplay changes
 
@@ -49,7 +50,7 @@ Reusable `MonoBehaviour` test doubles live in the player-compatible `ProjectExpe
 
 ## Acceptance rule
 
-The accepted Phase B baseline is 15 passing tests. The current Phase C gate is 28: all 23 EditMode and 5 PlayMode tests must pass on the target patched Editor, the static validator must pass and no existing manual Solo/Local smoke path may regress. Phase C commits must add or update tests when they change deterministic rules.
+The accepted Phase B baseline is 15 passing tests. The current Phase C gate is 34: all 28 EditMode and 6 PlayMode tests must pass on the target patched Editor, the static validator must pass and no existing manual Solo/Local smoke path may regress. Phase C commits must add or update tests when they change deterministic rules.
 
 ## Branch and PR workflow
 

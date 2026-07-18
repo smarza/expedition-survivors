@@ -85,8 +85,8 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Startup foundation checks covering deterministic random sequences, spatial membership and stable content IDs.
 - Runtime, EditMode and PlayMode assembly boundaries that keep tests separate from production builds.
 - GitHub Actions gates for static validation, Unity tests and Windows compilation, with retained reports and build artifacts.
-- Twenty-three EditMode regression tests for deterministic foundations, shared run/player/projectile behavior, builds, rewards, balance and versioned save migration.
-- Five disk-safe PlayMode smoke tests for bootstrap, shared player projection, Solo level-up, same-seed replay and terminal result flow.
+- Twenty-eight EditMode regression tests for deterministic foundations, shared run/player/enemy/projectile behavior, builds, rewards, balance and versioned save migration.
+- Six disk-safe PlayMode smoke tests for bootstrap, shared player/enemy projection, Solo level-up, same-seed replay and terminal result flow.
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
 
 ## Architecture
@@ -94,15 +94,17 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - `GameDirector`: local GameObject orchestration and presentation adapter for the shared run model.
 - `SharedRunModel`: presentation-free phase, clock, boss trigger, XP, reward-turn and outcome state.
 - `SharedPlayerModel`: presentation-free player attributes, movement requests, damage, knockdown/revival and Ultimate state.
+- `SharedEnemyModel`: presentation-free enemy attributes, movement, contact cadence, knockback and death state.
 - `SharedProjectileModel`: presentation-free Frost Axe flight, lifetime, collision radius and pierce state.
 - `PlayerController`: local input and GameObject/presentation adapter for the shared player model.
+- `Enemy`: pooled GameObject/presentation, target selection, drops and spatial-index adapter for the shared enemy model.
 - `LocalInputRouter`: deterministic keyboard/gamepad ownership for Local Co-op.
 - `ContentDefinitions`: shared characters, maps, Ultimates and balance rules.
 - `ContentAssets`: ScriptableObject authoring records, runtime loading, validation and enemy archetypes.
 - `BuildSystem`: item catalog, slots, reward generation, build state and evolution recipes.
 - `ProductionFoundation`: generic component pools, spatial hash, deterministic random source, performance metrics and startup checks.
 - `WeaponSystem`: data-like runtime weapon state and automatic attacks.
-- `Enemy`, `AxeProjectile`, `ExperienceGem`: focused simulation actors.
+- `AxeProjectile`, `ExperienceGem`: focused simulation actors.
 - `SaveService`: versioned local persistence with atomic temporary-file writes.
 - `SaveMigration`: backward-compatible deserialization and current save-envelope serialization.
 - `RuntimeAssets`: dependency-free prototype sprites and fallback art.

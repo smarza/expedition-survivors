@@ -4,17 +4,17 @@ namespace ProjectExpedition
 {
     public sealed class Enemy : MonoBehaviour, IPoolableComponent
     {
-        public bool Alive { get; private set; }
-        public float Radius { get; private set; }
-        public int ExperienceValue { get; private set; }
-        public Vector2 Position => transform.position;
+        public bool Alive => _model.Alive;
+        public bool Boss => _model.Boss;
+        public float Health => _model.Health;
+        public float Speed => _model.Speed;
+        public float ContactDamage => _model.ContactDamage;
+        public float Radius => _model.Radius;
+        public int ExperienceValue => _model.ExperienceValue;
+        public Vector2 Position => _model.Position;
 
         private GameDirector _director;
-        private float _health;
-        private float _speed;
-        private float _contactDamage;
-        private float _contactTimer;
-        private bool _boss;
+        private readonly SharedEnemyModel _model = new SharedEnemyModel();
         private SpriteRenderer _renderer;
         private GameObject _crown;
         private Color _baseColor;
@@ -39,16 +39,13 @@ namespace ProjectExpedition
         public void Initialize(GameDirector director, float difficulty, bool boss)
         {
             _director = director;
-            _boss = boss;
             var definition = boss ? EnemyCatalog.Jotunn : EnemyCatalog.Draugr;
             gameObject.name = definition.Name;
-            Alive = true;
-            _health = definition.BaseHealth + difficulty * definition.HealthPerDifficulty;
-            _speed = director.Rng.Range(definition.MinimumSpeed, definition.MaximumSpeed) + difficulty * definition.SpeedPerDifficulty;
-            _contactDamage = definition.BaseContactDamage + difficulty * definition.ContactDamagePerDifficulty;
-            Radius = director.Rng.Range(definition.MinimumRadius, definition.MaximumRadius);
-            ExperienceValue = director.Rng.Range(definition.MinimumExperience, definition.MaximumExperienceExclusive);
-            _contactTimer = 0f;
+            var rolledBaseSpeed = director.Rng.Range(definition.MinimumSpeed, definition.MaximumSpeed);
+            var rolledRadius = director.Rng.Range(definition.MinimumRadius, definition.MaximumRadius);
+            var rolledExperience = director.Rng.Range(definition.MinimumExperience, definition.MaximumExperienceExclusive);
+            _model.Begin(transform.position, definition, difficulty, rolledBaseSpeed, rolledRadius,
+                rolledExperience);
             transform.localScale = Vector3.one * Radius * 2f;
             _baseColor = boss || !director.Rng.Chance(0.5f) ? definition.PrimaryColor : definition.AlternateColor;
             _renderer.color = _baseColor;
@@ -61,40 +58,33 @@ namespace ProjectExpedition
             if (!Alive || _director == null || _director.State != RunState.Playing) return;
             var target = _director.GetNearestLivingPlayer(Position);
             if (target == null) return;
-            var delta = (Vector2)target.transform.position - Position;
-            if (delta.sqrMagnitude > 0.001f)
+            var result = _model.AdvanceTowards((Vector2)target.transform.position, 0.38f, Time.deltaTime);
+            if ((result & EnemyAdvanceResult.Moved) != 0)
             {
-                transform.position += (Vector3)(delta.normalized * _speed * Time.deltaTime);
+                transform.position = (Vector3)Position;
                 _director.UpdateEnemySpatial(this);
             }
-            transform.Rotate(0f, 0f, (_boss ? 16f : 36f) * Time.deltaTime);
+            transform.Rotate(0f, 0f, (Boss ? 16f : 36f) * Time.deltaTime);
 
-            _contactTimer -= Time.deltaTime;
-            var hitRange = Radius + 0.38f;
-            if (delta.sqrMagnitude <= hitRange * hitRange && _contactTimer <= 0f)
-            {
-                target.TakeDamage(_contactDamage);
-                _contactTimer = 0.7f;
-            }
+            if ((result & EnemyAdvanceResult.ContactTriggered) != 0)
+                target.TakeDamage(ContactDamage);
         }
 
-        public void TakeDamage(float amount, float knockback, Vector2 source)
+        public EnemyDamageResult TakeDamage(float amount, float knockback, Vector2 source)
         {
-            if (!Alive) return;
-            _health -= amount;
-            if (knockback > 0f)
+            var result = _model.TakeDamage(amount, knockback, source);
+            if (result == EnemyDamageResult.Ignored) return result;
+            if ((result & EnemyDamageResult.Moved) != 0)
             {
-                var away = Position - source;
-                if (away.sqrMagnitude > 0.001f)
-                {
-                    transform.position += (Vector3)(away.normalized * knockback);
-                    _director.UpdateEnemySpatial(this);
-                }
+                transform.position = (Vector3)Position;
+                _director.UpdateEnemySpatial(this);
             }
             _renderer.color = Color.white;
             CancelInvoke(nameof(RestoreColor));
             Invoke(nameof(RestoreColor), 0.07f);
-            if (_health <= 0f) Die();
+            if ((result & EnemyDamageResult.Killed) != 0)
+                _director.OnEnemyKilled(this, ExperienceValue, Boss);
+            return result;
         }
 
         private void RestoreColor()
@@ -103,19 +93,11 @@ namespace ProjectExpedition
                 _renderer.color = _baseColor;
         }
 
-        private void Die()
-        {
-            Alive = false;
-            _director.OnEnemyKilled(this, ExperienceValue, _boss);
-        }
-
         public void OnReleasedToPool()
         {
-            Alive = false;
+            _model.Stop();
             CancelInvoke();
             _director = null;
-            _health = 0f;
-            _contactTimer = 0f;
             transform.localScale = Vector3.one;
             transform.rotation = Quaternion.identity;
             if (_crown != null) _crown.SetActive(false);
