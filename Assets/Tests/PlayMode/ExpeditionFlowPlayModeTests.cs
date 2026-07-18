@@ -12,7 +12,7 @@ namespace ProjectExpedition.Tests
         {
             Time.timeScale = 1f;
             SaveService.PersistenceEnabled = true;
-            var directors = Object.FindObjectsByType<GameDirector>(FindObjectsSortMode.None);
+            var directors = Object.FindObjectsByType<GameDirector>();
             for (var i = 0; i < directors.Length; i++)
                 if (directors[i] != null) Object.Destroy(directors[i].gameObject);
             yield return null;
@@ -119,7 +119,7 @@ namespace ProjectExpedition.Tests
         private static IEnumerator ClearDirectors()
         {
             Time.timeScale = 1f;
-            var directors = Object.FindObjectsByType<GameDirector>(FindObjectsSortMode.None);
+            var directors = Object.FindObjectsByType<GameDirector>();
             for (var i = 0; i < directors.Length; i++)
                 if (directors[i] != null) Object.Destroy(directors[i].gameObject);
             yield return null;

@@ -18,6 +18,7 @@
 - Added the presentation-free `SharedRunModel` as the first Phase C extraction, owning local run phase, clock, boss trigger, XP, reward-turn alternation and terminal outcome.
 - Routed `GameDirector` progression through the shared model while retaining its existing GameObject, spawning, reward-effect and UI responsibilities.
 - Added five EditMode model tests and PlayMode phase-parity assertions for start, level-up, replay and result transitions.
+- Updated PlayMode object discovery to Unity 6000.5's unsorted `FindObjectsByType<T>()` overload, removing the deprecated `FindObjectsSortMode` warnings.
 
 # Milestone 0.7.1 — Foundation runtime fixes
 
