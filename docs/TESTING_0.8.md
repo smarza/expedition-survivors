@@ -11,6 +11,8 @@ This guide is the acceptance contract for the first automated regression boundar
 
 Allow Unity Package Manager to finish before evaluating compile or test results. If this is the first import after pulling the test harness, a legitimate `Packages/packages-lock.json` update may be produced and should be reviewed separately from generated `Library` content.
 
+The Test Runner menu is only registered after the project compiles and the Test Framework package finishes importing. If Unity opens in Safe Mode, resolve every Console compilation error first, exit Safe Mode and then open the Test Runner.
+
 ## Run in the Editor
 
 1. Open **Window → General → Test Runner**.

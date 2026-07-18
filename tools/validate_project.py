@@ -144,7 +144,12 @@ def main() -> int:
 
     runtime_assembly = json.loads((ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef").read_text(encoding="utf-8"))
     runtime_references = set(runtime_assembly.get("references", []))
-    required_runtime_references = {"Unity.Collections", "Unity.InputSystem", "Unity.Netcode.Runtime"}
+    required_runtime_references = {
+        "Unity.Collections",
+        "Unity.InputSystem",
+        "Unity.Netcode.Runtime",
+        "Unity.Networking.Transport",
+    }
     if runtime_assembly.get("name") != "ProjectExpedition.Runtime" or not required_runtime_references.issubset(runtime_references):
         fail("runtime assembly definition is missing its production package references")
 
