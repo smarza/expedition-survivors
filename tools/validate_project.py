@@ -262,7 +262,7 @@ def main() -> int:
         "targetPlatform: WebGL",
         "actions/upload-pages-artifact@",
         "actions/deploy-pages@",
-        "name: github-pages",
+        "github-pages-preview",
         '      - "agent/**"',
         "targetPlatform: StandaloneWindows64",
         "inputs.build_windows",

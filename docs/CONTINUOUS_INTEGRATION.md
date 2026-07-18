@@ -14,7 +14,7 @@ Every push to `main` or an `agent/**` development branch, plus every manual disp
 
 Test reports and the Web build are retained as GitHub Actions artifacts for 14 days. Unity `Library` caches for tests, Web and Windows builds are isolated because the jobs use different Editor images and target configurations.
 
-The repository has one Pages site, so the latest successful development-branch deployment is the active preview. Superseded runs for the same branch are cancelled, while Pages deployments are serialized to prevent two publications from writing concurrently.
+The repository has one Pages site, so the latest successful development-branch deployment is the active preview. Superseded runs for the same branch are cancelled, while Pages deployments are serialized to prevent two publications from writing concurrently. Development branches deploy through the dedicated `github-pages-preview` environment; `main` retains the default protected `github-pages` environment.
 
 ## Windows milestone gate
 
