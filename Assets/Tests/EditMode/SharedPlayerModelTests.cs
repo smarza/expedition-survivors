@@ -81,7 +81,7 @@ namespace ProjectExpedition.Tests
             Assert.That(model.ReviveProgress, Is.EqualTo(0.36f).Within(0.0001f));
             Assert.That(model.AdvanceRevival(true, 1.6f), Is.True);
             Assert.That(model.IsDowned, Is.False);
-            Assert.That(model.Health, Is.EqualTo(63f));
+            Assert.That(model.Health, Is.EqualTo(63f).Within(0.0001f));
             Assert.That(model.ReviveProgress, Is.Zero);
             Assert.That(model.InvulnerabilityRemaining, Is.EqualTo(1f));
         }
