@@ -128,6 +128,8 @@ def main() -> int:
         fail("Project Settings must enable the Unity Input System")
     if "m_BuildTarget: Standalone" not in project_settings or "m_DynamicBatching: 0" not in project_settings:
         fail("Dynamic Batching is deprecated in Unity 6000.5 and must be disabled for Standalone")
+    if "webGLDecompressionFallback: 1" not in project_settings:
+        fail("Web decompression fallback is required for static GitHub Pages hosting")
 
     project_version = (ROOT / "ProjectSettings/ProjectVersion.txt").read_text(encoding="utf-8")
     editor_version = re.search(r"m_EditorVersion:\s*(\d+)\.(\d+)\.(\d+)f(\d+)", project_version)
@@ -257,7 +259,13 @@ def main() -> int:
         "game-ci/unity-test-runner@",
         "testMode: All",
         "game-ci/unity-builder@",
+        "targetPlatform: WebGL",
+        "actions/upload-pages-artifact@",
+        "actions/deploy-pages@",
+        "name: github-pages",
+        '      - "agent/**"',
         "targetPlatform: StandaloneWindows64",
+        "inputs.build_windows",
         "python3 tools/validate_project.py",
         "UNITY_LICENSE:",
         "UNITY_SERIAL:",

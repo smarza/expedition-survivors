@@ -426,6 +426,8 @@ Started:
 - Frost Axe flight, lifetime, collision-radius and pierce behavior are extracted into `SharedProjectileModel`;
 - player attributes, movement requests, damage/armor, invulnerability, knockdown/revival and Ultimate rules are extracted into `SharedPlayerModel`;
 - enemy derived attributes, pursuit movement, contact cadence, knockback and death are extracted into `SharedEnemyModel`;
+- the `SharedEnemyModel` extraction passed automated and owner gameplay validation on 2026-07-18;
+- successful development builds are published as a browser-playable GitHub Pages preview, while Windows builds remain milestone and `main` gates;
 - the experimental Online runtime, menu and networking packages are removed from active scope;
 - incremental shared simulation extraction in progress.
 
@@ -542,19 +544,19 @@ Exit gate: the project imports and builds only with the patched supported Editor
 
 ### Phase B — Test harness and assembly boundaries
 
-Status: accepted on the target development machine and automated through GitHub Actions with 28 EditMode tests, 6 PlayMode tests, static validation and a gated Windows build.
+Status: accepted on the target development machine and automated through GitHub Actions with 28 EditMode tests, 6 PlayMode tests, static validation, a Web preview deployment and a gated Windows milestone build.
 
 1. Add runtime and test assembly definitions where they reduce coupling.
 2. Add Unity Test Framework EditMode tests for RNG, content IDs, reward eligibility, build slots, evolution prerequisites, spatial membership and save migration.
 3. Add PlayMode smoke tests for bootstrap, run start, level-up, replay seed and result flow.
 4. Preserve `tools/validate_project.py` as a fast non-Unity guard.
-5. Require the GitHub Actions test and Windows-build checks before requesting manual owner validation.
+5. Require the GitHub Actions tests, Web build and Pages deployment before requesting manual owner validation; require a Windows build at milestone closeout.
 
 Exit gate: critical deterministic rules fail automatically when regressed.
 
 ### Phase C — Extract shared run model
 
-Status: local run progression, player state, enemy state and Frost Axe projectile flight are implemented in presentation-free models. Enemy spawning and remaining-weapon state extraction continue.
+Status: local run progression, player state, enemy state and Frost Axe projectile flight are implemented in presentation-free models. The enemy-model cut passed owner gameplay validation on 2026-07-18. Enemy spawning and remaining-weapon state extraction continue.
 
 1. Define commands, events and read-only state views.
 2. Move clock, phase, XP, reward-turn and outcome rules behind the shared boundary.

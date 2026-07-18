@@ -17,14 +17,14 @@ Without Unity installed, run `python tools/validate_project.py` for fast reposit
 
 ## Continuous integration
 
-The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode and PlayMode tests, and a Windows build before manual gameplay acceptance. Unity license secrets must be configured once in the repository. Setup and the development handoff contract are documented in [`docs/CONTINUOUS_INTEGRATION.md`](docs/CONTINUOUS_INTEGRATION.md).
+The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode and PlayMode tests, builds the Web player and publishes it to [GitHub Pages](https://smarza.github.io/expedition-survivors/) before manual gameplay acceptance. Windows builds run on `main` and on explicit milestone dispatches. Setup and the development handoff contract are documented in [`docs/CONTINUOUS_INTEGRATION.md`](docs/CONTINUOUS_INTEGRATION.md).
 
 ## Automated tests
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 17 deterministic domain, shared-run, shared-projectile, content, build, reward, pool, spatial-grid and save-migration tests.
-2. **PlayMode** — 4 bootstrap, level-up, replay-seed and result-flow tests.
+1. **EditMode** — 28 deterministic domain, shared-run, shared-player, shared-enemy, shared-projectile, content, build, reward, pool, spatial-grid and save-migration tests.
+2. **PlayMode** — 6 bootstrap, shared-model projection, level-up, replay-seed and result-flow tests.
 
 The PlayMode tests explicitly disable persistence, so they do not overwrite the developer's local campaign save. The exact acceptance procedure and current manual regression matrix are in [`docs/TESTING_0.8.md`](docs/TESTING_0.8.md).
 
@@ -84,7 +84,7 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Toggleable production metrics with `F3` or gamepad Left Shoulder + View/Select.
 - Startup foundation checks covering deterministic random sequences, spatial membership and stable content IDs.
 - Runtime, EditMode and PlayMode assembly boundaries that keep tests separate from production builds.
-- GitHub Actions gates for static validation, Unity tests and Windows compilation, with retained reports and build artifacts.
+- GitHub Actions gates for static validation, Unity tests, Web compilation and GitHub Pages deployment, with Windows builds reserved for `main` and milestone dispatches.
 - Twenty-eight EditMode regression tests for deterministic foundations, shared run/player/enemy/projectile behavior, builds, rewards, balance and versioned save migration.
 - Six disk-safe PlayMode smoke tests for bootstrap, shared player/enemy projection, Solo level-up, same-seed replay and terminal result flow.
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.

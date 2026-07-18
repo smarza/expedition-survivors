@@ -23,8 +23,10 @@
 - Extracted enemy derived attributes, pursuit movement, contact cadence, knockback and death into `SharedEnemyModel`; the pooled `Enemy` component now handles target selection, presentation, spatial updates and drops around that state.
 - Removed the experimental Online Co-op runtime, menu entry, Netcode package and Transport assembly dependencies from the active product scope.
 - Deferred Online multiplayer until the Solo/Local shared simulation is mature; the former POC remains recoverable from Git history and its future replacement must reuse the common gameplay core.
-- Added GitHub Actions continuous integration with static validation, Unity EditMode/PlayMode tests and a gated Windows build.
-- Added license preflight, isolated Unity Library caches, cancellation of superseded PR runs and 14-day test/build artifacts.
+- Added GitHub Actions continuous integration with static validation, Unity EditMode/PlayMode tests, a Web build and automatic GitHub Pages preview deployment.
+- Reserved Windows CI builds for `main` and explicit milestone dispatches so everyday gameplay validation can use the browser without weakening the native release gate.
+- Enabled Unity's Web decompression fallback for static hosting and retained downloadable Web artifacts alongside the live preview.
+- Added license preflight, isolated Unity Library caches, cancellation of superseded branch runs and 14-day test/build artifacts.
 - Removed the validator's external Pillow dependency by reading the PNG header directly, keeping the fast CI guard self-contained.
 
 # Milestone 0.7.1 — Foundation runtime fixes
