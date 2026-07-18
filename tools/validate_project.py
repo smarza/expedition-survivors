@@ -66,6 +66,7 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedProjectileModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedPlayerModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedEnemyModel.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedSpawnModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
         ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
@@ -75,6 +76,7 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SharedRunModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedPlayerModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedEnemyModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/SharedSpawnModelTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -174,9 +176,8 @@ def main() -> int:
     if play_assembly.get("includePlatforms") or "ProjectExpedition.Runtime" not in play_assembly.get("references", []):
         fail("PlayMode test assembly must reference the runtime assembly and remain player-compatible")
 
-    edit_tests = "\n".join((ROOT / "Assets/Tests/EditMode" / name).read_text(encoding="utf-8") for name in (
-        "DeterministicFoundationTests.cs", "BuildAndRewardTests.cs", "SaveMigrationTests.cs",
-        "SharedRunModelTests.cs", "SharedPlayerModelTests.cs", "SharedEnemyModelTests.cs"))
+    edit_tests = "\n".join(path.read_text(encoding="utf-8")
+                           for path in sorted((ROOT / "Assets/Tests/EditMode").glob("*.cs")))
     edit_test_requirements = ("RunRandom_SameSeedProducesSameSequence", "SpatialGrid_UpdatesAndRemovesMembership",
                               "ComponentPool_ReusesReleasedInstances", "PlayerBuild_EvolutionRequiresMaximumLevelAndCatalyst",
                               "RewardFactory_SameSeedProducesSameRecipientsAndItems", "LegacyV1Save_MigratesWithoutProgressLoss",
@@ -194,7 +195,11 @@ def main() -> int:
                               "AdvanceTowards_MovesAndAppliesTheSharedContactInterval",
                               "TakeDamage_AppliesKnockbackAndReportsDeathExactlyOnce",
                               "Boss_UsesTheSameDifficultyScalingAndStateBoundary",
-                              "SameCommands_ProduceIdenticalEnemyStateForEveryAdapter")
+                              "SameCommands_ProduceIdenticalEnemyStateForEveryAdapter",
+                              "Advance_UsesInitialDelayAndMapDifficultyRamp",
+                              "Advance_GrowsGroupsAndClampsSpawnInterval",
+                              "Advance_RespectsActiveCapButNeverSuppressesBoss",
+                              "CalculateSpawnPosition_UsesSharedRingBounds")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -229,6 +234,7 @@ def main() -> int:
 
     enemy_source = (ROOT / "Assets/Scripts/Runtime/Enemy.cs").read_text(encoding="utf-8")
     shared_enemy_source = (ROOT / "Assets/Scripts/Runtime/SharedEnemyModel.cs").read_text(encoding="utf-8")
+    shared_spawn_source = (ROOT / "Assets/Scripts/Runtime/SharedSpawnModel.cs").read_text(encoding="utf-8")
     shared_enemy_requirements = (
         "class SharedEnemyModel",
         "EnemyAdvanceResult AdvanceTowards",
@@ -241,6 +247,11 @@ def main() -> int:
             "readonly SharedEnemyModel _model", "_model.Begin", "_model.AdvanceTowards",
             "_model.TakeDamage", "_model.Stop")):
         fail("Enemy must project shared enemy state instead of owning duplicate movement and combat rules")
+    if any(requirement not in shared_spawn_source for requirement in (
+        "class SharedSpawnModel", "SpawnAdvanceResult Advance", "CalculateSpawnPosition")) or any(
+        requirement not in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8")
+        for requirement in ("_spawnModel.Advance", "_spawnModel.Begin", "SharedSpawnModel.CalculateSpawnPosition")):
+        fail("GameDirector must project the shared spawn scheduler instead of owning wave formulas")
 
     content_source = (ROOT / "Assets/Scripts/Runtime/ContentDefinitions.cs").read_text(encoding="utf-8")
     input_source = (ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs").read_text(encoding="utf-8")
@@ -301,6 +312,7 @@ def main() -> int:
         "shared run progression": "class SharedRunModel" in (ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs").read_text(encoding="utf-8") and "_runModel.AddExperience" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8") and "_runModel.TryTriggerBoss" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "shared player state": "class SharedPlayerModel" in shared_player_source and "readonly SharedPlayerModel _model" in player_source,
         "shared enemy state": "class SharedEnemyModel" in shared_enemy_source and "readonly SharedEnemyModel _model" in enemy_source,
+        "shared spawning": "class SharedSpawnModel" in shared_spawn_source and "_spawnModel.Advance" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "scriptable content database": "class ProductionContentDatabase : ScriptableObject" in database_source and "Resources.Load<ProductionContentDatabase>" in (ROOT / "Assets/Scripts/Runtime/ContentAssets.cs").read_text(encoding="utf-8"),
         "gamepad movement deadzone": "MovementDeadzone" in input_source and "ApplyMovementDeadzone" in input_source,
         "visible replay confirmation": "REPLAYING SEED" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),

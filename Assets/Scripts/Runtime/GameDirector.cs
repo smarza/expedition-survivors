@@ -35,11 +35,11 @@ namespace ProjectExpedition
         private Camera _camera;
         private CameraFollow _cameraFollow;
         private GameHUD _hud;
-        private float _spawnTimer;
         private readonly List<RewardOption> _currentRewards = new List<RewardOption>(4);
         private readonly List<Enemy> _spatialScratch = new List<Enemy>(192);
         private bool _runRecorded;
         private readonly SharedRunModel _runModel = new SharedRunModel();
+        private readonly SharedSpawnModel _spawnModel = new SharedSpawnModel();
         private Transform _poolRoot;
         private ComponentPool<Enemy> _enemyPool;
         private ComponentPool<AxeProjectile> _projectilePool;
@@ -95,21 +95,16 @@ namespace ProjectExpedition
             if (State != RunState.Playing) return;
 
             _runModel.Advance(Time.deltaTime);
-            _spawnTimer -= Time.deltaTime;
             CleanupEnemyList();
 
-            var difficulty = 1f + Elapsed / SelectedMap.DifficultyRamp;
-            if (_spawnTimer <= 0f && Enemies.Count < 260)
-            {
-                var groupSize = Mathf.Clamp(1 + Mathf.FloorToInt(Elapsed / 35f), 1, 7);
-                for (var i = 0; i < groupSize; i++) SpawnEnemy(false, difficulty);
-                _spawnTimer = Mathf.Max(SelectedMap.MinimumSpawnInterval,
-                    SelectedMap.BaseSpawnInterval - Elapsed * 0.0014f);
-            }
+            var spawn = _spawnModel.Advance(Time.deltaTime, Elapsed, SelectedMap, Enemies.Count,
+                _runModel.TryTriggerBoss(SelectedMap.BossSpawnTime));
+            for (var i = 0; i < spawn.RegularEnemyCount; i++)
+                SpawnEnemy(false, spawn.Difficulty);
 
-            if (_runModel.TryTriggerBoss(SelectedMap.BossSpawnTime))
+            if (spawn.SpawnBoss)
             {
-                SpawnEnemy(true, difficulty);
+                SpawnEnemy(true, spawn.Difficulty);
                 _hud.SetAnnouncement("THE JOTUNN HAS FOUND YOU", 3.6f);
             }
 
@@ -177,7 +172,7 @@ namespace ProjectExpedition
             _runModel.Begin(playerCount, BalanceRules.ExperienceToNext);
             Kills = 0;
             RunRenown = 0;
-            _spawnTimer = 0.2f;
+            _spawnModel.Begin();
             _runRecorded = false;
             State = RunState.Playing;
             var expeditionLabel = playerCount > 1
@@ -215,8 +210,9 @@ namespace ProjectExpedition
         {
             if (Players.Count == 0) return;
             var angle = Rng.Range(0f, Mathf.PI * 2f);
-            var distance = Rng.Range(8.5f, 11.8f);
-            var position = GroupCenter + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
+            var distance = Rng.Range(SharedSpawnModel.MinimumSpawnDistance,
+                SharedSpawnModel.MaximumSpawnDistance);
+            var position = SharedSpawnModel.CalculateSpawnPosition(GroupCenter, angle, distance);
             var enemy = _enemyPool.Get(position);
             enemy.Initialize(this, difficulty, boss);
             Enemies.Add(enemy);
