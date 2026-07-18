@@ -423,6 +423,7 @@ Started:
 
 - repository migration and Git workflow;
 - patched Unity Editor requirement;
+- Unity 6000.5-compatible package matrix: Input System 1.19.0 and Netcode for GameObjects 2.13.0;
 - CVE-2025-59489 validation guard;
 - security policy and rebuild requirement;
 - planning for shared simulation extraction.
@@ -525,11 +526,12 @@ Every effect must define authority, target rules, stacking behavior, duration, d
 1. Clone/switch to `agent/0.8.0-shared-simulation`.
 2. Open with Unity `6000.5.4f1`.
 3. Allow package resolution and asset reimport.
-4. Commit legitimate serialization/version/lockfile changes separately.
-5. Confirm zero compile errors and no old ScriptableObject warnings.
-6. Run Solo, Local and Online smoke tests.
-7. Rebuild Windows host/client executables.
-8. Mark all pre-patch executables non-release.
+4. Confirm Package Manager resolves Input System `1.19.0`, Netcode for GameObjects `2.13.0` and the Editor-bound Transport/Collections dependencies.
+5. Commit legitimate serialization/version/lockfile changes separately.
+6. Confirm zero compile errors and no old ScriptableObject warnings.
+7. Run Solo, Local and Online smoke tests.
+8. Rebuild Windows host/client executables.
+9. Mark all pre-patch executables non-release.
 
 Exit gate: the project imports and builds only with the patched supported Editor, and all existing modes still start successfully.
 

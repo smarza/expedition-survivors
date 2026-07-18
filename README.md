@@ -11,6 +11,8 @@ For the complete product vision, technical roadmap, launch gates and new-chat ha
 3. Open `Assets/Scenes/Bootstrap.unity`.
 4. Press **Play**.
 
+If this branch was opened before the Unity 6000.5 package hotfix, close the Editor, pull the latest commit and reopen the project. Unity Package Manager must resolve Input System `1.19.0` and Netcode for GameObjects `2.13.0`; if stale PackageCache errors remain, remove the generated `Library/PackageCache` directory and reopen.
+
 Without Unity installed, run `python tools/validate_project.py` for fast repository, syntax-balance, scene-reference and art checks.
 
 ## Controls

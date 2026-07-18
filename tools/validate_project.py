@@ -82,10 +82,22 @@ def main() -> int:
         fail("Unity Input System package is required by the co-op input router")
     if "com.unity.netcode.gameobjects" not in manifest["dependencies"]:
         fail("Netcode for GameObjects is required by the online spike")
-    if "com.unity.transport" not in manifest["dependencies"]:
-        fail("Unity Transport is required by the online spike")
-    if manifest["dependencies"].get("com.unity.collections") != "2.6.7":
-        fail("Unity 6.0 requires the released Collections 2.6.7 package")
+    expected_unity_65_packages = {
+        "com.unity.ide.rider": "3.0.40",
+        "com.unity.ide.visualstudio": "2.0.27",
+        "com.unity.inputsystem": "1.19.0",
+        "com.unity.netcode.gameobjects": "2.13.0",
+    }
+    mismatched_packages = [
+        f"{package}={manifest['dependencies'].get(package)} (expected {version})"
+        for package, version in expected_unity_65_packages.items()
+        if manifest["dependencies"].get(package) != version
+    ]
+    if mismatched_packages:
+        fail("Unity 6000.5 package matrix mismatch: " + ", ".join(mismatched_packages))
+    for core_package in ("com.unity.collections", "com.unity.transport"):
+        if core_package in manifest["dependencies"]:
+            fail(f"{core_package} is a Unity 6000.5 core/transitive package and must not be pinned directly")
     for module in ("com.unity.modules.animation", "com.unity.modules.physics", "com.unity.modules.physics2d"):
         if module not in manifest["dependencies"]:
             fail(f"Netcode compile dependency is missing: {module}")
