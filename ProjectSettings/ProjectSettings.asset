@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 28
+  productGUID: 36b6aa3e47424c6dbbf46ed052cf8b97
+  AndroidProfiler: 0
+  companyName: Smarza Games
+  productName: Project Expedition
+  defaultScreenWidth: 1920
+  defaultScreenHeight: 1080
+  runInBackground: 1
+  resizableWindow: 1
+  usePlayerLog: 1
+  activeInputHandler: 1

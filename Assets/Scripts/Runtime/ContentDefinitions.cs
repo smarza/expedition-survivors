@@ -1,0 +1,160 @@
+using UnityEngine;
+
+namespace ProjectExpedition
+{
+    public sealed class CharacterDefinition
+    {
+        public readonly string Id;
+        public readonly string Name;
+        public readonly string Tribe;
+        public readonly string Role;
+        public readonly string Description;
+        public readonly Color Color;
+        public readonly float MaxHealth;
+        public readonly float MoveSpeed;
+        public readonly float Armor;
+        public readonly string UltimateName;
+        public readonly string UltimateDescription;
+        public readonly float UltimateCooldown;
+        public readonly float UltimateDamage;
+        public readonly float UltimateRadius;
+
+        public CharacterDefinition(
+            string id, string name, string tribe, string role, string description, Color color,
+            float maxHealth, float moveSpeed, float armor, string ultimateName,
+            string ultimateDescription, float ultimateCooldown, float ultimateDamage, float ultimateRadius)
+        {
+            Id = id;
+            Name = name;
+            Tribe = tribe;
+            Role = role;
+            Description = description;
+            Color = color;
+            MaxHealth = maxHealth;
+            MoveSpeed = moveSpeed;
+            Armor = armor;
+            UltimateName = ultimateName;
+            UltimateDescription = ultimateDescription;
+            UltimateCooldown = ultimateCooldown;
+            UltimateDamage = ultimateDamage;
+            UltimateRadius = ultimateRadius;
+        }
+    }
+
+    public sealed class MapDefinition
+    {
+        public readonly string Id;
+        public readonly string Name;
+        public readonly string Region;
+        public readonly string Description;
+        public readonly string DurationLabel;
+        public readonly float Duration;
+        public readonly float BossSpawnTime;
+        public readonly float BaseSpawnInterval;
+        public readonly float MinimumSpawnInterval;
+        public readonly float DifficultyRamp;
+        public readonly Color GroundColor;
+        public readonly int WeaponSlots;
+        public readonly int GearSlots;
+
+        public MapDefinition(
+            string id, string name, string region, string description, string durationLabel,
+            float duration, float bossSpawnTime, float baseSpawnInterval,
+            float minimumSpawnInterval, float difficultyRamp, Color groundColor,
+            int weaponSlots, int gearSlots)
+        {
+            Id = id;
+            Name = name;
+            Region = region;
+            Description = description;
+            DurationLabel = durationLabel;
+            Duration = duration;
+            BossSpawnTime = bossSpawnTime;
+            BaseSpawnInterval = baseSpawnInterval;
+            MinimumSpawnInterval = minimumSpawnInterval;
+            DifficultyRamp = difficultyRamp;
+            GroundColor = groundColor;
+            WeaponSlots = weaponSlots;
+            GearSlots = gearSlots;
+        }
+    }
+
+    public static class ContentCatalog
+    {
+        public static CharacterDefinition[] Characters { get; private set; } = new[]
+        {
+            new CharacterDefinition(
+                "ravenbound.haldor", "Haldor Stormborn", "Ravenbound Vikings", "Expedition Leader",
+                "A relentless Viking shield-bearer who turns every fallen enemy into another verse of his saga.",
+                new Color(0.29f, 0.65f, 0.82f), 150f, 4.45f, 2f,
+                "Ravenstorm",
+                "Haldor becomes briefly untouchable and calls a devastating storm of frost axes and ravens around him.",
+                60f, 145f, 6.8f),
+            new CharacterDefinition(
+                "ravenbound.eira", "Eira Raven-Sworn", "Ravenbound Vikings", "Storm Scout",
+                "A swift pathfinder whose ravens mark openings before the enemy realizes it has been surrounded.",
+                new Color(0.88f, 0.52f, 0.24f), 122f, 5.05f, 0.5f,
+                "Murder of Ravens",
+                "Eira releases a focused murder of ravens that tears through every nearby enemy.",
+                52f, 112f, 5.8f)
+        };
+
+        public static MapDefinition[] Maps { get; private set; } = new[]
+        {
+            new MapDefinition(
+                "frostbound.scout", "The Frostbound Shore", "Jotunn Coast",
+                "A shorter expedition used to learn the shore, complete a build and confront its Jotunn guardian.",
+                "SCOUT EXPEDITION — 5 MIN", 300f, 240f, 0.86f, 0.24f, 46f,
+                new Color(0.075f, 0.13f, 0.16f), 4, 4),
+            new MapDefinition(
+                "frostbound.saga", "The Frostbound Shore: Long Night", "Jotunn Coast",
+                "The full twelve-minute route. Denser phases, stronger elites and a late Jotunn confrontation.",
+                "QUICK EXPEDITION — 12 MIN", 720f, 630f, 0.82f, 0.18f, 42f,
+                new Color(0.055f, 0.105f, 0.145f), 6, 6)
+        };
+
+        public static CharacterDefinition Character(int index) =>
+            Characters[Mathf.Clamp(index, 0, Characters.Length - 1)];
+
+        public static MapDefinition Map(int index) =>
+            Maps[Mathf.Clamp(index, 0, Maps.Length - 1)];
+
+        public static void Apply(ProductionContentDatabase database)
+        {
+            if (database == null) return;
+            if (database.characters != null && database.characters.Length > 0)
+            {
+                var definitions = new System.Collections.Generic.List<CharacterDefinition>(database.characters.Length);
+                for (var i = 0; i < database.characters.Length; i++)
+                    if (database.characters[i] != null && !string.IsNullOrWhiteSpace(database.characters[i].id))
+                        definitions.Add(database.characters[i].Build());
+                if (definitions.Count > 0) Characters = definitions.ToArray();
+            }
+            if (database.maps != null && database.maps.Length > 0)
+            {
+                var definitions = new System.Collections.Generic.List<MapDefinition>(database.maps.Length);
+                for (var i = 0; i < database.maps.Length; i++)
+                    if (database.maps[i] != null && !string.IsNullOrWhiteSpace(database.maps[i].id))
+                        definitions.Add(database.maps[i].Build());
+                if (definitions.Count > 0) Maps = definitions.ToArray();
+            }
+        }
+    }
+
+    public static class BalanceRules
+    {
+        public static int ExperienceToNext(int currentLevel, int playerCount)
+        {
+            var level = Mathf.Max(1, currentLevel);
+            var soloRequirement = 48f + level * 8f + Mathf.Pow(level, 1.35f) * 2f;
+            var partyMultiplier = playerCount > 1 ? 1.35f : 1f;
+            return Mathf.RoundToInt(soloRequirement * partyMultiplier);
+        }
+
+        public static float UltimateCooldown(float baseCooldown, int cooldownUpgrades)
+        {
+            var multiplier = Mathf.Pow(0.9f, Mathf.Max(0, cooldownUpgrades));
+            return Mathf.Max(28f, baseCooldown * multiplier);
+        }
+    }
+}
