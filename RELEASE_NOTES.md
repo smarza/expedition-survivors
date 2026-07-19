@@ -2,6 +2,7 @@
 
 - Added persistent accessibility settings for UI scale, high contrast, reduced flashes and screen shake.
 - Added independent master, music and SFX buses with browser-compatible imported clips and startup after interaction.
+- Replaced unsupported runtime PCM generation after owner validation found silent music and SFX in the Web build.
 - Added bounded, prioritised SFX voices and Menu/Expedition/Boss/Reward/Result music states.
 - Added real P1 keyboard rebinding for movement, Ultimate, Submit, Back, Pause and Expedition Build.
 - Added semantic prompts for keyboard, Xbox, PlayStation, Switch, Steam Deck and generic gamepads.
