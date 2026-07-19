@@ -144,7 +144,11 @@ namespace ProjectExpedition
         private AudioClip[] _musicClips;
         private AudioClip[] _sfxClips;
         private PresentationMusicState _pendingMusic;
+#if UNITY_WEBGL
         private bool _unlocked;
+#else
+        private bool _unlocked = true;
+#endif
 
         public int ActiveVoiceCount
         {
@@ -237,15 +241,33 @@ namespace ProjectExpedition
 
         private static bool HasInteraction()
         {
-            if (Keyboard.current != null && Keyboard.current.anyKey.isPressed) return true;
-            if (Mouse.current != null && Mouse.current.leftButton.isPressed) return true;
-            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed) return true;
+            if (Keyboard.current != null &&
+                (Keyboard.current.anyKey.wasPressedThisFrame || Keyboard.current.anyKey.isPressed))
+                return true;
+
+            if (Mouse.current != null &&
+                (Mouse.current.leftButton.wasPressedThisFrame || Mouse.current.leftButton.isPressed))
+                return true;
+
+            if (Touchscreen.current != null &&
+                (Touchscreen.current.primaryTouch.press.wasPressedThisFrame ||
+                 Touchscreen.current.primaryTouch.press.isPressed))
+                return true;
+
             for (var i = 0; i < Gamepad.all.Count; i++)
             {
                 var gamepad = Gamepad.all[i];
-                if (gamepad.buttonSouth.isPressed || gamepad.startButton.isPressed ||
-                    gamepad.leftStick.ReadValue().sqrMagnitude > 0.2f) return true;
+                if (gamepad.buttonSouth.wasPressedThisFrame || gamepad.buttonSouth.isPressed ||
+                    gamepad.buttonNorth.wasPressedThisFrame || gamepad.buttonNorth.isPressed ||
+                    gamepad.buttonEast.wasPressedThisFrame || gamepad.buttonEast.isPressed ||
+                    gamepad.buttonWest.wasPressedThisFrame || gamepad.buttonWest.isPressed ||
+                    gamepad.startButton.wasPressedThisFrame || gamepad.startButton.isPressed ||
+                    gamepad.dpad.up.wasPressedThisFrame || gamepad.dpad.down.wasPressedThisFrame ||
+                    gamepad.dpad.left.wasPressedThisFrame || gamepad.dpad.right.wasPressedThisFrame ||
+                    gamepad.leftStick.ReadValue().sqrMagnitude > 0.2f)
+                    return true;
             }
+
             return false;
         }
 

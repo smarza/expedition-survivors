@@ -90,6 +90,35 @@ namespace ProjectExpedition
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _cameraFollow = cameraObject.AddComponent<CameraFollow>();
             _cameraFollow.Director = this;
+            DisableForeignCameras(_camera);
+            EnsureSingleAudioListener(cameraObject);
+        }
+
+        private static void DisableForeignCameras(Camera activeCamera)
+        {
+            var cameras = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (var i = 0; i < cameras.Length; i++)
+            {
+                if (cameras[i] == activeCamera)
+                    continue;
+
+                cameras[i].enabled = false;
+            }
+        }
+
+        private static void EnsureSingleAudioListener(GameObject cameraObject)
+        {
+            var listeners = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            for (var i = 0; i < listeners.Length; i++)
+            {
+                if (listeners[i].gameObject == cameraObject)
+                    continue;
+
+                Object.Destroy(listeners[i]);
+            }
+
+            if (cameraObject.GetComponent<AudioListener>() == null)
+                cameraObject.AddComponent<AudioListener>();
         }
 
         private void Update()
