@@ -96,7 +96,7 @@ namespace ProjectExpedition
 
         private static void DisableForeignCameras(Camera activeCamera)
         {
-            var cameras = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var cameras = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include);
             for (var i = 0; i < cameras.Length; i++)
             {
                 if (cameras[i] == activeCamera)
@@ -108,7 +108,7 @@ namespace ProjectExpedition
 
         private static void EnsureSingleAudioListener(GameObject cameraObject)
         {
-            var listeners = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var listeners = Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Include);
             for (var i = 0; i < listeners.Length; i++)
             {
                 if (listeners[i].gameObject == cameraObject)
