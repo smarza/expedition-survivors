@@ -23,7 +23,7 @@ The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode a
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 47 deterministic simulation, content, persistence, presentation-settings, safe-layout, glyph, audio-mix and music-routing tests.
+1. **EditMode** — 48 deterministic simulation, content, persistence, presentation-settings, safe-layout, glyph, audio-asset and music-routing tests.
 2. **PlayMode** — 9 bootstrap, shared-model/reward, presentation-service, VFX-pool, settings, level-up, replay-seed and result-flow tests.
 
 The PlayMode tests explicitly disable campaign persistence, so they do not overwrite the developer's local save. The current presentation acceptance matrix is in [`docs/TESTING_0.9.md`](docs/TESTING_0.9.md).
@@ -94,7 +94,7 @@ Device assignment is intentionally predictable: with one gamepad in co-op, P1 us
 - Backward-compatible migration from the original unversioned save payload to a versioned save envelope.
 - Persistent presentation settings with 90–120% UI scale, high contrast, reduced flashes, screen shake and independent audio buses.
 - P1 keyboard rebinding plus active-device glyphs for keyboard, Xbox, PlayStation, Switch, Steam Deck and generic gamepads.
-- State-driven procedural prototype music, prioritised bounded SFX voices and browser-autoplay-safe startup.
+- State-driven imported prototype music, prioritised bounded SFX voices and browser-compatible startup after interaction.
 - Pooled Frost Axe trails, impacts and combat/result feedback with reduced-flash support.
 - Haldor/Eira silhouette animation, Frostbound ambient snow and accessible camera trauma.
 

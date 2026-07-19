@@ -455,7 +455,7 @@ Release candidate implemented on `agent/0.9.0-presentation-foundation`:
 - Haldor/Eira compositional silhouettes and shared idle/movement/attack/hit/Ultimate animation;
 - deterministic Frostbound ambient snow that cannot perturb gameplay RNG;
 - safe-area/reference layout contracts for 1920×1080 and 1280×800;
-- 47 EditMode and 9 PlayMode tests in the release-candidate inventory;
+- 48 EditMode and 9 PlayMode tests in the release-candidate inventory;
 - detailed architecture and acceptance guides in `PRESENTATION_FOUNDATION_0.9.md` and `TESTING_0.9.md`.
 
 Closeout gate:
@@ -504,7 +504,7 @@ Solo and Local Co-op share `GameDirector`, `PlayerController`, `Enemy` and `Weap
 Other significant debt:
 
 - the code-driven GameHUD renderer should eventually move to authored UI documents without replacing its presentation contracts;
-- current runtime-generated audio and visuals are original production placeholders, not the final authored asset library;
+- current imported audio and runtime-generated visuals are original production placeholders, not the final authored asset library;
 - shared simulation coverage is automated; broader content, UI and performance coverage remains future milestone work;
 - no production cloud-save integration;
 - save migration now covers legacy payload to envelope v2, but needs a durable migration chain and failure recovery before public progression begins;
@@ -681,7 +681,7 @@ Exit gate: the Haldor/Frostbound run is visually coherent without adding gamepla
 
 #### Phase E — Regression and milestone close
 
-Status: release-candidate documentation and 47 EditMode + 9 PlayMode tests prepared; CI/manual gates pending.
+Status: release-candidate documentation and 48 EditMode + 9 PlayMode tests prepared; CI/manual gates pending.
 
 1. Pass static validation and all Unity tests.
 2. Pass WebGL compilation, Pages deployment and Windows milestone compilation.
@@ -828,7 +828,7 @@ Expedition Survivors is not launch-ready merely because a run can be completed. 
 The next developer/agent should do the following, in order:
 
 1. Work on `agent/0.9.0-presentation-foundation` and its milestone PR.
-2. Verify the release-candidate workflow: static validation, 47 EditMode tests, 9 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
+2. Verify the release-candidate workflow: static validation, 48 EditMode tests, 9 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
 3. Run the matrix in `docs/TESTING_0.9.md` through the Pages preview, then use the Windows artifact for native audio/device validation.
 4. Record any failure with its seed, target, resolution, settings, devices, reproduction steps and screenshot/video or Console/log output.
 5. After explicit owner acceptance, merge into `main` and tag `v0.9.0`.

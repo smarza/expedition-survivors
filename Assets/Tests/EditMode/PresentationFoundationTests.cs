@@ -94,5 +94,17 @@ namespace ProjectExpedition.Tests
             Assert.That(PresentationDirector.MusicFor(RunState.LevelUp, false), Is.EqualTo(PresentationMusicState.Reward));
             Assert.That(PresentationDirector.MusicFor(RunState.Victory, true), Is.EqualTo(PresentationMusicState.Result));
         }
+
+        [Test]
+        public void PresentationAudioAssets_AreImportedForEveryMusicStateAndCue()
+        {
+            foreach (PresentationMusicState state in System.Enum.GetValues(typeof(PresentationMusicState)))
+                Assert.That(Resources.Load<AudioClip>(PresentationAudioMixer.MusicResourcePath(state)), Is.Not.Null,
+                    $"Missing imported music asset for {state}.");
+
+            foreach (PresentationCue cue in System.Enum.GetValues(typeof(PresentationCue)))
+                Assert.That(Resources.Load<AudioClip>(PresentationAudioMixer.SfxResourcePath(cue)), Is.Not.Null,
+                    $"Missing imported SFX asset for {cue}.");
+        }
     }
 }

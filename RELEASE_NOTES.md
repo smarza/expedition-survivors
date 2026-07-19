@@ -1,7 +1,7 @@
 # Milestone 0.9.0 — Presentation foundation (release candidate)
 
 - Added persistent accessibility settings for UI scale, high contrast, reduced flashes and screen shake.
-- Added independent master, music and SFX buses with browser-autoplay-safe startup.
+- Added independent master, music and SFX buses with browser-compatible imported clips and startup after interaction.
 - Added bounded, prioritised SFX voices and Menu/Expedition/Boss/Reward/Result music states.
 - Added real P1 keyboard rebinding for movement, Ultimate, Submit, Back, Pause and Expedition Build.
 - Added semantic prompts for keyboard, Xbox, PlayStation, Switch, Steam Deck and generic gamepads.
@@ -11,7 +11,7 @@
 - Added reduced-flash-aware VFX and adjustable centralized camera trauma.
 - Added Haldor/Eira compositional silhouettes, idle/movement/attack/hit/Ultimate animation and deterministic Frostbound snow.
 - Extended F3 diagnostics with VFX, SFX voice and music-state telemetry.
-- Added 6 EditMode and 2 PlayMode presentation regressions, bringing the gate to 47 EditMode + 9 PlayMode tests.
+- Added 7 EditMode and 2 PlayMode presentation regressions, bringing the gate to 48 EditMode + 9 PlayMode tests.
 - Added `docs/PRESENTATION_FOUNDATION_0.9.md` and `docs/TESTING_0.9.md` as the architecture and acceptance contracts.
 
 # Milestone 0.8.0 — Shared simulation

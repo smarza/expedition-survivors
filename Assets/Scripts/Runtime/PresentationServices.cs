@@ -130,6 +130,14 @@ namespace ProjectExpedition
     public sealed class PresentationAudioMixer : MonoBehaviour
     {
         private const int VoiceCount = 10;
+        private static readonly string[] MusicResourcePaths =
+        {
+            "Audio/Music/RavenboundTheme",
+            "Audio/Music/FrostboundExpedition",
+            "Audio/Music/JotunnOmen",
+            "Audio/Music/RewardVerse",
+            "Audio/Music/SagaResult"
+        };
         private readonly AudioSource[] _voices = new AudioSource[VoiceCount];
         private readonly PresentationCue[] _voiceCues = new PresentationCue[VoiceCount];
         private AudioSource _music;
@@ -154,15 +162,12 @@ namespace ProjectExpedition
             if (Application.isBatchMode) return;
             _music = CreateSource("Music Bus", true);
             _music.priority = 32;
-            _musicClips = new[]
-            {
-                MakeTone("Ravenbound Theme", 110f, 0.16f, 4f, true),
-                MakeTone("Frostbound Expedition", 146.8f, 0.12f, 4f, true),
-                MakeTone("Jotunn Omen", 82.4f, 0.18f, 4f, true),
-                MakeTone("Reward Verse", 196f, 0.1f, 4f, true),
-                MakeTone("Saga Result", 130.8f, 0.14f, 4f, true)
-            };
+            _musicClips = new AudioClip[MusicResourcePaths.Length];
+            for (var i = 0; i < _musicClips.Length; i++)
+                _musicClips[i] = Resources.Load<AudioClip>(MusicResourcePaths[i]);
             _sfxClips = new AudioClip[Enum.GetValues(typeof(PresentationCue)).Length];
+            for (var i = 0; i < _sfxClips.Length; i++)
+                _sfxClips[i] = Resources.Load<AudioClip>(SfxResourcePath((PresentationCue)i));
             for (var i = 0; i < _voices.Length; i++) _voices[i] = CreateSource($"SFX Voice {i + 1}", false);
         }
 
@@ -188,7 +193,7 @@ namespace ProjectExpedition
             if (_unlocked && !_music.isPlaying)
             {
                 _music.clip = _musicClips[(int)_pendingMusic];
-                _music.Play();
+                if (_music.clip != null) _music.Play();
             }
         }
 
@@ -197,6 +202,7 @@ namespace ProjectExpedition
             _pendingMusic = state;
             if (_music == null || !_unlocked) return;
             var clip = _musicClips[(int)state];
+            if (clip == null) return;
             if (_music.clip == clip && _music.isPlaying) return;
             _music.Stop();
             _music.clip = clip;
@@ -205,6 +211,7 @@ namespace ProjectExpedition
 
         public void Play(PresentationCue cue)
         {
+            if (!_unlocked) _unlocked = HasInteraction();
             if (!_unlocked || _voices[0] == null) return;
             var priority = PresentationMix.Priority(cue);
             var selected = -1;
@@ -220,7 +227,7 @@ namespace ProjectExpedition
                 }
             }
             if (selected < 0) return;
-            if (_sfxClips[(int)cue] == null) _sfxClips[(int)cue] = MakeCue(cue);
+            if (_sfxClips[(int)cue] == null) return;
             _voiceCues[selected] = cue;
             _voices[selected].priority = priority;
             _voices[selected].clip = _sfxClips[(int)cue];
@@ -232,6 +239,7 @@ namespace ProjectExpedition
         {
             if (Keyboard.current != null && Keyboard.current.anyKey.isPressed) return true;
             if (Mouse.current != null && Mouse.current.leftButton.isPressed) return true;
+            if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.isPressed) return true;
             for (var i = 0; i < Gamepad.all.Count; i++)
             {
                 var gamepad = Gamepad.all[i];
@@ -241,44 +249,14 @@ namespace ProjectExpedition
             return false;
         }
 
-        private static AudioClip MakeCue(PresentationCue cue)
+        public static string MusicResourcePath(PresentationMusicState state)
         {
-            var frequency = 180f + (int)cue * 24f;
-            var duration = cue == PresentationCue.Ultimate || cue == PresentationCue.Victory ? 0.52f : 0.12f;
-            var amplitude = cue == PresentationCue.AxeThrow || cue == PresentationCue.ProjectileTrail ||
-                            cue == PresentationCue.ExperiencePickup ? 0.08f : 0.16f;
-            return MakeTone(cue.ToString(), frequency, amplitude, duration, false);
+            return MusicResourcePaths[(int)state];
         }
 
-        private static AudioClip MakeTone(string clipName, float frequency, float amplitude,
-            float duration, bool harmonic)
+        public static string SfxResourcePath(PresentationCue cue)
         {
-            const int sampleRate = 11025;
-            var samples = Mathf.Max(64, Mathf.RoundToInt(sampleRate * duration));
-            var data = new float[samples];
-            for (var i = 0; i < samples; i++)
-            {
-                var t = i / (float)sampleRate;
-                var envelope = harmonic ? 0.72f + 0.28f * Mathf.Sin(t * Mathf.PI * 0.5f)
-                    : Mathf.Sin(Mathf.PI * Mathf.Clamp01(i / (samples * 0.12f))) *
-                      Mathf.Clamp01((samples - i) / (samples * 0.35f));
-                var wave = Mathf.Sin(t * frequency * Mathf.PI * 2f);
-                if (harmonic) wave += Mathf.Sin(t * frequency * 1.5f * Mathf.PI * 2f) * 0.32f;
-                data[i] = wave * amplitude * envelope;
-            }
-            var clip = AudioClip.Create(clipName, samples, 1, sampleRate, false);
-            clip.SetData(data, 0);
-            return clip;
-        }
-
-        private void OnDestroy()
-        {
-            if (_musicClips != null)
-                for (var i = 0; i < _musicClips.Length; i++)
-                    if (_musicClips[i] != null) Destroy(_musicClips[i]);
-            if (_sfxClips != null)
-                for (var i = 0; i < _sfxClips.Length; i++)
-                    if (_sfxClips[i] != null) Destroy(_sfxClips[i]);
+            return $"Audio/SFX/{cue}";
         }
     }
 

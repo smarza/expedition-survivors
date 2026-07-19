@@ -31,13 +31,13 @@ Version 0.9.0 adds a presentation layer around the shared simulation accepted in
 | `InputGlyphs` | Device-family detection and semantic prompts. |
 | `LocalInputRouter` | Existing device ownership plus persistent P1 keyboard bindings and last-device tracking. |
 | `PresentationDirector` | Maps run state to music and translates presentation cues to audio, VFX and camera trauma. |
-| `PresentationAudioMixer` | Master/music/SFX software buses, procedural prototype score and prioritized SFX voice pool. |
+| `PresentationAudioMixer` | Master/music/SFX software buses, imported prototype score and prioritized SFX voice pool. |
 | `PresentationVfxPool` | Prewarmed transient effects with no steady-state creation/destruction. |
 | `HeroPresentation` | Character silhouette composition and animation without gameplay authority. |
 | `FrostboundAmbience` | Deterministic visual snow independent from the run seed sequence. |
 | `GameHUD` | Code-driven view adapter using the shared layout/theme/settings/input-prompt contracts. |
 
-The current visual/audio assets are original runtime-generated production placeholders. The foundation deliberately keeps asset lookup and playback behind services so authored sprites, animation clips, music and SFX can replace them without changing simulation code.
+The current visuals and imported audio clips are original production placeholders. Audio is serialized as WAV source assets so Unity can convert it for Web builds instead of relying on partially supported runtime PCM creation. The foundation keeps asset lookup and playback behind services so final authored sprites, animation clips, music and SFX can replace them without changing simulation code.
 
 ## Rebinding contract
 

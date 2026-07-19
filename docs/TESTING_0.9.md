@@ -1,6 +1,6 @@
 # Testing 0.9.0 — Presentation Foundation
 
-The automated gate is **47 EditMode + 9 PlayMode tests**. GitHub Actions must also pass static validation, WebGL compilation, GitHub Pages deployment and the Windows milestone build before owner validation.
+The automated gate is **48 EditMode + 9 PlayMode tests**. GitHub Actions must also pass static validation, WebGL compilation, GitHub Pages deployment and the Windows milestone build before owner validation.
 
 ## Automated contracts
 
@@ -12,6 +12,7 @@ EditMode adds coverage for:
 - keyboard/Xbox/PlayStation/Steam Deck prompt semantics;
 - master/music/SFX mix math and SFX priorities;
 - Menu/Expedition/Boss/Reward/Result music routing.
+- every music state and presentation cue resolves to an imported audio asset.
 
 PlayMode adds coverage for:
 

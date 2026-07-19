@@ -107,6 +107,20 @@ def main() -> int:
     if missing:
         fail("missing required files: " + ", ".join(missing))
 
+    expected_audio = [
+        "Music/RavenboundTheme", "Music/FrostboundExpedition", "Music/JotunnOmen",
+        "Music/RewardVerse", "Music/SagaResult",
+    ] + [f"SFX/{cue}" for cue in (
+        "Navigate", "Confirm", "Back", "AxeThrow", "ProjectileTrail", "Impact",
+        "EnemyDefeated", "ExperiencePickup", "RavenGuard", "Ultimate", "LevelUp",
+        "PlayerDowned", "PlayerRevived", "Victory", "Defeat",
+    )]
+    missing_audio = [name for name in expected_audio
+                     if not (ROOT / "Assets/Resources/Audio" / f"{name}.wav").is_file()
+                     or not (ROOT / "Assets/Resources/Audio" / f"{name}.wav.meta").is_file()]
+    if missing_audio:
+        fail("missing imported presentation audio: " + ", ".join(missing_audio))
+
     manifest = json.loads((ROOT / "Packages/manifest.json").read_text(encoding="utf-8"))
     if "dependencies" not in manifest:
         fail("Packages/manifest.json has no dependencies object")
@@ -223,7 +237,8 @@ def main() -> int:
                               "Layout_PreservesReferenceAspectInsideDesktopAndSteamDeckSafeAreas",
                               "Glyphs_ExposeKeyboardAndControllerSpecificPrompts",
                               "AudioMix_UsesMasterBusAndProtectsImportantVoices",
-                              "MusicRouting_FollowsMenuRunBossRewardAndResultStates")
+                              "MusicRouting_FollowsMenuRunBossRewardAndResultStates",
+                              "PresentationAudioAssets_AreImportedForEveryMusicStateAndCue")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -368,7 +383,7 @@ def main() -> int:
         "presentation preferences": "PresentationPreferences.Data" in hud_source and "PresentationPreferences.Save" in input_source,
         "keyboard rebinding": "PollRebind" in input_source and "RebindableActions" in hud_source,
         "active device glyphs": "InputGlyphs.Prompt" in hud_source and "CurrentPromptDevice" in input_source,
-        "audio buses and priorities": "class PresentationAudioMixer" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "PresentationMix.Priority" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
+        "imported audio buses and priorities": "class PresentationAudioMixer" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "PresentationMix.Priority" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "Resources.Load<AudioClip>" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "AudioClip.Create" not in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
         "pooled presentation effects": "class PresentationVfxPool" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "ComponentPool<PresentationBurst>" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
         "hero presentation": "class HeroPresentation" in (ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs").read_text(encoding="utf-8") and "BuildHaldorSilhouette" in (ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs").read_text(encoding="utf-8"),
         "deterministic ambience": "class FrostboundAmbience" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "Hash01" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
