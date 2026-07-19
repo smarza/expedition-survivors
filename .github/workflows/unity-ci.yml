@@ -5,6 +5,9 @@ on:
     branches:
       - main
       - "agent/**"
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       build_windows:
@@ -17,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: unity-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: unity-ci-${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
