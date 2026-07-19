@@ -120,6 +120,15 @@ def main() -> int:
                      or not (ROOT / "Assets/Resources/Audio" / f"{name}.wav.meta").is_file()]
     if missing_audio:
         fail("missing imported presentation audio: " + ", ".join(missing_audio))
+    audio_metas = [ROOT / "Assets/Resources/Audio.meta", *
+                   sorted((ROOT / "Assets/Resources/Audio").rglob("*.meta"))]
+    malformed_audio_metas = []
+    for meta in audio_metas:
+        source = meta.read_text(encoding="utf-8")
+        if "\\n" in source or not re.search(r"^guid: [a-f0-9]{32}$", source, re.MULTILINE):
+            malformed_audio_metas.append(str(meta.relative_to(ROOT)))
+    if malformed_audio_metas:
+        fail("malformed presentation audio metadata: " + ", ".join(malformed_audio_metas))
 
     manifest = json.loads((ROOT / "Packages/manifest.json").read_text(encoding="utf-8"))
     if "dependencies" not in manifest:
