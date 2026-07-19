@@ -160,8 +160,15 @@ def main() -> int:
     project_settings = (ROOT / "ProjectSettings/ProjectSettings.asset").read_text(encoding="utf-8")
     if "activeInputHandler: 1" not in project_settings and "activeInputHandler: 2" not in project_settings:
         fail("Project Settings must enable the Unity Input System")
-    if "m_BuildTarget: Standalone" not in project_settings or "m_DynamicBatching: 0" not in project_settings:
-        fail("Dynamic Batching is deprecated in Unity 6000.5 and must be disabled for Standalone")
+    for build_target in ("Standalone", "WebGL"):
+        batching_pattern = (
+            rf"- m_BuildTarget: {build_target}\s*\n\s+m_StaticBatching: \d+\s*\n\s+m_DynamicBatching: 0"
+        )
+        if not re.search(batching_pattern, project_settings):
+            fail(
+                "Dynamic Batching is deprecated in Unity 6000.5 and must be disabled for "
+                f"{build_target}"
+            )
     if "webGLDecompressionFallback: 1" not in project_settings:
         fail("Web decompression fallback is required for static GitHub Pages hosting")
 
