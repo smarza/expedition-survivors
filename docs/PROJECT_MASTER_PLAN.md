@@ -4,7 +4,7 @@
 > **Last updated:** 2026-07-19
 > **Stable baseline:** `main` — `v0.8.0`
 > **Active development:** `agent/0.9.0-presentation-foundation`
-> **Active pull request:** pending publication of the 0.9.0 release candidate
+> **Active pull request:** [PR #2 — Release 0.9.0 presentation foundation](https://github.com/smarza/expedition-survivors/pull/2)
 
 ## 1. How to use this document in a new chat
 

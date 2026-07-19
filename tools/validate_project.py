@@ -173,9 +173,9 @@ def main() -> int:
     edit_assembly = json.loads((ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef").read_text(encoding="utf-8"))
     edit_references = set(edit_assembly.get("references", []))
     if "Editor" not in edit_assembly.get("includePlatforms", []) or not {
-        "ProjectExpedition.Runtime", "ProjectExpedition.TestSupport"
+        "ProjectExpedition.Runtime", "ProjectExpedition.TestSupport", "Unity.InputSystem"
     }.issubset(edit_references):
-        fail("EditMode test assembly must be Editor-only and reference runtime plus player-compatible test support")
+        fail("EditMode test assembly must be Editor-only and reference runtime, Input System and player-compatible test support")
 
     support_assembly = json.loads((ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef").read_text(encoding="utf-8"))
     if support_assembly.get("includePlatforms") or "ProjectExpedition.Runtime" not in support_assembly.get("references", []):
