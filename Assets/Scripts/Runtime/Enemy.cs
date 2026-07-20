@@ -73,8 +73,8 @@ namespace ProjectExpedition
                 transform.position = (Vector3)Position;
                 _director.UpdateEnemySpatial(this);
             }
-            transform.Rotate(0f, 0f, (Boss ? 16f : 36f) * Time.deltaTime);
-            var breathe = 1f + Mathf.Sin(Time.time * (Boss ? 2.2f : 4.1f) + _animationSeed) * (Boss ? 0.025f : 0.045f);
+            transform.Rotate(0f, 0f, (Boss ? 28f : 36f) * Time.deltaTime);
+            var breathe = 1f + Mathf.Sin(Time.time * (Boss ? 2.8f : 4.1f) + _animationSeed) * (Boss ? 0.05f : 0.045f);
             transform.localScale = Vector3.one * Radius * 2f * breathe;
 
             if ((result & EnemyAdvanceResult.ContactTriggered) != 0)

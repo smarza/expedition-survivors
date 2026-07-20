@@ -59,6 +59,11 @@ namespace ProjectExpedition
         private const string FileName = "project-expedition-save-v1.json";
         public static MetaProgress Data { get; private set; } = new MetaProgress();
         internal static bool PersistenceEnabled { get; set; } = true;
+
+        internal static void AssignDataForTests(MetaProgress progress)
+        {
+            Data = progress ?? new MetaProgress();
+        }
         private static string PathName => Path.Combine(Application.persistentDataPath, FileName);
 
         public static void Load()
@@ -110,6 +115,89 @@ namespace ProjectExpedition
             updated[relics.Length] = relicId;
             Data.RelicsCollected = updated;
             Save();
+        }
+
+        public static int RelicCollectionCount()
+        {
+            return Data.RelicsCollected?.Length ?? 0;
+        }
+
+        public static bool HasRelic(string relicId)
+        {
+            if (string.IsNullOrWhiteSpace(relicId))
+            {
+                return false;
+            }
+
+            var relics = Data.RelicsCollected;
+            if (relics == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < relics.Length; i++)
+            {
+                if (relics[i] == relicId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static void RecordCampLeader(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId))
+            {
+                return;
+            }
+
+            Data.LastCampLeaderId = characterId;
+            Save();
+        }
+
+        public static void RecordLastRunCharacters(string primaryCharacterId, string secondaryCharacterId)
+        {
+            if (!string.IsNullOrWhiteSpace(primaryCharacterId))
+            {
+                Data.LastCampLeaderId = primaryCharacterId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(secondaryCharacterId))
+            {
+                Data.LastCoopPartnerId = secondaryCharacterId;
+            }
+
+            Save();
+        }
+
+        public static int ResolveLastCharacterSelectionIndex(int playerSlot)
+        {
+            var characterId = playerSlot == 0 ? Data.LastCampLeaderId : Data.LastCoopPartnerId;
+            var index = ContentCatalog.CharacterIndex(characterId);
+            if (index >= 0)
+            {
+                return index;
+            }
+
+            if (playerSlot == 0)
+            {
+                return 0;
+            }
+
+            return ContentCatalog.Characters.Length > 1 ? 1 : 0;
+        }
+
+        public static CharacterDefinition ResolveCampLeader()
+        {
+            var leader = ContentCatalog.FindCharacter(Data.LastCampLeaderId);
+            if (leader != null)
+            {
+                return leader;
+            }
+
+            return ContentCatalog.Characters[0];
         }
 
         public static void Save()

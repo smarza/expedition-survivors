@@ -25,10 +25,10 @@ Use the GitHub Pages preview first, then the Windows artifact for the native dev
 ### Scout expedition route
 
 1. Start **The Frostbound Shore** and confirm the opening announcement **THE SHORE AWAKENS**.
-2. Confirm the required objective **Cull the Raider Tide** appears and tracks Draugr defeats toward 120.
+2. Confirm the required objective **Cull the Raider Tide** appears and tracks Draugr defeats toward 150.
 3. Collect optional rune shards when visible and confirm shard progress toward 5.
 4. Reach 50% objective progress during **THE COAST TIGHTENS** and confirm the Frost Wraith Captain elite can emerge once.
-5. Defeat 120 Draugr before the timer or survive until the Jotunn phase; confirm **THE JOTUNN HAS FOUND YOU**.
+5. Defeat 150 Draugr before the timer or survive until the Jotunn phase; confirm **THE JOTUNN HAS FOUND YOU**.
 6. Defeat the Jotunn and confirm **REACH THE BEACON** with a visible extraction beacon at the north marker.
 7. Reach the beacon within 3.5 units or survive 15 seconds there to complete the run.
 8. Confirm victory grants **Jotunn Echo**, or **Jotunn Echo Warden** when all shards were collected.
