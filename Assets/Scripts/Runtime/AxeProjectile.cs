@@ -84,7 +84,8 @@ namespace ProjectExpedition
 
             ApplyHealTrail();
             ResolveEnemyHits();
-            if (!_flight.Active)
+
+            if (!_flight.Active && _director != null)
             {
                 _director.ReleaseProjectile(this);
             }

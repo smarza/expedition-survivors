@@ -31,7 +31,7 @@ Purchases deduct from available renown and append the stable content ID to `Unlo
 | `ironway.mara` | Captain Mara Voss | 145 | hero |
 | `frostbound.saga` | The Frostbound Shore: Long Night | 200 | expedition |
 
-Fresh saves start with Haldor and Scout only. Locked heroes and expeditions cannot be selected until purchased at camp.
+Fresh saves start with Haldor and Scout only. Locked heroes and expeditions cannot be selected until purchased in the CODEX at camp.
 
 ## 3. Mastery tracks
 
@@ -54,33 +54,37 @@ Local Co-op awards mastery to both selected heroes.
 
 ## 4. Codex
 
-`DiscoveredCodexIds` records stable IDs the player has encountered. Visibility states:
+The CODEX is the camp hub for the full content catalog, renown purchases (heroes and expeditions) and run discoveries.
+
+`DiscoveredCodexIds` records stable IDs the player has encountered or unlocked. Visibility states:
 
 | State | Rule |
 | --- | --- |
-| Hidden | Never seen; omitted from codex UI |
+| Locked | Catalog entry visible without details — undiscovered run content, unpurchased heroes/expeditions, or unearned challenges |
 | Hint | Evolution recipe when base weapon and catalyst are both discovered but evolution not yet achieved |
-| Discovered | Entry visible with name and description |
+| Discovered | Entry visible with name and description — discovered in a run, purchased hero/expedition, or earned challenge |
+
+Renown purchases for heroes and expeditions happen in the CODEX and auto-discover the matching codex entry.
 
 Discovery triggers:
 
-- **Hero** — selected for an expedition.
-- **Expedition** — map started.
+- **Hero** — selected for an expedition (or purchased in the CODEX).
+- **Expedition** — map started (or purchased in the CODEX).
 - **Weapon / gear** — first level-up reward applied for that item in a run.
 - **Catalyst** — catalyst appears in a level-up offer (seen, not necessarily taken).
 - **Evolution** — evolution applied to a build.
 - **Relic** — relic earned on victory.
 
-Camp codex groups entries: Heroes, Expeditions, Weapons, Gear, Evolutions, Relics.
+Camp codex groups entries: Heroes, Expeditions, Weapons, Gear, Evolutions, Relics, Challenges.
 
 ## 5. Camp onboarding
 
 `CampOnboardingComplete` persists in meta save. First camp visit shows four dismissible panels:
 
 1. Ledger and available renown balance.
-2. Unlock board — spend renown on survivors and expeditions.
+2. CODEX — spend renown on survivors and expeditions.
 3. Relic vault — trophies from Scout victories.
-4. Codex — discoveries from your expeditions.
+4. CODEX catalog — discoveries from your expeditions fill in over time.
 
 Combat first-run hints (presentation preferences) add Scout objective, extraction beacon, and renown unlock guidance.
 

@@ -25,6 +25,7 @@ namespace ProjectExpedition
     public enum CodexVisibility
     {
         Hidden,
+        Locked,
         Hint,
         Discovered
     }
@@ -683,6 +684,7 @@ namespace ProjectExpedition
 
             progress.SpentRenown += unlock.Value.RenownCost;
             AddUnlock(progress, contentId);
+            DiscoverCodex(progress, contentId);
             result.Success = true;
             result.Message = unlock.Value.DisplayName;
             return result;
@@ -749,25 +751,62 @@ namespace ProjectExpedition
                 return CodexVisibility.Discovered;
             }
 
-            if (entry.Category != CodexCategory.Evolution)
+            if (entry.Category == CodexCategory.Hero || entry.Category == CodexCategory.Expedition)
             {
-                return CodexVisibility.Hidden;
+                if (IsUnlocked(progress, entry.ContentId))
+                {
+                    return CodexVisibility.Discovered;
+                }
+
+                return CodexVisibility.Locked;
             }
 
-            if (string.IsNullOrWhiteSpace(entry.EvolutionBaseId) || string.IsNullOrWhiteSpace(entry.EvolutionCatalystId))
+            if (entry.Category == CodexCategory.Challenge)
             {
-                return CodexVisibility.Hidden;
+                if (IsUnlocked(progress, entry.ContentId))
+                {
+                    return CodexVisibility.Discovered;
+                }
+
+                return CodexVisibility.Locked;
             }
 
-            var baseDiscovered = IsCodexDiscovered(progress, entry.EvolutionBaseId);
-            var catalystDiscovered = IsCodexDiscovered(progress, entry.EvolutionCatalystId);
-
-            if (baseDiscovered && catalystDiscovered)
+            if (entry.Category == CodexCategory.Evolution)
             {
-                return CodexVisibility.Hint;
+                if (string.IsNullOrWhiteSpace(entry.EvolutionBaseId) || string.IsNullOrWhiteSpace(entry.EvolutionCatalystId))
+                {
+                    return CodexVisibility.Locked;
+                }
+
+                var baseDiscovered = IsCodexDiscovered(progress, entry.EvolutionBaseId);
+                var catalystDiscovered = IsCodexDiscovered(progress, entry.EvolutionCatalystId);
+
+                if (baseDiscovered && catalystDiscovered)
+                {
+                    return CodexVisibility.Hint;
+                }
+
+                return CodexVisibility.Locked;
             }
 
-            return CodexVisibility.Hidden;
+            return CodexVisibility.Locked;
+        }
+
+        public static bool IsCodexPurchasable(CodexDefinition entry)
+        {
+            if (entry.Category != CodexCategory.Hero && entry.Category != CodexCategory.Expedition)
+            {
+                return false;
+            }
+
+            var unlock = FindUnlock(entry.ContentId);
+
+            if (!unlock.HasValue)
+            {
+                return false;
+            }
+
+            return unlock.Value.RenownCost > 0;
         }
 
         public static int NextGridIndex(int itemCount, int columns, int currentIndex, int columnDelta, int rowDelta)

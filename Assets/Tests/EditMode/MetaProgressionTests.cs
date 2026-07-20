@@ -129,6 +129,76 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void CodexVisibility_LockedHeroShowsBeforePurchase()
+        {
+            var progress = new MetaProgress();
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+
+            var entry = SharedMetaProgressionModel.FindCodexEntry(SharedMetaProgressionModel.SylvaId);
+            Assert.That(entry.HasValue, Is.True);
+
+            var visibility = SharedMetaProgressionModel.ResolveCodexVisibility(progress, entry.Value);
+            Assert.That(visibility, Is.EqualTo(CodexVisibility.Locked));
+        }
+
+        [Test]
+        public void CodexVisibility_PurchasedHeroShowsDiscovered()
+        {
+            var progress = new MetaProgress { TotalRenown = 100 };
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+            SharedMetaProgressionModel.TryPurchaseUnlock(progress, SharedMetaProgressionModel.SylvaId);
+
+            var entry = SharedMetaProgressionModel.FindCodexEntry(SharedMetaProgressionModel.SylvaId);
+            Assert.That(entry.HasValue, Is.True);
+
+            var visibility = SharedMetaProgressionModel.ResolveCodexVisibility(progress, entry.Value);
+            Assert.That(visibility, Is.EqualTo(CodexVisibility.Discovered));
+            Assert.That(SharedMetaProgressionModel.IsCodexDiscovered(progress, SharedMetaProgressionModel.SylvaId), Is.True);
+        }
+
+        [Test]
+        public void CodexVisibility_UndiscoveredWeaponShowsLocked()
+        {
+            var progress = new MetaProgress();
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+
+            var entry = SharedMetaProgressionModel.FindCodexEntry("weapon.grove_thorn_lash");
+            Assert.That(entry.HasValue, Is.True);
+
+            var visibility = SharedMetaProgressionModel.ResolveCodexVisibility(progress, entry.Value);
+            Assert.That(visibility, Is.EqualTo(CodexVisibility.Locked));
+        }
+
+        [Test]
+        public void CodexVisibility_DiscoveredWeaponShowsDiscovered()
+        {
+            var progress = new MetaProgress();
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+            SharedMetaProgressionModel.DiscoverCodex(progress, "weapon.grove_thorn_lash");
+
+            var entry = SharedMetaProgressionModel.FindCodexEntry("weapon.grove_thorn_lash");
+            Assert.That(entry.HasValue, Is.True);
+
+            var visibility = SharedMetaProgressionModel.ResolveCodexVisibility(progress, entry.Value);
+            Assert.That(visibility, Is.EqualTo(CodexVisibility.Discovered));
+        }
+
+        [Test]
+        public void IsCodexPurchasable_OnlyHeroesAndExpeditionsWithCost()
+        {
+            var hero = SharedMetaProgressionModel.FindCodexEntry(SharedMetaProgressionModel.SylvaId);
+            var weapon = SharedMetaProgressionModel.FindCodexEntry("weapon.frost_axe");
+            var starterHero = SharedMetaProgressionModel.FindCodexEntry(SharedMetaProgressionModel.HaldorId);
+
+            Assert.That(hero.HasValue, Is.True);
+            Assert.That(weapon.HasValue, Is.True);
+            Assert.That(starterHero.HasValue, Is.True);
+            Assert.That(SharedMetaProgressionModel.IsCodexPurchasable(hero.Value), Is.True);
+            Assert.That(SharedMetaProgressionModel.IsCodexPurchasable(weapon.Value), Is.False);
+            Assert.That(SharedMetaProgressionModel.IsCodexPurchasable(starterHero.Value), Is.False);
+        }
+
+        [Test]
         public void NextCharacterIndex_WrapsAllFourHeroes()
         {
             Assert.That(SharedMetaProgressionModel.NextCharacterIndex(0, 1, 0), Is.EqualTo(1));

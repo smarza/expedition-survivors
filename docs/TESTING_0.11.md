@@ -1,6 +1,6 @@
 # Testing 0.11.0 — Camp and Progression
 
-The automated gate is **75 EditMode + 13 PlayMode tests**. GitHub Actions must also pass static validation, WebGL compilation, GitHub Pages deployment and the Windows milestone build before owner validation.
+The automated gate is **80 EditMode + 13 PlayMode tests**. GitHub Actions must also pass static validation, WebGL compilation, GitHub Pages deployment and the Windows milestone build before owner validation.
 
 ## Automated contracts
 
@@ -18,7 +18,7 @@ PlayMode adds coverage for:
 
 - fresh save gating (Haldor/Scout only at camp);
 - run completion increasing renown and Haldor mastery;
-- camp unlock purchase spending available renown.
+- camp unlock purchase spending available renown via the CODEX.
 
 ## Final owner matrix
 
@@ -30,16 +30,18 @@ Use the GitHub Pages preview first, then the Windows artifact for the native dev
 2. Confirm the ledger shows **AVAILABLE** renown (zero on first visit) and mastery summary for H/S/M/E.
 3. Start **Solo** — confirm only **Haldor Stormborn** is selectable; Sylva, Mara and Eira show lock cost and camp guidance.
 4. Complete or fail one Scout run; confirm results show renown earned, available balance and unlock callout when affordable.
-5. Return to camp; confirm **Unlock Board** lists Sylva at 75 renown — a strong first victory should leave you close but usually short until a second run.
-6. Purchase Sylva after enough renown accumulates; confirm available renown decreases and Sylva becomes selectable.
+5. Return to camp; open **CODEX** → **HEROES** and confirm Sylva appears at 75 renown — a strong first victory should leave you close but usually short until a second run.
+6. Purchase Sylva in the CODEX after enough renown accumulates; confirm available renown decreases and Sylva becomes selectable.
 7. Start a second run as Sylva (or save toward Eira/Mara/Long Night) with a clear goal.
 
-### Unlock board and codex
+### Codex catalog and purchases
 
-1. Confirm locked rows show cost; affordable rows highlight and accept purchase.
-2. Open **CODEX** from camp; confirm categories navigate with Up/Down and Back returns to camp.
-3. After a run, confirm discovered weapons/gear appear; evolution hints appear when base weapon and catalyst were seen.
-4. Confirm relic entries appear after Scout victory relic grants.
+1. Confirm the CODEX header shows available renown and lifetime earned balance.
+2. Confirm every category lists all catalog entries; undiscovered weapons/gear show as **UNKNOWN ENTRY** without details.
+3. Confirm locked heroes and expeditions show name and renown cost; confirm purchase with Submit when affordable.
+4. Confirm categories navigate with Up/Down, entries with Left/Right, and Back returns to camp.
+5. After a run, confirm discovered weapons/gear reveal full details; evolution hints appear when base weapon and catalyst were seen.
+6. Confirm relic entries reveal details after Scout victory relic grants.
 
 ### Mastery
 
