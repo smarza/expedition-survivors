@@ -1,6 +1,6 @@
 # Testing 0.11.0 — Camp and Progression
 
-The automated gate is **74 EditMode + 13 PlayMode tests**. GitHub Actions must also pass static validation, WebGL compilation, GitHub Pages deployment and the Windows milestone build before owner validation.
+The automated gate is **75 EditMode + 13 PlayMode tests**. GitHub Actions must also pass static validation, WebGL compilation, GitHub Pages deployment and the Windows milestone build before owner validation.
 
 ## Automated contracts
 
@@ -30,9 +30,9 @@ Use the GitHub Pages preview first, then the Windows artifact for the native dev
 2. Confirm the ledger shows **AVAILABLE** renown (zero on first visit) and mastery summary for H/S/M/E.
 3. Start **Solo** — confirm only **Haldor Stormborn** is selectable; Sylva, Mara and Eira show lock cost and camp guidance.
 4. Complete or fail one Scout run; confirm results show renown earned, available balance and unlock callout when affordable.
-5. Return to camp; confirm **Unlock Board** lists Sylva at 50 renown (affordable after a typical first run).
-6. Purchase Sylva; confirm available renown decreases and Sylva becomes selectable.
-7. Start a second run as Sylva (or save toward Mara/Eira/Long Night) with a clear goal.
+5. Return to camp; confirm **Unlock Board** lists Sylva at 75 renown — a strong first victory should leave you close but usually short until a second run.
+6. Purchase Sylva after enough renown accumulates; confirm available renown decreases and Sylva becomes selectable.
+7. Start a second run as Sylva (or save toward Eira/Mara/Long Night) with a clear goal.
 
 ### Unlock board and codex
 

@@ -10,13 +10,13 @@
 - **SpentRenown** — renown committed to camp unlock purchases.
 - **Available renown** — `TotalRenown - SpentRenown`; shown on the camp ledger and results screen.
 
-Run renown accrual (per run, unchanged):
+Run renown accrual (per run):
 
-- `recoveredRenown` from pickups during the run;
-- `max(1, kills / 10)` bonus;
-- `+50` on victory.
+- `recoveredRenown` from pickups during the run (10% chance per kill);
+- `max(1, kills / 15)` bonus;
+- `+25` on victory.
 
-Typical first Scout run yields **50–80 available renown** after return to camp.
+Typical first Scout **victory** yields **~55–70 available renown** — enough to notice progress, but usually short of the first hero unlock until a second solid run.
 
 ## 2. Unlock catalog
 
@@ -26,10 +26,10 @@ Purchases deduct from available renown and append the stable content ID to `Unlo
 | --- | --- | ---: | --- |
 | `ravenbound.haldor` | Haldor Stormborn | 0 | hero |
 | `frostbound.scout` | The Frostbound Shore (Scout) | 0 | expedition |
-| `oathbound.sylva` | Sylva Reedwalker | 50 | hero |
-| `ravenbound.eira` | Eira Raven-Sworn | 60 | hero |
-| `ironway.mara` | Captain Mara Voss | 75 | hero |
-| `frostbound.saga` | The Frostbound Shore: Long Night | 100 | expedition |
+| `oathbound.sylva` | Sylva Reedwalker | 75 | hero |
+| `ravenbound.eira` | Eira Raven-Sworn | 110 | hero |
+| `ironway.mara` | Captain Mara Voss | 145 | hero |
+| `frostbound.saga` | The Frostbound Shore: Long Night | 200 | expedition |
 
 Fresh saves start with Haldor and Scout only. Locked heroes and expeditions cannot be selected until purchased at camp.
 

@@ -9,6 +9,7 @@ namespace ProjectExpedition
         public readonly string Tribe;
         public readonly string Role;
         public readonly string Description;
+        public readonly string LockedPreviewLine;
         public readonly Color Color;
         public readonly float MaxHealth;
         public readonly float MoveSpeed;
@@ -24,13 +25,14 @@ namespace ProjectExpedition
             string id, string name, string tribe, string role, string description, Color color,
             float maxHealth, float moveSpeed, float armor, string ultimateName,
             string ultimateDescription, float ultimateCooldown, float ultimateDamage, float ultimateRadius,
-            string[] starterWeaponIds = null)
+            string[] starterWeaponIds = null, string lockedPreviewLine = "")
         {
             Id = id;
             Name = name;
             Tribe = tribe;
             Role = role;
             Description = description;
+            LockedPreviewLine = lockedPreviewLine ?? string.Empty;
             Color = color;
             MaxHealth = maxHealth;
             MoveSpeed = moveSpeed;
@@ -50,6 +52,7 @@ namespace ProjectExpedition
         public readonly string Name;
         public readonly string Region;
         public readonly string Description;
+        public readonly string LockedPreviewLine;
         public readonly string DurationLabel;
         public readonly float Duration;
         public readonly float BossSpawnTime;
@@ -70,12 +73,14 @@ namespace ProjectExpedition
             float duration, float bossSpawnTime, float baseSpawnInterval,
             float minimumSpawnInterval, float difficultyRamp, Color groundColor,
             int weaponSlots, int gearSlots, int requiredKillObjective, int optionalShardObjective,
-            float extractionDuration, float extractionBeaconX, float extractionBeaconY)
+            float extractionDuration, float extractionBeaconX, float extractionBeaconY,
+            string lockedPreviewLine = "")
         {
             Id = id;
             Name = name;
             Region = region;
             Description = description;
+            LockedPreviewLine = lockedPreviewLine ?? string.Empty;
             DurationLabel = durationLabel;
             Duration = duration;
             BossSpawnTime = bossSpawnTime;
@@ -112,7 +117,8 @@ namespace ProjectExpedition
                 "Murder of Ravens",
                 "Eira releases a focused murder of ravens that tears through every nearby enemy.",
                 52f, 112f, 5.8f,
-                new[] { "weapon.frost_axe", "weapon.raven_guard" }),
+                new[] { "weapon.frost_axe", "weapon.raven_guard" },
+                "A Ravenbound pathfinder whose ravens find openings before the enemy realizes it has been surrounded."),
             new CharacterDefinition(
                 "oathbound.sylva", "Sylva Reedwalker", "Oathbound Grove", "Canopy Warden",
                 "An oathbound grove warden who binds thorn and canopy magic — fictional woodland culture, not any real people.",
@@ -120,7 +126,8 @@ namespace ProjectExpedition
                 "Verdant Tempest",
                 "Sylva becomes briefly untouchable and unleashes an expanding thorn ring through nearby enemies.",
                 54f, 118f, 6.2f,
-                new[] { "weapon.grove_thorn_lash", "weapon.canopy_vortex" }),
+                new[] { "weapon.grove_thorn_lash", "weapon.canopy_vortex" },
+                "An Oathbound grove warden — thorn and canopy magic still waiting to be revealed."),
             new CharacterDefinition(
                 "ironway.mara", "Captain Mara Voss", "Ironway Expedition Corps", "Field Captain",
                 "A modern expedition corps captain who marks targets with signal gear and keeps the squad alive in the field.",
@@ -128,7 +135,8 @@ namespace ProjectExpedition
                 "Orbital Barrage",
                 "Mara becomes briefly untouchable and calls a concentrated strike zone onto the nearest threat cluster.",
                 58f, 132f, 6.5f,
-                new[] { "weapon.signal_flare", "weapon.supply_pulse" })
+                new[] { "weapon.signal_flare", "weapon.supply_pulse" },
+                "An Ironway field captain — battlefield tactics and squad support still to be discovered.")
         };
 
         public static MapDefinition[] Maps { get; private set; } = new[]
@@ -142,7 +150,8 @@ namespace ProjectExpedition
                 "frostbound.saga", "The Frostbound Shore: Long Night", "Jotunn Coast",
                 "The full twelve-minute route. Denser phases, stronger elites and a late Jotunn confrontation.",
                 "QUICK EXPEDITION — 12 MIN", 720f, 630f, 0.82f, 0.18f, 42f,
-                new Color(0.055f, 0.105f, 0.145f), 6, 6, 180, 5, 15f, 0f, 14f)
+                new Color(0.055f, 0.105f, 0.145f), 6, 6, 180, 5, 15f, 0f, 14f,
+                "The full Frostbound Shore route — denser phases and a late Jotunn confrontation still await unlock.")
         };
 
         public static CharacterDefinition Character(int index) =>

@@ -12,6 +12,7 @@ namespace ProjectExpedition
         public string tribe;
         public string role;
         [TextArea] public string description;
+        [TextArea] public string lockedPreviewLine;
         public Color color = Color.white;
         public float maxHealth = 120f;
         public float moveSpeed = 4.5f;
@@ -26,7 +27,7 @@ namespace ProjectExpedition
         public CharacterDefinition Build() => new CharacterDefinition(
             id, displayName, tribe, role, description, color, maxHealth, moveSpeed, armor,
             ultimateName, ultimateDescription, ultimateCooldown, ultimateDamage, ultimateRadius,
-            starterWeaponIds);
+            starterWeaponIds, lockedPreviewLine);
     }
 
     [Serializable]
@@ -36,6 +37,7 @@ namespace ProjectExpedition
         public string displayName;
         public string region;
         [TextArea] public string description;
+        [TextArea] public string lockedPreviewLine;
         public string durationLabel;
         public float duration = 300f;
         public float bossSpawnTime = 240f;
@@ -55,7 +57,7 @@ namespace ProjectExpedition
             id, displayName, region, description, durationLabel, duration, bossSpawnTime,
             baseSpawnInterval, minimumSpawnInterval, difficultyRamp, groundColor, weaponSlots, gearSlots,
             requiredKillObjective, optionalShardObjective, extractionDuration, extractionBeaconX,
-            extractionBeaconY);
+            extractionBeaconY, lockedPreviewLine);
     }
 
     [Serializable]

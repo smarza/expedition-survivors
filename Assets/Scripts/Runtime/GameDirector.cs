@@ -589,7 +589,7 @@ namespace ProjectExpedition
         {
             if (enemy == null) return;
             Kills++;
-            if (Rng.Chance(0.18f)) RunRenown++;
+            if (Rng.Chance(SharedMetaProgressionModel.RenownKillPickupChance)) RunRenown++;
             var position = enemy.transform.position;
             var gem = _gemPool.Get(position);
             gem.Initialize(this, experienceValue);
@@ -719,7 +719,7 @@ namespace ProjectExpedition
                     characterIds[i] = SelectedCharacters[Mathf.Clamp(i, 0, SelectedCharacters.Length - 1)].Id;
                 }
 
-                LastRunRenownEarned = RunRenown + Mathf.Max(1, Kills / 10) + (victory ? 50 : 0);
+                LastRunRenownEarned = SharedMetaProgressionModel.CalculateRunRenownEarned(RunRenown, Kills, victory);
                 SaveService.RecordRun(Kills, RunRenown, Elapsed, victory, characterIds);
                 if (victory)
                 {

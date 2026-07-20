@@ -19,21 +19,21 @@ namespace ProjectExpedition.Tests
         [Test]
         public void PurchaseUnlock_DeductsRenownAndUnlocksContent()
         {
-            var progress = new MetaProgress { TotalRenown = 80 };
+            var progress = new MetaProgress { TotalRenown = 100 };
             SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
 
             var result = SharedMetaProgressionModel.TryPurchaseUnlock(progress, SharedMetaProgressionModel.SylvaId);
 
             Assert.That(result.Success, Is.True);
-            Assert.That(progress.SpentRenown, Is.EqualTo(50));
-            Assert.That(SharedMetaProgressionModel.AvailableRenown(progress), Is.EqualTo(30));
+            Assert.That(progress.SpentRenown, Is.EqualTo(75));
+            Assert.That(SharedMetaProgressionModel.AvailableRenown(progress), Is.EqualTo(25));
             Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.SylvaId), Is.True);
         }
 
         [Test]
         public void PurchaseUnlock_RejectsInsufficientRenown()
         {
-            var progress = new MetaProgress { TotalRenown = 30 };
+            var progress = new MetaProgress { TotalRenown = 50 };
             SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
 
             var result = SharedMetaProgressionModel.TryPurchaseUnlock(progress, SharedMetaProgressionModel.SylvaId);
@@ -46,14 +46,14 @@ namespace ProjectExpedition.Tests
         [Test]
         public void PurchaseUnlock_RejectsDoublePurchase()
         {
-            var progress = new MetaProgress { TotalRenown = 120, SpentRenown = 50 };
+            var progress = new MetaProgress { TotalRenown = 120 };
             SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
             SharedMetaProgressionModel.TryPurchaseUnlock(progress, SharedMetaProgressionModel.SylvaId);
 
             var result = SharedMetaProgressionModel.TryPurchaseUnlock(progress, SharedMetaProgressionModel.SylvaId);
 
             Assert.That(result.Success, Is.False);
-            Assert.That(progress.SpentRenown, Is.EqualTo(50));
+            Assert.That(progress.SpentRenown, Is.EqualTo(75));
         }
 
         [Test]
@@ -68,6 +68,13 @@ namespace ProjectExpedition.Tests
             Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.SylvaId), Is.True);
             Assert.That(progress.SpentRenown, Is.Zero);
             Assert.That(progress.DiscoveredCodexIds, Is.Not.Null);
+        }
+
+        public void RunRenownEarned_MatchesBalancedFormula()
+        {
+            Assert.That(SharedMetaProgressionModel.CalculateRunRenownEarned(0, 0, false), Is.EqualTo(1));
+            Assert.That(SharedMetaProgressionModel.CalculateRunRenownEarned(20, 200, true), Is.EqualTo(58));
+            Assert.That(SharedMetaProgressionModel.CalculateRunRenownEarned(0, 150, false), Is.EqualTo(10));
         }
 
         [Test]
@@ -122,6 +129,50 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void NextCharacterIndex_WrapsAllFourHeroes()
+        {
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(0, 1, 0), Is.EqualTo(1));
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(1, 1, 0), Is.EqualTo(2));
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(2, 1, 0), Is.EqualTo(3));
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(3, 1, 0), Is.EqualTo(0));
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(0, 0, 1), Is.EqualTo(2));
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(2, 0, -1), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void NextCharacterIndex_IncludesLockedHeroes()
+        {
+            var progress = new MetaProgress();
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+
+            var next = SharedMetaProgressionModel.NextCharacterIndex(0, 1, 0);
+
+            Assert.That(next, Is.EqualTo(1));
+            Assert.That(SharedMetaProgressionModel.IsCharacterUnlocked(progress, next), Is.False);
+            Assert.That(ContentCatalog.Character(next).Id, Is.EqualTo(SharedMetaProgressionModel.EiraId));
+        }
+
+        [Test]
+        public void NextMapIndex_WrapsBothMaps()
+        {
+            Assert.That(SharedMetaProgressionModel.NextMapIndex(0, 1, 0), Is.EqualTo(1));
+            Assert.That(SharedMetaProgressionModel.NextMapIndex(1, 1, 0), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void NextMapIndex_IncludesLockedMaps()
+        {
+            var progress = new MetaProgress();
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+
+            var next = SharedMetaProgressionModel.NextMapIndex(0, 1, 0);
+
+            Assert.That(next, Is.EqualTo(1));
+            Assert.That(SharedMetaProgressionModel.IsMapUnlocked(progress, next), Is.False);
+            Assert.That(ContentCatalog.Map(next).Id, Is.EqualTo(SharedMetaProgressionModel.SagaMapId));
+        }
+
+        [Test]
         public void NextUnlockedCharacterIndex_SkipsLockedHeroes()
         {
             var progress = new MetaProgress();
@@ -135,7 +186,7 @@ namespace ProjectExpedition.Tests
         [Test]
         public void FindCheapestAffordableUnlock_PrefersLowestCost()
         {
-            var progress = new MetaProgress { TotalRenown = 65 };
+            var progress = new MetaProgress { TotalRenown = 80 };
             SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
 
             var unlockId = SharedMetaProgressionModel.FindCheapestAffordableUnlockId(progress);

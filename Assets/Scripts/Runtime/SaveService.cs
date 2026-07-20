@@ -152,7 +152,7 @@ namespace ProjectExpedition
             Data.RunsCompleted++;
             Data.BestKills = Mathf.Max(Data.BestKills, kills);
             Data.BestTime = Mathf.Max(Data.BestTime, time);
-            Data.TotalRenown += recoveredRenown + Mathf.Max(1, kills / 10) + (victory ? 50 : 0);
+            Data.TotalRenown += SharedMetaProgressionModel.CalculateRunRenownEarned(recoveredRenown, kills, victory);
 
             if (characterIds != null)
             {

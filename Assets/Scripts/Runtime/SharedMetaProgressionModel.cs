@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace ProjectExpedition
 {
@@ -95,10 +96,10 @@ namespace ProjectExpedition
         {
             new UnlockDefinition(HaldorId, "Haldor Stormborn", 0, UnlockCategory.Hero),
             new UnlockDefinition(ScoutMapId, "The Frostbound Shore (Scout)", 0, UnlockCategory.Expedition),
-            new UnlockDefinition(SylvaId, "Sylva Reedwalker", 50, UnlockCategory.Hero),
-            new UnlockDefinition(EiraId, "Eira Raven-Sworn", 60, UnlockCategory.Hero),
-            new UnlockDefinition(MaraId, "Captain Mara Voss", 75, UnlockCategory.Hero),
-            new UnlockDefinition(SagaMapId, "The Frostbound Shore: Long Night", 100, UnlockCategory.Expedition)
+            new UnlockDefinition(SylvaId, "Sylva Reedwalker", 75, UnlockCategory.Hero),
+            new UnlockDefinition(EiraId, "Eira Raven-Sworn", 110, UnlockCategory.Hero),
+            new UnlockDefinition(MaraId, "Captain Mara Voss", 145, UnlockCategory.Hero),
+            new UnlockDefinition(SagaMapId, "The Frostbound Shore: Long Night", 200, UnlockCategory.Expedition)
         };
 
         private static readonly CodexDefinition[] CodexCatalog =
@@ -161,6 +162,10 @@ namespace ProjectExpedition
 
         public static IReadOnlyList<CodexDefinition> CodexEntries => CodexCatalog;
 
+        public const float RenownKillPickupChance = 0.10f;
+        public const int RenownVictoryBonus = 25;
+        public const int RenownKillBonusDivisor = 15;
+
         public static int AvailableRenown(MetaProgress progress)
         {
             if (progress == null)
@@ -213,6 +218,13 @@ namespace ProjectExpedition
         public static int CalculateMasteryGain(int kills, bool victory)
         {
             return Math.Max(1, kills / 25) + (victory ? 3 : 0);
+        }
+
+        public static int CalculateRunRenownEarned(int recoveredRenown, int kills, bool victory)
+        {
+            var killBonus = Math.Max(1, kills / RenownKillBonusDivisor);
+            var victoryBonus = victory ? RenownVictoryBonus : 0;
+            return recoveredRenown + killBonus + victoryBonus;
         }
 
         public static float MasteryDamageMultiplier(int mastery)
@@ -486,6 +498,98 @@ namespace ProjectExpedition
             }
 
             return CodexVisibility.Hidden;
+        }
+
+        public static int NextGridIndex(int itemCount, int columns, int currentIndex, int columnDelta, int rowDelta)
+        {
+            if (itemCount <= 1 || (columnDelta == 0 && rowDelta == 0))
+            {
+                return Mathf.Clamp(currentIndex, 0, Mathf.Max(0, itemCount - 1));
+            }
+
+            var rows = Mathf.Max(1, (itemCount + columns - 1) / columns);
+            var column = currentIndex % columns;
+            var row = currentIndex / columns;
+
+            if (columnDelta != 0)
+            {
+                column += columnDelta;
+                if (column >= columns)
+                {
+                    column = 0;
+                    row++;
+                }
+                else if (column < 0)
+                {
+                    column = columns - 1;
+                    row--;
+                }
+            }
+
+            if (rowDelta != 0)
+            {
+                row += rowDelta;
+            }
+
+            row = WrapIndex(row, rows);
+            var index = row * columns + column;
+
+            if (index < itemCount)
+            {
+                return index;
+            }
+
+            for (var step = 0; step < rows * columns; step++)
+            {
+                if (columnDelta != 0)
+                {
+                    column += columnDelta;
+                    if (column >= columns)
+                    {
+                        column = 0;
+                        row++;
+                    }
+                    else if (column < 0)
+                    {
+                        column = columns - 1;
+                        row--;
+                    }
+                }
+
+                if (rowDelta != 0)
+                {
+                    row += rowDelta;
+                }
+
+                row = WrapIndex(row, rows);
+                index = row * columns + column;
+                if (index < itemCount)
+                {
+                    return index;
+                }
+            }
+
+            return currentIndex;
+        }
+
+        public static int NextCharacterIndex(int currentIndex, int columnDelta, int rowDelta)
+        {
+            return NextGridIndex(
+                ContentCatalog.Characters.Length,
+                CharacterSelectPresentation.GridColumns,
+                currentIndex,
+                columnDelta,
+                rowDelta);
+        }
+
+        public static int NextMapIndex(int currentIndex, int columnDelta, int rowDelta)
+        {
+            return NextGridIndex(
+                ContentCatalog.Maps.Length,
+                MapSelectPresentation.GridColumns,
+                currentIndex,
+                columnDelta,
+                rowDelta);
         }
 
         public static int NextUnlockedCharacterIndex(MetaProgress progress, int currentIndex, int direction)

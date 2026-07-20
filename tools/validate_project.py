@@ -349,6 +349,7 @@ def main() -> int:
     content_source = (ROOT / "Assets/Scripts/Runtime/ContentDefinitions.cs").read_text(encoding="utf-8")
     input_source = (ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs").read_text(encoding="utf-8")
     hud_source = (ROOT / "Assets/Scripts/Runtime/GameHUD.cs").read_text(encoding="utf-8")
+    meta_source = (ROOT / "Assets/Scripts/Runtime/SharedMetaProgressionModel.cs").read_text(encoding="utf-8")
     game_types_source = (ROOT / "Assets/Scripts/Runtime/GameTypes.cs").read_text(encoding="utf-8")
     database_source = (ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs").read_text(encoding="utf-8")
     online_runtime = ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs"
@@ -401,8 +402,11 @@ def main() -> int:
         "exact reward preview": "RewardEffectPreview" in hud_source and
             "EffectDescriptionAtLevel" in hud_source,
         "fully clickable rewards": "GUI.Button(rect, GUIContent.none, GUIStyle.none)" in hud_source,
-        "separated character controls": "var ultimateRect" in hud_source and "rect.y + 592" in hud_source,
-        "responsive map titles": "_mapTitle" in hud_source and "rect.y + 190, rect.width - 80, 78" in hud_source,
+        "character select grid": "DrawCharacterSelectGrid" in hud_source and "DrawCharacterSelectDetail" in hud_source,
+        "character roster navigation": "NextCharacterIndex" in meta_source and "CharacterSelectPresentation" in hud_source,
+        "map select grid": "DrawMapSelectGrid" in hud_source and "DrawMapSelectDetail" in hud_source,
+        "map roster navigation": "NextMapIndex" in meta_source and "MapSelectPresentation" in hud_source,
+        "shared selection action button": "DrawPrimaryActionButton" in hud_source,
         "compact combat hint": "Prompt(BindingAction.Ultimate)" in hud_source and "Prompt(BindingAction.Pause)" in hud_source,
         "aligned local statistics": "DrawStatColumn" in hud_source and "_statValue" in hud_source,
         "safe result summary": "var summary = new Rect" in hud_source and "_director.SelectedMap.Name.ToUpperInvariant()" in hud_source,

@@ -3,7 +3,7 @@
 - Added `SharedMetaProgressionModel` with presentation-free renown unlock purchases, per-hero mastery accrual, codex discovery rules and starter unlock defaults (Haldor + Scout).
 - Bumped save envelope to **v4** with `SpentRenown`, `UnlockedContentIds`, `DiscoveredCodexIds`, Sylva/Mara/Eira mastery fields and `CampOnboardingComplete`.
 - Added v3 → v4 migration with retroactive unlock generosity for existing profiles (no retroactive renown charges).
-- Added Frostbound Camp **Unlock Board** — spend available renown on Sylva (50), Eira (60), Mara (75) and Long Night (100).
+- Added Frostbound Camp **Unlock Board** — spend available renown on Sylva (75), Eira (110), Mara (145) and Long Night (200).
 - Gated character and expedition selection to purchased unlocks; locked entries show camp renown cost.
 - Extended mastery combat bonuses to Sylva (Grove Thorn Lash), Mara (Signal Flare) and Eira (Raven Guard).
 - Added camp **Codex** with Heroes, Expeditions, Weapons, Gear, Evolutions and Relics; evolution recipe hints when base + catalyst are discovered.

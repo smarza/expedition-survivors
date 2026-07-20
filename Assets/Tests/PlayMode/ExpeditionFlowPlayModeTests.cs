@@ -337,7 +337,7 @@ namespace ProjectExpedition.Tests
             CreateDirector();
             SaveService.AssignDataForTests(new MetaProgress
             {
-                TotalRenown = 80,
+                TotalRenown = 100,
                 UnlockedContentIds = new[] { SharedMetaProgressionModel.HaldorId, SharedMetaProgressionModel.ScoutMapId }
             });
 
@@ -345,7 +345,7 @@ namespace ProjectExpedition.Tests
 
             Assert.That(result.Success, Is.True);
             Assert.That(SaveService.IsUnlocked(SharedMetaProgressionModel.SylvaId), Is.True);
-            Assert.That(SaveService.AvailableRenown(), Is.EqualTo(30));
+            Assert.That(SaveService.AvailableRenown(), Is.EqualTo(25));
 
             yield return null;
         }
