@@ -464,6 +464,23 @@ Closeout gate:
 - final owner validation on desktop WebGL and the native Windows/device matrix;
 - merge and `v0.9.0` tag only after explicit owner acceptance.
 
+### 12.4 Active milestone: 0.10.0
+
+Release candidate implemented:
+
+- `SharedExpeditionRouteModel` for Scout phase pacing, kill/shard objectives, boss eligibility, extraction rules and relic tier resolution;
+- authored Frostbound landmarks with phase-tinted RuntimeAssets presentation;
+- Sylva and Mara hero silhouettes alongside the existing Haldor/Eira presentation path;
+- `SharedWeaponRegistry` as the weapon-state source behind the legacy shared weapon facade;
+- 55 EditMode and 10 PlayMode tests in the release-candidate inventory;
+- demonstration content and acceptance guides in `DEMONSTRATION_CONTENT_0.10.md` and `TESTING_0.10.md`.
+
+Closeout gate:
+
+- static validation, all Unity tests, Web/Pages and Windows milestone compilation green;
+- external player completes the Scout expedition without developer instruction;
+- merge and `v0.10.0` tag only after explicit owner acceptance **and** green CI on the pull request.
+
 ## 13. Current technical architecture
 
 | Component | Current responsibility |
@@ -690,6 +707,38 @@ Status: release-candidate documentation and 48 EditMode + 9 PlayMode tests prepa
 5. Validate settings, audio states, VFX readability and bounded diagnostics.
 6. Merge and tag only after explicit owner acceptance.
 
+## 15B. Detailed 0.10.0 execution plan
+
+#### Phase A — Expedition route model
+
+Status: implemented.
+
+1. Extract Scout phase pacing, objectives, boss eligibility and extraction into `SharedExpeditionRouteModel`.
+2. Route `GameDirector` announcements, elite spawn gating, beacon spawn and victory relic grants through the model.
+3. Add EditMode regressions for objectives, extraction and relic resolution.
+
+Exit gate: Scout route rules are presentation-free and covered by automated tests.
+
+#### Phase B — Biome polish and hero silhouettes
+
+Status: implemented.
+
+1. Add authored wreck, rune circle, boss-approach and extraction landmarks to `CreateArena`.
+2. Tint landmarks by expedition phase without affecting gameplay RNG.
+3. Add Sylva and Mara compositional silhouettes in `HeroPresentation`.
+
+Exit gate: the Frostbound arena reads as a guided Scout route rather than random scatter props.
+
+#### Phase C — Weapon registry and regression close
+
+Status: release-candidate documentation and 55 EditMode + 10 PlayMode tests prepared; CI/manual gates pending.
+
+1. Preserve Frost Axe level-table parity through `SharedWeaponRegistry`.
+2. Add simplified PlayMode Scout extraction-victory coverage.
+3. Pass static validation, all Unity tests, Web/Pages and Windows milestone compilation.
+4. Run the matrix in `docs/TESTING_0.10.md` through Pages preview and the Windows artifact.
+5. Merge and tag only after explicit owner acceptance.
+
 ## 16. Roadmap to 1.0
 
 Dates are intentionally absent until production velocity and asset capacity are measured. A version advances only after its exit criteria are met.
@@ -827,11 +876,11 @@ Expedition Survivors is not launch-ready merely because a run can be completed. 
 
 The next developer/agent should do the following, in order:
 
-1. Work on `agent/0.9.0-presentation-foundation` and its milestone PR.
-2. Verify the release-candidate workflow: static validation, 48 EditMode tests, 9 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
-3. Run the matrix in `docs/TESTING_0.9.md` through the Pages preview, then use the Windows artifact for native audio/device validation.
+1. Work on the 0.10.0 demonstration-content branch and its milestone PR.
+2. Verify the release-candidate workflow: static validation, 55 EditMode tests, 10 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
+3. Run the matrix in `docs/TESTING_0.10.md` through the Pages preview, then use the Windows artifact for native audio/device validation.
 4. Record any failure with its seed, target, resolution, settings, devices, reproduction steps and screenshot/video or Console/log output.
-5. After explicit owner acceptance, merge into `main` and tag `v0.9.0`.
-6. Begin 0.10.0 Demonstration Content only from the updated accepted `main`.
+5. After explicit owner acceptance **and green CI on the pull request**, merge into `main` and tag `v0.10.0`.
+6. Begin 0.11.0 Camp and Progression only from the updated accepted `main`.
 
-Do not begin bulk demonstration content before the presentation gate is accepted. Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.
+Do not merge or tag before CI is green. Do not begin camp/progression systems before the demonstration gate is accepted. Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.

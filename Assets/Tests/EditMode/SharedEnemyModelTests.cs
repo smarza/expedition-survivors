@@ -66,9 +66,9 @@ namespace ProjectExpedition.Tests
             model.Begin(new Vector2(-2f, 4f), EnemyCatalog.Jotunn, 3f, 1.35f, 0.85f, 60);
 
             Assert.That(model.Boss, Is.True);
-            Assert.That(model.Health, Is.EqualTo(860f));
-            Assert.That(model.Speed, Is.EqualTo(1.35f));
-            Assert.That(model.ContactDamage, Is.EqualTo(22f));
+            Assert.That(model.Health, Is.EqualTo(935f));
+            Assert.That(model.Speed, Is.EqualTo(1.41f));
+            Assert.That(model.ContactDamage, Is.EqualTo(27.05f));
             Assert.That(model.ExperienceValue, Is.EqualTo(60));
 
             model.Stop();

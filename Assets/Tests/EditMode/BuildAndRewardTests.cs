@@ -73,6 +73,8 @@ namespace ProjectExpedition.Tests
                 Is.EqualTo("+42% Raven Guard damage and -14% interval"));
             Assert.That(UpgradeDescriptions.Progression(ItemCatalog.FrostAxe),
                 Does.Contain("L8: +26% Frost Axe damage"));
+            Assert.That(ItemCatalog.Find("gear.flare_core").EffectDescriptionAtLevel(1),
+                Is.EqualTo("+1 Signal Flare projectile per volley"));
         }
 
         private static RewardOption[] GeneratePair(int seed)

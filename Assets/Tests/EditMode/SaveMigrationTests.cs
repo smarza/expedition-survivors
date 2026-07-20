@@ -20,6 +20,18 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void Version2Save_MigratesRelicsCollected()
+        {
+            const string versionTwo = "{\"Version\":2,\"Progress\":{\"TotalRenown\":10,\"RunsCompleted\":2,\"BestKills\":40,\"BestTime\":180,\"HaldorMastery\":4}}";
+
+            var progress = SaveMigration.Deserialize(versionTwo, out var sourceVersion);
+
+            Assert.That(sourceVersion, Is.EqualTo(2));
+            Assert.That(progress.RelicsCollected, Is.Not.Null);
+            Assert.That(progress.RelicsCollected.Length, Is.Zero);
+        }
+
+        [Test]
         public void CurrentSave_RoundTripsThroughVersionedEnvelope()
         {
             var original = new MetaProgress
@@ -28,7 +40,8 @@ namespace ProjectExpedition.Tests
                 RunsCompleted = 6,
                 BestKills = 144,
                 BestTime = 612.25f,
-                HaldorMastery = 19
+                HaldorMastery = 19,
+                RelicsCollected = new[] { "relic.jotunn_echo" }
             };
 
             var json = SaveMigration.Serialize(original);
@@ -40,6 +53,74 @@ namespace ProjectExpedition.Tests
             Assert.That(restored.BestKills, Is.EqualTo(original.BestKills));
             Assert.That(restored.BestTime, Is.EqualTo(original.BestTime));
             Assert.That(restored.HaldorMastery, Is.EqualTo(original.HaldorMastery));
+            Assert.That(restored.RelicsCollected, Is.EqualTo(original.RelicsCollected));
+        }
+
+        [Test]
+        public void ResolveCampLeader_UsesLastPlayedHero()
+        {
+            SaveService.AssignDataForTests(new MetaProgress
+            {
+                LastCampLeaderId = "ironway.mara"
+            });
+
+            Assert.That(SaveService.ResolveCampLeader().Id, Is.EqualTo("ironway.mara"));
+            Assert.That(SaveService.ResolveCampLeader().Name, Is.EqualTo("Captain Mara Voss"));
+        }
+
+        [Test]
+        public void ResolveCampLeader_FallsBackToHaldorWhenUnknown()
+        {
+            SaveService.AssignDataForTests(new MetaProgress
+            {
+                LastCampLeaderId = "missing.hero"
+            });
+
+            Assert.That(SaveService.ResolveCampLeader().Id, Is.EqualTo("ravenbound.haldor"));
+        }
+
+        [Test]
+        public void ResolveLastCharacterSelectionIndex_UsesSavedIds()
+        {
+            SaveService.AssignDataForTests(new MetaProgress
+            {
+                LastCampLeaderId = "ironway.mara",
+                LastCoopPartnerId = "oathbound.sylva"
+            });
+
+            Assert.That(SaveService.ResolveLastCharacterSelectionIndex(0),
+                Is.EqualTo(ContentCatalog.CharacterIndex("ironway.mara")));
+            Assert.That(SaveService.ResolveLastCharacterSelectionIndex(1),
+                Is.EqualTo(ContentCatalog.CharacterIndex("oathbound.sylva")));
+        }
+
+        [Test]
+        public void SerializeRoundTrip_PreservesLastCampLeaderId()
+        {
+            var original = new MetaProgress
+            {
+                LastCampLeaderId = "oathbound.sylva"
+            };
+
+            var json = SaveMigration.Serialize(original);
+            var restored = SaveMigration.Deserialize(json, out _);
+
+            Assert.That(restored.LastCampLeaderId, Is.EqualTo("oathbound.sylva"));
+        }
+
+        [Test]
+        public void SerializeRoundTrip_PreservesLastCoopPartnerId()
+        {
+            var original = new MetaProgress
+            {
+                LastCampLeaderId = "ironway.mara",
+                LastCoopPartnerId = "ravenbound.eira"
+            };
+
+            var json = SaveMigration.Serialize(original);
+            var restored = SaveMigration.Deserialize(json, out _);
+
+            Assert.That(restored.LastCoopPartnerId, Is.EqualTo("ravenbound.eira"));
         }
     }
 }

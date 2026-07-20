@@ -68,6 +68,9 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedEnemyModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedSpawnModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedEffectModel.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedWeaponRegistry.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedExpeditionRouteModel.cs",
+        ROOT / "Assets/Scripts/Runtime/RuneShardPickup.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
         ROOT / "Assets/Scripts/Runtime/PresentationSettings.cs",
@@ -82,6 +85,8 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SharedEnemyModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedSpawnModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedEffectModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/SharedExpeditionRouteModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/SharedWeaponRegistryTests.cs",
         ROOT / "Assets/Tests/EditMode/PresentationFoundationTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
@@ -112,7 +117,7 @@ def main() -> int:
         "Music/RewardVerse", "Music/SagaResult",
     ] + [f"SFX/{cue}" for cue in (
         "Navigate", "Confirm", "Back", "AxeThrow", "ProjectileTrail", "Impact",
-        "EnemyDefeated", "ExperiencePickup", "RavenGuard", "Ultimate", "LevelUp",
+        "EnemyDefeated", "ExperiencePickup", "RavenGuard", "Ultimate", "BossSpawn", "LevelUp",
         "PlayerDowned", "PlayerRevived", "Victory", "Defeat",
     )]
     missing_audio = [name for name in expected_audio
@@ -191,6 +196,12 @@ def main() -> int:
         fail("unexpectedly small runtime script set")
     for script in scripts:
         validate_csharp(script)
+        meta_path = script.with_suffix(script.suffix + ".meta")
+        if meta_path.exists():
+            meta_text = meta_path.read_text(encoding="utf-8")
+            guid_match = re.search(r"^guid:\s*([a-f0-9]{32})$", meta_text, flags=re.MULTILINE)
+            if not guid_match:
+                fail(f"{meta_path.relative_to(ROOT)} must contain a valid 32-character lowercase guid")
 
     runtime_assembly = json.loads((ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef").read_text(encoding="utf-8"))
     runtime_references = set(runtime_assembly.get("references", []))
@@ -356,6 +367,7 @@ def main() -> int:
     )
     if any(requirement not in workflow_source for requirement in workflow_requirements):
         fail("Unity CI workflow is missing a required validation, test, build or license boundary")
+    game_director_source = (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8")
     production_requirements = {
         "content catalog": "class CharacterDefinition" in content_source and "class MapDefinition" in content_source,
         "ultimate balance": "UltimateCooldown" in content_source and "Mathf.Max(28f" in content_source,
@@ -366,15 +378,16 @@ def main() -> int:
         "four reward cards": "new List<RewardOption>(4)" in build_source and "CurrentRewards" in hud_source,
         "map build slots": "WeaponSlots" in content_source and "GearSlots" in content_source,
         "targeted co-op rewards": "TargetPlayerIndex" in build_source and "Shared" in build_source,
-        "behavioral evolutions": "JotunnCleaver" in build_source and "StormAegis" in build_source,
+        "behavioral evolutions": all(token in build_source for token in (
+            "JotunnCleaver", "StormAegis", "GroveCrown", "SignalStorm", "OathMaelstrom", "IronSanctuary")),
         "build HUD": "DrawBuildTray" in hud_source and "DrawBuildDetails" in hud_source,
         "proportional UI canvas": "PresentationLayout.Calculate" in hud_source and "DrawLetterbox" in hud_source,
         "stable label hover": "SetAllTextColors" in hud_source and "style.hover.textColor = color" in hud_source,
         "opaque modal hierarchy": "case RunState.LevelUp: DrawLevelUp();" in hud_source and "case RunState.BuildDetails: DrawBuildDetails();" in hud_source,
-        "readable item grid": "visibleIndex % 3" in hud_source and "row * 78" in hud_source,
-        "complete build statistics": all(token in hud_source for token in (
-            '"SURVIVOR"', '"FROST AXE"', '"RAVEN GUARD"', '"INTERVAL"',
-            '"PROJECTILES"', '"ULT RADIUS"')),
+        "readable item grid": "visibleIndex % 3" in hud_source and (
+            "DrawBuildItemCard" in hud_source or "row * 78" in hud_source),
+        "complete build statistics": '"SURVIVOR"' in hud_source and '"INTERVAL"' in hud_source and (
+            "DrawWeaponStatColumn" in hud_source or "EquippedWeapons" in hud_source),
         "exact reward preview": "RewardEffectPreview" in hud_source and
             "EffectDescriptionAtLevel" in hud_source,
         "fully clickable rewards": "GUI.Button(rect, GUIContent.none, GUIStyle.none)" in hud_source,
@@ -386,7 +399,7 @@ def main() -> int:
         "component pooling": "class ComponentPool" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReleasePooledSimulation" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "spatial partitioning": "class SpatialHashGrid" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "GetEnemiesInRadius" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "deterministic run seed": "class RunRandom" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReplayRun" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
-        "shared run progression": "class SharedRunModel" in (ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs").read_text(encoding="utf-8") and "_runModel.AddExperience" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8") and "_runModel.TryTriggerBoss" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
+        "shared run progression": "class SharedRunModel" in (ROOT / "Assets/Scripts/Runtime/SharedRunModel.cs").read_text(encoding="utf-8") and "_runModel.AddExperience" in game_director_source and ("_runModel.TryTriggerBoss" in game_director_source or "_routeModel.CanSpawnBoss" in game_director_source),
         "shared player state": "class SharedPlayerModel" in shared_player_source and "readonly SharedPlayerModel _model" in player_source,
         "shared enemy state": "class SharedEnemyModel" in shared_enemy_source and "readonly SharedEnemyModel _model" in enemy_source,
         "shared spawning": "class SharedSpawnModel" in shared_spawn_source and "_spawnModel.Advance" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
@@ -420,6 +433,16 @@ def main() -> int:
     weapon_level_tables = {
         "weapon.frost_axe": [0, 1, 2, 4, 1, 3, 2, 1],
         "weapon.raven_guard": [0, 10, 7, 10, 15, 7, 10, 15],
+        "weapon.north_wind_spear": [0, 1, 2, 4, 1, 4, 2, 1],
+        "weapon.rune_bolt": [0, 2, 1, 2, 3, 1, 2, 1],
+        "weapon.oath_ring": [0, 16, 17, 16, 18, 16, 17, 18],
+        "weapon.grove_thorn_lash": [0, 10, 15, 10, 10, 15, 10, 15],
+        "weapon.canopy_vortex": [0, 19, 20, 19, 21, 19, 20, 21],
+        "weapon.driftwood_staff": [0, 19, 19, 21, 19, 20, 19, 21],
+        "weapon.signal_flare": [0, 1, 1, 2, 1, 3, 2, 1],
+        "weapon.supply_pulse": [0, 15, 15, 9, 15, 15, 15, 15],
+        "weapon.iron_beacon": [0, 10, 10, 15, 10, 7, 15, 10],
+        "weapon.tide_caller": [0, 1, 3, 2, 1, 3, 2, 1],
     }
     for item_id, expected_effects in weapon_level_tables.items():
         record = re.search(
@@ -434,15 +457,33 @@ def main() -> int:
         fail("new serialized UpgradeId values must be appended without renumbering existing content")
     content_ids = re.findall(r"^\s+- id:\s*([^\s]+)\s*$", content_asset, flags=re.MULTILINE)
     required_content_ids = {
-        "ravenbound.haldor", "ravenbound.eira", "frostbound.scout", "frostbound.saga",
-        "weapon.frost_axe", "weapon.raven_guard", "evolution.jotunn_cleaver",
-        "evolution.storm_aegis", "boon.field_rations", "enemy.draugr_raider",
+        "ravenbound.haldor", "ravenbound.eira", "oathbound.sylva", "ironway.mara",
+        "frostbound.scout", "frostbound.saga",
+        "weapon.frost_axe", "weapon.raven_guard", "weapon.north_wind_spear", "weapon.rune_bolt",
+        "weapon.oath_ring", "weapon.grove_thorn_lash", "weapon.canopy_vortex", "weapon.driftwood_staff",
+        "weapon.signal_flare", "weapon.supply_pulse", "weapon.iron_beacon", "weapon.tide_caller",
+        "gear.grove_seed", "gear.flare_core", "gear.oath_band",
+        "evolution.jotunn_cleaver", "evolution.storm_aegis", "evolution.grove_crown",
+        "evolution.signal_storm", "evolution.oath_maelstrom", "evolution.iron_sanctuary",
+        "boon.field_rations", "enemy.draugr_raider", "enemy.frost_wraith_captain",
         "enemy.jotunn_warlord",
     }
     if len(content_ids) != len(set(content_ids)):
         fail("ProductionContent.asset contains duplicate stable IDs")
     if not required_content_ids.issubset(content_ids):
         fail("ProductionContent.asset is missing required production content IDs")
+    scout_route = re.search(
+        r"- id: frostbound\.scout\n.*?requiredKillObjective:\s*(\d+).*?"
+        r"optionalShardObjective:\s*(\d+).*?extractionDuration:\s*([\d.]+).*?"
+        r"extractionBeaconX:\s*([\d.-]+).*?extractionBeaconY:\s*([\d.-]+)",
+        content_asset,
+        flags=re.DOTALL,
+    )
+    if not scout_route:
+        fail("frostbound.scout is missing required expedition route fields")
+    kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y = scout_route.groups()
+    if (kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y) != ("150", "5", "15", "0", "14"):
+        fail("frostbound.scout route objectives or extraction beacon do not match the 0.10.0 contract")
 
     foundation_meta = (ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs.meta").read_text(encoding="utf-8")
     content_guid = re.search(r"^guid:\s*([a-f0-9]{32})$", foundation_meta, flags=re.MULTILINE)

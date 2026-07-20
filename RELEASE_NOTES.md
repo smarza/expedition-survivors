@@ -1,3 +1,14 @@
+# Milestone 0.10.0 — Demonstration content (release candidate)
+
+- Added authored Frostbound landmarks: driftwood wreck, rune circle, boss-approach markers and a north extraction beacon placeholder with phase-tinted RuntimeAssets sprites.
+- Added `FrostboundLandmarkTint` so landmarks brighten as the Scout route advances through shoreline, driftwood, warlord approach, boss and extraction phases.
+- Added Sylva Reedwalker and Captain Mara Voss compositional silhouettes in `HeroPresentation`.
+- Added `SharedExpeditionRouteModel` EditMode coverage for Scout objectives, extraction completion and relic tier resolution.
+- Added `SharedWeaponRegistry` EditMode coverage preserving Frost Axe level-table parity with the legacy shared weapon model.
+- Added a simplified PlayMode Scout extraction-victory flow regression after boss defeat and beacon arrival.
+- Added `docs/DEMONSTRATION_CONTENT_0.10.md` as the owner-approved content brief and `docs/TESTING_0.10.md` as the acceptance matrix.
+- Extended automated gate inventory to 55 EditMode + 10 PlayMode tests.
+
 # Milestone 0.9.0 — Presentation foundation (release candidate)
 
 - Added persistent accessibility settings for UI scale, high contrast, reduced flashes and screen shake.

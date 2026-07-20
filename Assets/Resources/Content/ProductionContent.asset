@@ -27,6 +27,9 @@ MonoBehaviour:
     ultimateCooldown: 60
     ultimateDamage: 145
     ultimateRadius: 6.8
+    starterWeaponIds:
+    - weapon.frost_axe
+    - weapon.raven_guard
   - id: ravenbound.eira
     displayName: Eira Raven-Sworn
     tribe: Ravenbound Vikings
@@ -41,6 +44,43 @@ MonoBehaviour:
     ultimateCooldown: 52
     ultimateDamage: 112
     ultimateRadius: 5.8
+    starterWeaponIds:
+    - weapon.frost_axe
+    - weapon.raven_guard
+  - id: oathbound.sylva
+    displayName: Sylva Reedwalker
+    tribe: Oathbound Grove
+    role: Canopy Warden
+    description: An oathbound grove warden who binds thorn and canopy magic — fictional woodland culture, not any real people.
+    color: {r: 0.38, g: 0.78, b: 0.42, a: 1}
+    maxHealth: 128
+    moveSpeed: 4.85
+    armor: 1
+    ultimateName: Verdant Tempest
+    ultimateDescription: Sylva becomes briefly untouchable and unleashes an expanding thorn ring through nearby enemies.
+    ultimateCooldown: 54
+    ultimateDamage: 118
+    ultimateRadius: 6.2
+    starterWeaponIds:
+    - weapon.grove_thorn_lash
+    - weapon.canopy_vortex
+  - id: ironway.mara
+    displayName: Captain Mara Voss
+    tribe: Ironway Expedition Corps
+    role: Field Captain
+    description: A modern expedition corps captain who marks targets with signal gear and keeps the squad alive in the field.
+    color: {r: 0.62, g: 0.68, b: 0.78, a: 1}
+    maxHealth: 135
+    moveSpeed: 4.65
+    armor: 1.5
+    ultimateName: Orbital Barrage
+    ultimateDescription: Mara becomes briefly untouchable and calls a concentrated strike zone onto the nearest threat cluster.
+    ultimateCooldown: 58
+    ultimateDamage: 132
+    ultimateRadius: 6.5
+    starterWeaponIds:
+    - weapon.signal_flare
+    - weapon.supply_pulse
   maps:
   - id: frostbound.scout
     displayName: The Frostbound Shore
@@ -55,6 +95,11 @@ MonoBehaviour:
     groundColor: {r: 0.075, g: 0.13, b: 0.16, a: 1}
     weaponSlots: 4
     gearSlots: 4
+    requiredKillObjective: 150
+    optionalShardObjective: 5
+    extractionDuration: 15
+    extractionBeaconX: 0
+    extractionBeaconY: 14
   - id: frostbound.saga
     displayName: 'The Frostbound Shore: Long Night'
     region: Jotunn Coast
@@ -68,6 +113,11 @@ MonoBehaviour:
     groundColor: {r: 0.055, g: 0.105, b: 0.145, a: 1}
     weaponSlots: 6
     gearSlots: 6
+    requiredKillObjective: 180
+    optionalShardObjective: 5
+    extractionDuration: 15
+    extractionBeaconX: 0
+    extractionBeaconY: 14
   items:
   - id: weapon.frost_axe
     displayName: Frost Axe
@@ -105,6 +155,186 @@ MonoBehaviour:
     - 7
     - 10
     - 15
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.north_wind_spear
+    displayName: North Wind Spear
+    shortName: SPEAR
+    description: Directed spear projectile. Each level grants the listed damage, interval or pierce modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.75, g: 0.88, b: 0.95, a: 1}
+    levelEffects:
+    - 0
+    - 1
+    - 2
+    - 4
+    - 1
+    - 4
+    - 2
+    - 1
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.rune_bolt
+    displayName: Rune Bolt
+    shortName: BOLT
+    description: Fast rune projectile. Each level grants the listed damage, interval or projectile modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.65, g: 0.45, b: 0.92, a: 1}
+    levelEffects:
+    - 0
+    - 2
+    - 1
+    - 2
+    - 3
+    - 1
+    - 2
+    - 1
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.oath_ring
+    displayName: Oath Ring
+    shortName: RING
+    description: Orbiting oath blades. Each level grants the listed damage, speed or blade modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.55, g: 0.82, b: 0.45, a: 1}
+    levelEffects:
+    - 0
+    - 16
+    - 17
+    - 16
+    - 18
+    - 16
+    - 17
+    - 18
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.grove_thorn_lash
+    displayName: Grove Thorn Lash
+    shortName: LASH
+    description: Fast thorn pulse centered on its owner. Each level grants the listed damage or interval modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.42, g: 0.78, b: 0.38, a: 1}
+    levelEffects:
+    - 0
+    - 10
+    - 15
+    - 10
+    - 10
+    - 15
+    - 10
+    - 15
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.canopy_vortex
+    displayName: Canopy Vortex
+    shortName: VORTEX
+    description: Radial canopy burst. Each level grants the listed damage, interval or projectile modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.38, g: 0.85, b: 0.72, a: 1}
+    levelEffects:
+    - 0
+    - 19
+    - 20
+    - 19
+    - 21
+    - 19
+    - 20
+    - 21
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.driftwood_staff
+    displayName: Driftwood Staff
+    shortName: STAFF
+    description: Slow radial driftwood burst. Each level grants the listed damage, interval or projectile modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.55, g: 0.48, b: 0.35, a: 1}
+    levelEffects:
+    - 0
+    - 19
+    - 19
+    - 21
+    - 19
+    - 20
+    - 19
+    - 21
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.signal_flare
+    displayName: Signal Flare
+    shortName: FLARE
+    description: Explosive signal projectile. Each level grants the listed damage, interval or projectile modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.95, g: 0.55, b: 0.22, a: 1}
+    levelEffects:
+    - 0
+    - 1
+    - 1
+    - 2
+    - 1
+    - 3
+    - 2
+    - 1
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.supply_pulse
+    displayName: Supply Pulse
+    shortName: SUPPLY
+    description: Periodic heal pulse centered on its owner. Each level grants the listed interval or potency modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.48, g: 0.82, b: 0.55, a: 1}
+    levelEffects:
+    - 0
+    - 15
+    - 15
+    - 9
+    - 15
+    - 15
+    - 15
+    - 15
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.iron_beacon
+    displayName: Iron Beacon
+    shortName: BEACON
+    description: Large defensive pulse centered on its owner. Each level grants the listed damage, armor or interval modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.58, g: 0.65, b: 0.78, a: 1}
+    levelEffects:
+    - 0
+    - 10
+    - 10
+    - 15
+    - 10
+    - 7
+    - 15
+    - 10
+    evolutionOf: 
+    catalystId: 
+  - id: weapon.tide_caller
+    displayName: Tide Caller
+    shortName: TIDE
+    description: Wide shore projectile volley. Each level grants the listed damage, interval or projectile modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.35, g: 0.72, b: 0.88, a: 1}
+    levelEffects:
+    - 0
+    - 1
+    - 3
+    - 2
+    - 1
+    - 3
+    - 2
+    - 1
     evolutionOf: 
     catalystId: 
   - id: gear.longship_boots
@@ -197,6 +427,81 @@ MonoBehaviour:
     - 13
     evolutionOf: 
     catalystId: 
+  - id: gear.windswept_cloak
+    displayName: Windswept Cloak
+    shortName: CLOAK
+    description: Increases movement speed.
+    category: 1
+    maxLevel: 5
+    color: {r: 0.62, g: 0.72, b: 0.82, a: 1}
+    levelEffects:
+    - 5
+    - 5
+    - 5
+    - 5
+    - 5
+    evolutionOf: 
+    catalystId: 
+  - id: gear.hollow_gourds
+    displayName: Hollow Gourds
+    shortName: GOURD
+    description: Increases maximum health and heals the same amount.
+    category: 1
+    maxLevel: 5
+    color: {r: 0.78, g: 0.62, b: 0.28, a: 1}
+    levelEffects:
+    - 6
+    - 6
+    - 6
+    - 6
+    - 6
+    evolutionOf: 
+    catalystId: 
+  - id: gear.oath_feather
+    displayName: Oath Feather
+    shortName: FEATHER
+    description: Reduces every contact hit.
+    category: 1
+    maxLevel: 5
+    color: {r: 0.82, g: 0.92, b: 0.78, a: 1}
+    levelEffects:
+    - 7
+    - 7
+    - 7
+    - 7
+    - 7
+    evolutionOf: 
+    catalystId: 
+  - id: gear.signal_magnet
+    displayName: Signal Magnet
+    shortName: MAGNET
+    description: Increases XP pickup radius.
+    category: 1
+    maxLevel: 5
+    color: {r: 0.92, g: 0.82, b: 0.35, a: 1}
+    levelEffects:
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    evolutionOf: 
+    catalystId: 
+  - id: gear.field_manual
+    displayName: Field Manual
+    shortName: MANUAL
+    description: Ultimate recharges 10% faster per level.
+    category: 1
+    maxLevel: 5
+    color: {r: 0.72, g: 0.65, b: 0.48, a: 1}
+    levelEffects:
+    - 12
+    - 12
+    - 12
+    - 12
+    - 12
+    evolutionOf: 
+    catalystId: 
   - id: gear.jotunn_rune
     displayName: Jotunn Rune
     shortName: RUNE
@@ -206,6 +511,39 @@ MonoBehaviour:
     color: {r: 0.75, g: 0.35, b: 0.85, a: 1}
     levelEffects:
     - 4
+    evolutionOf: 
+    catalystId: 
+  - id: gear.grove_seed
+    displayName: Grove Seed
+    shortName: SEED
+    description: A rare catalyst that prepares Grove Thorn Lash for evolution.
+    category: 1
+    maxLevel: 1
+    color: {r: 0.48, g: 0.68, b: 0.32, a: 1}
+    levelEffects:
+    - 21
+    evolutionOf: 
+    catalystId: 
+  - id: gear.flare_core
+    displayName: Flare Core
+    shortName: CORE
+    description: A rare catalyst that prepares Signal Flare for evolution.
+    category: 1
+    maxLevel: 1
+    color: {r: 0.98, g: 0.62, b: 0.18, a: 1}
+    levelEffects:
+    - 3
+    evolutionOf: 
+    catalystId: 
+  - id: gear.oath_band
+    displayName: Oath Band
+    shortName: BAND
+    description: A rare catalyst that prepares Oath Ring for evolution.
+    category: 1
+    maxLevel: 1
+    color: {r: 0.55, g: 0.75, b: 0.62, a: 1}
+    levelEffects:
+    - 18
     evolutionOf: 
     catalystId: 
   - id: evolution.jotunn_cleaver
@@ -230,6 +568,50 @@ MonoBehaviour:
     - 0
     evolutionOf: weapon.raven_guard
     catalystId: gear.bear_blooded
+  - id: evolution.grove_crown
+    displayName: Grove Crown
+    shortName: CROWN
+    description: Grove Thorn Lash leaves damaging thorn patches where it strikes.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.55, g: 0.88, b: 0.42, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.grove_thorn_lash
+    catalystId: gear.grove_seed
+  - id: evolution.signal_storm
+    displayName: Signal Storm
+    shortName: STORM
+    description: Signal Flares chain to two nearby enemies after impact.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.98, g: 0.48, b: 0.15, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.signal_flare
+    catalystId: gear.flare_core
+  - id: evolution.oath_maelstrom
+    displayName: Oath Maelstrom
+    shortName: MAEL
+    description: Oath Ring gains an extra blade and a wider orbit radius.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.42, g: 0.92, b: 0.55, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.oath_ring
+    catalystId: gear.oath_band
+  - id: evolution.iron_sanctuary
+    displayName: Iron Sanctuary
+    shortName: SANCT
+    description: Iron Beacon persists as a moving shield zone after each pulse.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.52, g: 0.58, b: 0.72, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.iron_beacon
+    catalystId: gear.field_manual
   - id: boon.field_rations
     displayName: Field Rations
     shortName: HEAL
@@ -258,16 +640,32 @@ MonoBehaviour:
     maximumExperienceExclusive: 5
     primaryColor: {r: 0.35, g: 0.46, b: 0.39, a: 1}
     alternateColor: {r: 0.43, g: 0.35, b: 0.47, a: 1}
+  - id: enemy.frost_wraith_captain
+    displayName: Frost Wraith Captain
+    boss: 0
+    baseHealth: 95
+    healthPerDifficulty: 18
+    minimumSpeed: 1.5
+    maximumSpeed: 2
+    speedPerDifficulty: 0.02
+    baseContactDamage: 14
+    contactDamagePerDifficulty: 1
+    minimumRadius: 0.38
+    maximumRadius: 0.52
+    minimumExperience: 8
+    maximumExperienceExclusive: 14
+    primaryColor: {r: 0.55, g: 0.82, b: 0.95, a: 1}
+    alternateColor: {r: 0.35, g: 0.65, b: 0.88, a: 1}
   - id: enemy.jotunn_warlord
     displayName: Jotunn Warlord
     boss: 1
-    baseHealth: 620
-    healthPerDifficulty: 80
-    minimumSpeed: 1.35
-    maximumSpeed: 1.35
-    speedPerDifficulty: 0
-    baseContactDamage: 22
-    contactDamagePerDifficulty: 0
+    baseHealth: 680
+    healthPerDifficulty: 85
+    minimumSpeed: 1.65
+    maximumSpeed: 1.85
+    speedPerDifficulty: 0.02
+    baseContactDamage: 26
+    contactDamagePerDifficulty: 0.35
     minimumRadius: 0.85
     maximumRadius: 0.85
     minimumExperience: 60

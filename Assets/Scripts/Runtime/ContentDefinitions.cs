@@ -18,11 +18,13 @@ namespace ProjectExpedition
         public readonly float UltimateCooldown;
         public readonly float UltimateDamage;
         public readonly float UltimateRadius;
+        public readonly string[] StarterWeaponIds;
 
         public CharacterDefinition(
             string id, string name, string tribe, string role, string description, Color color,
             float maxHealth, float moveSpeed, float armor, string ultimateName,
-            string ultimateDescription, float ultimateCooldown, float ultimateDamage, float ultimateRadius)
+            string ultimateDescription, float ultimateCooldown, float ultimateDamage, float ultimateRadius,
+            string[] starterWeaponIds = null)
         {
             Id = id;
             Name = name;
@@ -38,6 +40,7 @@ namespace ProjectExpedition
             UltimateCooldown = ultimateCooldown;
             UltimateDamage = ultimateDamage;
             UltimateRadius = ultimateRadius;
+            StarterWeaponIds = starterWeaponIds ?? new[] { "weapon.frost_axe", "weapon.raven_guard" };
         }
     }
 
@@ -56,12 +59,18 @@ namespace ProjectExpedition
         public readonly Color GroundColor;
         public readonly int WeaponSlots;
         public readonly int GearSlots;
+        public readonly int RequiredKillObjective;
+        public readonly int OptionalShardObjective;
+        public readonly float ExtractionDuration;
+        public readonly float ExtractionBeaconX;
+        public readonly float ExtractionBeaconY;
 
         public MapDefinition(
             string id, string name, string region, string description, string durationLabel,
             float duration, float bossSpawnTime, float baseSpawnInterval,
             float minimumSpawnInterval, float difficultyRamp, Color groundColor,
-            int weaponSlots, int gearSlots)
+            int weaponSlots, int gearSlots, int requiredKillObjective, int optionalShardObjective,
+            float extractionDuration, float extractionBeaconX, float extractionBeaconY)
         {
             Id = id;
             Name = name;
@@ -76,6 +85,11 @@ namespace ProjectExpedition
             GroundColor = groundColor;
             WeaponSlots = weaponSlots;
             GearSlots = gearSlots;
+            RequiredKillObjective = requiredKillObjective;
+            OptionalShardObjective = optionalShardObjective;
+            ExtractionDuration = extractionDuration;
+            ExtractionBeaconX = extractionBeaconX;
+            ExtractionBeaconY = extractionBeaconY;
         }
     }
 
@@ -89,14 +103,32 @@ namespace ProjectExpedition
                 new Color(0.29f, 0.65f, 0.82f), 150f, 4.45f, 2f,
                 "Ravenstorm",
                 "Haldor becomes briefly untouchable and calls a devastating storm of frost axes and ravens around him.",
-                60f, 145f, 6.8f),
+                60f, 145f, 6.8f,
+                new[] { "weapon.frost_axe", "weapon.raven_guard" }),
             new CharacterDefinition(
                 "ravenbound.eira", "Eira Raven-Sworn", "Ravenbound Vikings", "Storm Scout",
                 "A swift pathfinder whose ravens mark openings before the enemy realizes it has been surrounded.",
                 new Color(0.88f, 0.52f, 0.24f), 122f, 5.05f, 0.5f,
                 "Murder of Ravens",
                 "Eira releases a focused murder of ravens that tears through every nearby enemy.",
-                52f, 112f, 5.8f)
+                52f, 112f, 5.8f,
+                new[] { "weapon.frost_axe", "weapon.raven_guard" }),
+            new CharacterDefinition(
+                "oathbound.sylva", "Sylva Reedwalker", "Oathbound Grove", "Canopy Warden",
+                "An oathbound grove warden who binds thorn and canopy magic — fictional woodland culture, not any real people.",
+                new Color(0.38f, 0.78f, 0.42f), 128f, 4.85f, 1f,
+                "Verdant Tempest",
+                "Sylva becomes briefly untouchable and unleashes an expanding thorn ring through nearby enemies.",
+                54f, 118f, 6.2f,
+                new[] { "weapon.grove_thorn_lash", "weapon.canopy_vortex" }),
+            new CharacterDefinition(
+                "ironway.mara", "Captain Mara Voss", "Ironway Expedition Corps", "Field Captain",
+                "A modern expedition corps captain who marks targets with signal gear and keeps the squad alive in the field.",
+                new Color(0.62f, 0.68f, 0.78f), 135f, 4.65f, 1.5f,
+                "Orbital Barrage",
+                "Mara becomes briefly untouchable and calls a concentrated strike zone onto the nearest threat cluster.",
+                58f, 132f, 6.5f,
+                new[] { "weapon.signal_flare", "weapon.supply_pulse" })
         };
 
         public static MapDefinition[] Maps { get; private set; } = new[]
@@ -105,16 +137,52 @@ namespace ProjectExpedition
                 "frostbound.scout", "The Frostbound Shore", "Jotunn Coast",
                 "A shorter expedition used to learn the shore, complete a build and confront its Jotunn guardian.",
                 "SCOUT EXPEDITION — 5 MIN", 300f, 240f, 0.86f, 0.24f, 46f,
-                new Color(0.075f, 0.13f, 0.16f), 4, 4),
+                new Color(0.075f, 0.13f, 0.16f), 4, 4, 150, 5, 15f, 0f, 14f),
             new MapDefinition(
                 "frostbound.saga", "The Frostbound Shore: Long Night", "Jotunn Coast",
                 "The full twelve-minute route. Denser phases, stronger elites and a late Jotunn confrontation.",
                 "QUICK EXPEDITION — 12 MIN", 720f, 630f, 0.82f, 0.18f, 42f,
-                new Color(0.055f, 0.105f, 0.145f), 6, 6)
+                new Color(0.055f, 0.105f, 0.145f), 6, 6, 180, 5, 15f, 0f, 14f)
         };
 
         public static CharacterDefinition Character(int index) =>
             Characters[Mathf.Clamp(index, 0, Characters.Length - 1)];
+
+        public static CharacterDefinition FindCharacter(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId))
+            {
+                return null;
+            }
+
+            for (var i = 0; i < Characters.Length; i++)
+            {
+                if (Characters[i].Id == characterId)
+                {
+                    return Characters[i];
+                }
+            }
+
+            return null;
+        }
+
+        public static int CharacterIndex(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId))
+            {
+                return -1;
+            }
+
+            for (var i = 0; i < Characters.Length; i++)
+            {
+                if (Characters[i].Id == characterId)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
 
         public static MapDefinition Map(int index) =>
             Maps[Mathf.Clamp(index, 0, Maps.Length - 1)];
