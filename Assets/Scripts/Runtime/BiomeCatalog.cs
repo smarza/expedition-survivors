@@ -79,5 +79,20 @@ namespace ProjectExpedition
 
             return "A FROST WRAITH CAPTAIN EMERGES";
         }
+
+        public static string ResolveExtractionUnderwayAnnouncement(string biomeId)
+        {
+            if (biomeId == CanopyId)
+            {
+                return "CANOPY EXTRACTION UNDERWAY";
+            }
+
+            if (biomeId == RelayId)
+            {
+                return "RELAY EXTRACTION UNDERWAY";
+            }
+
+            return "EXTRACTION UNDERWAY";
+        }
     }
 }

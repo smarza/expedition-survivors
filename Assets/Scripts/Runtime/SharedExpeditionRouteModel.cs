@@ -19,6 +19,8 @@ namespace ProjectExpedition
     /// </summary>
     public sealed class SharedExpeditionRouteModel
     {
+        public const float ExtractionHoldDuration = 2f;
+
         private const float ExtractionBeaconRadius = 3.5f;
         private const float ShorelineSecondsBeforeBoss = 150f;
         private const float DriftwoodSecondsBeforeBoss = 60f;
@@ -34,9 +36,20 @@ namespace ProjectExpedition
         public float ExtractionBeaconY { get; private set; }
         public float BossSpawnTime { get; private set; }
         public float ExtractionElapsed { get; private set; }
+        public float ExtractionHoldElapsed { get; private set; }
+        public bool PartyAtExtractionBeacon { get; private set; }
+        public ExtractionCompletionKind ExtractionCompletion { get; private set; }
         public bool BossSpawned { get; private set; }
         public bool BossKilled { get; private set; }
         public string PendingAnnouncement { get; private set; }
+
+        public float ExtractionHoldRemaining =>
+            Mathf.Max(0f, ExtractionHoldDuration - ExtractionHoldElapsed);
+
+        public float ExtractionHoldProgress =>
+            ExtractionHoldDuration > 0f
+                ? Mathf.Clamp01(ExtractionHoldElapsed / ExtractionHoldDuration)
+                : 0f;
 
         public int DraugrKills => PrimaryKillCount;
 
@@ -65,6 +78,9 @@ namespace ProjectExpedition
             PrimaryKillCount = 0;
             OptionalPickupsCollected = 0;
             ExtractionElapsed = 0f;
+            ExtractionHoldElapsed = 0f;
+            PartyAtExtractionBeacon = false;
+            ExtractionCompletion = ExtractionCompletionKind.None;
             BossSpawned = false;
             BossKilled = false;
             _elapsed = 0f;
@@ -88,6 +104,8 @@ namespace ProjectExpedition
                 {
                     CurrentPhase = ExpeditionPhase.Extraction;
                     ExtractionElapsed = 0f;
+                    ExtractionHoldElapsed = 0f;
+                    PartyAtExtractionBeacon = false;
                     QueueAnnouncement(PhaseAnnouncement(ExpeditionPhase.Extraction));
                 }
                 else
@@ -98,8 +116,30 @@ namespace ProjectExpedition
                 var atBeacon = Vector2.Distance(partyCenter,
                     new Vector2(ExtractionBeaconX, ExtractionBeaconY)) <= ExtractionBeaconRadius;
 
-                if (atBeacon || ExtractionElapsed >= ExtractionDuration)
+                if (atBeacon && !PartyAtExtractionBeacon)
                 {
+                    QueueAnnouncement(ResolveExtractionUnderwayAnnouncement());
+                }
+
+                PartyAtExtractionBeacon = atBeacon;
+
+                if (atBeacon)
+                {
+                    ExtractionHoldElapsed += deltaTime;
+                }
+                else
+                {
+                    ExtractionHoldElapsed = 0f;
+                }
+
+                if (ExtractionHoldElapsed >= ExtractionHoldDuration)
+                {
+                    ExtractionCompletion = ExtractionCompletionKind.BeaconHold;
+                    CurrentPhase = ExpeditionPhase.Completed;
+                }
+                else if (ExtractionElapsed >= ExtractionDuration)
+                {
+                    ExtractionCompletion = ExtractionCompletionKind.Timeout;
                     CurrentPhase = ExpeditionPhase.Completed;
                 }
 
@@ -122,6 +162,9 @@ namespace ProjectExpedition
                 BossKilled = true;
                 CurrentPhase = ExpeditionPhase.Extraction;
                 ExtractionElapsed = 0f;
+                ExtractionHoldElapsed = 0f;
+                PartyAtExtractionBeacon = false;
+                ExtractionCompletion = ExtractionCompletionKind.None;
                 QueueAnnouncement(PhaseAnnouncement(ExpeditionPhase.Extraction));
                 return;
             }
@@ -262,6 +305,16 @@ namespace ProjectExpedition
                 default:
                     return string.Empty;
             }
+        }
+
+        private string ResolveExtractionUnderwayAnnouncement()
+        {
+            if (_activeMap == null)
+            {
+                return "EXTRACTION UNDERWAY";
+            }
+
+            return BiomeCatalog.ResolveExtractionUnderwayAnnouncement(_activeMap.BiomeId);
         }
 
         private void QueueAnnouncement(string message)

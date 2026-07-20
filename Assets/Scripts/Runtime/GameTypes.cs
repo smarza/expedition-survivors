@@ -17,6 +17,26 @@ namespace ProjectExpedition
         Settings
     }
 
+    public enum RunEndPresentationPhase
+    {
+        Beat,
+        Summary
+    }
+
+    public enum RunEndCause
+    {
+        VictoryExtraction,
+        VictoryTimeout,
+        DefeatPartyWiped
+    }
+
+    public enum ExtractionCompletionKind
+    {
+        None,
+        BeaconHold,
+        Timeout
+    }
+
     public enum UpgradeId
     {
         None,

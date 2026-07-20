@@ -58,11 +58,19 @@ namespace ProjectExpedition.Tests
             var route = new SharedExpeditionRouteModel();
             route.Begin("frostbound.scout");
             route.OnEnemyKilled(true, false);
+            var beacon = new Vector2(route.ExtractionBeaconX, route.ExtractionBeaconY);
 
-            route.Advance(1f, new Vector2(route.ExtractionBeaconX, route.ExtractionBeaconY));
+            route.Advance(1f, beacon);
+
+            Assert.That(route.IsExtractionComplete(), Is.False);
+            Assert.That(route.PartyAtExtractionBeacon, Is.True);
+            Assert.That(route.ExtractionHoldElapsed, Is.EqualTo(1f).Within(0.0001f));
+
+            route.Advance(2f, beacon);
 
             Assert.That(route.IsExtractionComplete(), Is.True);
             Assert.That(route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Completed));
+            Assert.That(route.ExtractionCompletion, Is.EqualTo(ExtractionCompletionKind.BeaconHold));
 
             route = new SharedExpeditionRouteModel();
             route.Begin("frostbound.scout");
@@ -70,6 +78,42 @@ namespace ProjectExpedition.Tests
             route.Advance(16f, Vector2.zero);
 
             Assert.That(route.IsExtractionComplete(), Is.True);
+            Assert.That(route.ExtractionCompletion, Is.EqualTo(ExtractionCompletionKind.Timeout));
+        }
+
+        [Test]
+        public void Extraction_HoldResetsWhenLeavingBeacon()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("frostbound.scout");
+            route.OnEnemyKilled(true, false);
+            var beacon = new Vector2(route.ExtractionBeaconX, route.ExtractionBeaconY);
+
+            route.Advance(1.5f, beacon);
+            Assert.That(route.ExtractionHoldElapsed, Is.EqualTo(1.5f).Within(0.0001f));
+            Assert.That(route.IsExtractionComplete(), Is.False);
+
+            route.Advance(2f, Vector2.zero);
+            Assert.That(route.ExtractionHoldElapsed, Is.Zero.Within(0.0001f));
+            Assert.That(route.PartyAtExtractionBeacon, Is.False);
+            Assert.That(route.IsExtractionComplete(), Is.False);
+
+            route.Advance(4f, beacon);
+            Assert.That(route.IsExtractionComplete(), Is.True);
+            Assert.That(route.ExtractionCompletion, Is.EqualTo(ExtractionCompletionKind.BeaconHold));
+        }
+
+        [Test]
+        public void Extraction_QueuesUnderwayAnnouncementWhenEnteringBeacon()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("frostbound.scout");
+            route.OnEnemyKilled(true, false);
+            route.ConsumeAnnouncement();
+
+            route.Advance(0.5f, new Vector2(route.ExtractionBeaconX, route.ExtractionBeaconY));
+
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("EXTRACTION UNDERWAY"));
         }
 
         [Test]

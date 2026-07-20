@@ -94,6 +94,7 @@ namespace ProjectExpedition
                 case PresentationCue.Ultimate: _cameraFollow.AddTrauma(0.48f); break;
                 case PresentationCue.BossSpawn: _cameraFollow.AddTrauma(0.62f); break;
                 case PresentationCue.Victory: _cameraFollow.AddTrauma(0.35f); break;
+                case PresentationCue.Defeat: _cameraFollow.AddTrauma(0.4f); break;
             }
         }
 

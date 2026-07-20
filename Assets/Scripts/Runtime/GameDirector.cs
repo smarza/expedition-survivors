@@ -34,6 +34,9 @@ namespace ProjectExpedition
         public int RewardTurnPlayerIndex => _runModel.RewardTurnPlayerIndex;
         public RunSimulationPhase SimulationPhase => _runModel.Phase;
         public RunOutcome Outcome => _runModel.Outcome;
+        public RunEndPresentationPhase EndPresentationPhase { get; private set; } = RunEndPresentationPhase.Summary;
+        public float EndBeatRemaining { get; private set; }
+        public RunEndCause EndCause { get; private set; }
         public PresentationDirector Presentation => _presentation;
 
         private Transform _runRoot;
@@ -262,6 +265,8 @@ namespace ProjectExpedition
             _persistentZones.Clear();
             _runRecorded = false;
             _warlordEliteSpawned = false;
+            EndPresentationPhase = RunEndPresentationPhase.Summary;
+            EndBeatRemaining = 0f;
             ClearExtractionBeacon();
             SpawnRuneShards();
             State = RunState.Playing;
@@ -913,6 +918,21 @@ namespace ProjectExpedition
             if (!_runModel.Complete(victory)) return;
             State = _runModel.Outcome == RunOutcome.Victory ? RunState.Victory : RunState.GameOver;
             Time.timeScale = 0f;
+
+            if (victory)
+            {
+                EndCause = _routeModel.ExtractionCompletion == ExtractionCompletionKind.Timeout
+                    ? RunEndCause.VictoryTimeout
+                    : RunEndCause.VictoryExtraction;
+            }
+            else
+            {
+                EndCause = RunEndCause.DefeatPartyWiped;
+            }
+
+            EndPresentationPhase = RunEndPresentationPhase.Beat;
+            EndBeatRemaining = 2.8f;
+
             Present(victory ? PresentationCue.Victory : PresentationCue.Defeat, GroupCenter,
                 victory ? PresentationTheme.Accent : new Color(0.65f, 0.2f, 0.22f), 2f);
             if (!_runRecorded)
@@ -938,6 +958,31 @@ namespace ProjectExpedition
 
                 _runRecorded = true;
             }
+        }
+
+        public void AdvanceEndBeat(float deltaTime)
+        {
+            if (EndPresentationPhase != RunEndPresentationPhase.Beat)
+            {
+                return;
+            }
+
+            EndBeatRemaining = Mathf.Max(0f, EndBeatRemaining - deltaTime);
+            if (EndBeatRemaining <= 0f)
+            {
+                EndPresentationPhase = RunEndPresentationPhase.Summary;
+            }
+        }
+
+        public void SkipEndBeat()
+        {
+            if (EndPresentationPhase != RunEndPresentationPhase.Beat)
+            {
+                return;
+            }
+
+            EndPresentationPhase = RunEndPresentationPhase.Summary;
+            EndBeatRemaining = 0f;
         }
 
         private void DiscoverRunStartCodex(int playerCount)
@@ -976,6 +1021,8 @@ namespace ProjectExpedition
             Time.timeScale = 1f;
             _runModel.Reset();
             State = RunState.MainMenu;
+            EndPresentationPhase = RunEndPresentationPhase.Summary;
+            EndBeatRemaining = 0f;
             LocalInputRouter.BeginSession(1);
             ReleasePooledSimulation();
             ClearExtractionBeacon();

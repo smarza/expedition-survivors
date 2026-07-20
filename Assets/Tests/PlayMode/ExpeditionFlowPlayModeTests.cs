@@ -245,6 +245,8 @@ namespace ProjectExpedition.Tests
 
             director.EndRun(true);
             Assert.That(director.State, Is.EqualTo(RunState.Victory));
+            Assert.That(director.EndPresentationPhase, Is.EqualTo(RunEndPresentationPhase.Beat));
+            Assert.That(director.EndCause, Is.EqualTo(RunEndCause.VictoryExtraction));
             Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Completed));
             Assert.That(director.Outcome, Is.EqualTo(RunOutcome.Victory));
             Assert.That(Time.timeScale, Is.Zero);
@@ -283,11 +285,22 @@ namespace ProjectExpedition.Tests
                 director.SelectedMap.ExtractionBeaconY,
                 0f);
 
-            yield return null;
+            var extractionFrames = 0;
+            while (!director.Route.IsExtractionComplete() && extractionFrames < 240)
+            {
+                extractionFrames++;
+                yield return null;
+            }
 
             Assert.That(director.Route.IsExtractionComplete(), Is.True);
+            Assert.That(director.Route.ExtractionCompletion, Is.EqualTo(ExtractionCompletionKind.BeaconHold));
             Assert.That(director.State, Is.EqualTo(RunState.Victory));
             Assert.That(director.Outcome, Is.EqualTo(RunOutcome.Victory));
+            Assert.That(director.EndPresentationPhase, Is.EqualTo(RunEndPresentationPhase.Beat));
+
+            yield return null;
+
+            Assert.That(director.EndBeatRemaining, Is.LessThan(2.8f));
 
             yield return DestroyDirector(director);
         }
@@ -386,11 +399,22 @@ namespace ProjectExpedition.Tests
                 director.SelectedMap.ExtractionBeaconY,
                 0f);
 
-            yield return null;
+            var extractionFrames = 0;
+            while (!director.Route.IsExtractionComplete() && extractionFrames < 240)
+            {
+                extractionFrames++;
+                yield return null;
+            }
 
             Assert.That(director.Route.IsExtractionComplete(), Is.True);
+            Assert.That(director.Route.ExtractionCompletion, Is.EqualTo(ExtractionCompletionKind.BeaconHold));
             Assert.That(director.State, Is.EqualTo(RunState.Victory));
             Assert.That(director.Outcome, Is.EqualTo(RunOutcome.Victory));
+            Assert.That(director.EndPresentationPhase, Is.EqualTo(RunEndPresentationPhase.Beat));
+
+            yield return null;
+
+            Assert.That(director.EndBeatRemaining, Is.LessThan(2.8f));
 
             yield return DestroyDirector(director);
         }

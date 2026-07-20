@@ -108,6 +108,12 @@ namespace ProjectExpedition
                 HighlightAffordableCodexIfAny();
             }
 
+            if ((currentState == RunState.Victory || currentState == RunState.GameOver) &&
+                _previousRunState != RunState.Victory && _previousRunState != RunState.GameOver)
+            {
+                _resultSelection = currentState == RunState.Victory ? 0 : 1;
+            }
+
             _previousRunState = currentState;
 
             switch (currentState)
@@ -119,7 +125,7 @@ namespace ProjectExpedition
                 case RunState.Paused: UpdatePause(); break;
                 case RunState.Settings: UpdateSettings(); break;
                 case RunState.GameOver:
-                case RunState.Victory: UpdateResults(); break;
+                case RunState.Victory: UpdateEndRun(); break;
             }
         }
 
@@ -518,6 +524,22 @@ namespace ProjectExpedition
             PresentationPreferences.Save();
         }
 
+        private void UpdateEndRun()
+        {
+            if (_director.EndPresentationPhase == RunEndPresentationPhase.Beat)
+            {
+                _director.AdvanceEndBeat(Time.unscaledDeltaTime);
+                if (LocalInputRouter.AnyMenuSubmitPressed())
+                {
+                    _director.SkipEndBeat();
+                }
+
+                return;
+            }
+
+            UpdateResults();
+        }
+
         private void UpdateResults()
         {
             var direction = LocalInputRouter.AnyMenuHorizontalPressed();
@@ -547,8 +569,8 @@ namespace ProjectExpedition
                 case RunState.BuildDetails: DrawBuildDetails(); break;
                 case RunState.Paused: DrawPause(); break;
                 case RunState.Settings: DrawSettings(); break;
-                case RunState.GameOver: DrawResults(false); break;
-                case RunState.Victory: DrawResults(true); break;
+                case RunState.GameOver: DrawEndRun(false); break;
+                case RunState.Victory: DrawEndRun(true); break;
             }
 
             if (_announcementTimer > 0f && _director.State == RunState.Playing)
@@ -1841,7 +1863,10 @@ namespace ProjectExpedition
             const float panelX = 735f;
             const float panelY = 130f;
             const float panelWidth = 450f;
-            const float panelHeight = 118f;
+            var extractingAtBeacon = route.BossKilled &&
+                route.CurrentPhase == ExpeditionPhase.Extraction &&
+                route.PartyAtExtractionBeacon;
+            var panelHeight = extractingAtBeacon ? 148f : 118f;
             DrawPanel(new Rect(panelX, panelY, panelWidth, panelHeight), new Color(0.025f, 0.055f, 0.075f, 0.92f));
             DrawPanel(new Rect(panelX, panelY, panelWidth, 4), new Color(0.32f, 0.68f, 0.78f, 0.85f));
             GUI.Label(new Rect(panelX + 18, panelY + 10, panelWidth - 36, 26), "EXPEDITION OBJECTIVES", _statSection);
@@ -1859,8 +1884,16 @@ namespace ProjectExpedition
 
             if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
             {
-                var extractionRemaining = Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed);
-                objectiveBody += $"\nREACH THE BEACON — {FormatTime(extractionRemaining)} REMAINING";
+                if (route.PartyAtExtractionBeacon)
+                {
+                    objectiveBody +=
+                        $"\nEXTRACTING — {route.ExtractionHoldRemaining:0.0}s";
+                }
+                else
+                {
+                    var extractionRemaining = Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed);
+                    objectiveBody += $"\nREACH THE BEACON — {FormatTime(extractionRemaining)} REMAINING";
+                }
             }
             else if (route.CanSpawnBoss() && !route.BossSpawned)
             {
@@ -1868,6 +1901,14 @@ namespace ProjectExpedition
             }
 
             GUI.Label(new Rect(panelX + 18, panelY + 36, panelWidth - 36, panelHeight - 44), objectiveBody, _microLeft);
+
+            if (extractingAtBeacon)
+            {
+                var barRect = new Rect(panelX + 18, panelY + panelHeight - 28f, panelWidth - 36, 12f);
+                DrawPanel(barRect, new Color(0.018f, 0.048f, 0.068f, 1f));
+                var fillRect = new Rect(barRect.x, barRect.y, barRect.width * route.ExtractionHoldProgress, barRect.height);
+                DrawPanel(fillRect, PresentationTheme.Accent);
+            }
         }
 
         private void DrawFirstRunHints()
@@ -2534,15 +2575,97 @@ namespace ProjectExpedition
             }
         }
 
+        private void DrawEndRun(bool victory)
+        {
+            if (_director.EndPresentationPhase == RunEndPresentationPhase.Beat)
+            {
+                DrawRunEndBeat(victory);
+                return;
+            }
+
+            DrawResults(victory);
+        }
+
+        private void DrawRunEndBeat(bool victory)
+        {
+            var overlayColor = victory
+                ? new Color(0.01f, 0.04f, 0.06f, 0.58f)
+                : new Color(0.08f, 0.015f, 0.02f, 0.68f);
+            DrawPanel(new Rect(0, 0, 1920, 1080), overlayColor);
+
+            var accent = victory
+                ? PresentationTheme.Accent
+                : new Color(0.78f, 0.22f, 0.24f);
+            var badgeText = victory ? "VICTORY" : "DEFEAT";
+            var headline = ResolveRunEndBeatHeadline(victory);
+            var subtitle = ResolveRunEndBeatSubtitle(victory);
+
+            GUI.Label(new Rect(0, 300, 1920, 72), badgeText, _campEyebrow);
+            GUI.Label(new Rect(120, 372, 1680, 120), headline, _resultTitle);
+            GUI.Label(new Rect(220, 500, 1480, 72), subtitle, _resultBody);
+
+            var barWidth = 420f;
+            var barRect = new Rect((1920f - barWidth) * 0.5f, 610f, barWidth, 8f);
+            DrawPanel(barRect, new Color(0.02f, 0.05f, 0.07f, 0.95f));
+            var progress = 1f - Mathf.Clamp01(_director.EndBeatRemaining / 2.8f);
+            DrawPanel(new Rect(barRect.x, barRect.y, barRect.width * progress, barRect.height), accent);
+
+            GUI.Label(new Rect(0, 650, 1920, 34),
+                $"{Prompt(BindingAction.Submit)} CONTINUE TO RESULTS", _small);
+        }
+
+        private string ResolveRunEndBeatHeadline(bool victory)
+        {
+            if (victory)
+            {
+                if (_director.EndCause == RunEndCause.VictoryTimeout)
+                {
+                    return "BEACON WINDOW CLOSED";
+                }
+
+                return "EXTRACTION COMPLETE";
+            }
+
+            return "EXPEDITION LOST";
+        }
+
+        private string ResolveRunEndBeatSubtitle(bool victory)
+        {
+            if (victory)
+            {
+                if (_director.EndCause == RunEndCause.VictoryTimeout)
+                {
+                    return "EXTRACTED UNDER FIRE";
+                }
+
+                return "THE JOTUNN IS FALLEN — YOUR SAGA IS SEALED";
+            }
+
+            if (_director.Route.BossKilled)
+            {
+                return "FALLEN BEFORE EXTRACTION";
+            }
+
+            return "THE ICE CLAIMS YOUR PARTY";
+        }
+
         private void DrawResults(bool victory)
         {
-            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.01f, 0.025f, 0.04f, 0.82f));
+            var accent = victory
+                ? PresentationTheme.Accent
+                : new Color(0.65f, 0.2f, 0.22f);
+            var backdrop = victory
+                ? new Color(0.01f, 0.025f, 0.04f, 0.82f)
+                : new Color(0.05f, 0.015f, 0.02f, 0.86f);
+            DrawPanel(new Rect(0, 0, 1920, 1080), backdrop);
             var panel = new Rect(460, 120, 1000, 820);
             DrawPanel(panel, new Color(0.055f, 0.105f, 0.14f, 1f));
-            DrawPanel(new Rect(panel.x, panel.y, panel.width, 7), new Color(0.32f, 0.68f, 0.78f));
+            DrawPanel(new Rect(panel.x, panel.y, panel.width, 7), accent);
 
             var titleY = panel.y + 32f;
-            GUI.Label(new Rect(panel.x + 60, titleY, panel.width - 120, 96),
+            GUI.Label(new Rect(panel.x + 60, titleY, panel.width - 120, 34),
+                victory ? "VICTORY" : "DEFEAT", _campEyebrow);
+            GUI.Label(new Rect(panel.x + 60, titleY + 38f, panel.width - 120, 96),
                 victory ? "A SAGA IS BORN" : "THE ICE CLAIMS THE EXPEDITION", _resultTitle);
 
             var summaryTop = titleY + 108f;
@@ -2582,8 +2705,9 @@ namespace ProjectExpedition
 
             var renownRect = new Rect(panel.x + 70, sectionTop, panel.width - 140, 132);
             DrawPanel(renownRect, new Color(0.018f, 0.048f, 0.068f, 1f));
-            DrawBorder(renownRect, PresentationTheme.Accent, 3f);
-            GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 12, renownRect.width - 44, 24), "RENOWN FOR CODEX UNLOCKS", _micro);
+            DrawBorder(renownRect, accent, 3f);
+            GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 12, renownRect.width - 44, 24),
+                victory ? "RENOWN EARNED" : "RENOWN RECOVERED", _micro);
             GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 36, renownRect.width - 44, 34),
                 $"+{_director.LastRunRenownEarned} THIS RUN     •     {SaveService.AvailableRenown()} TO SPEND IN CODEX", _heading);
 
