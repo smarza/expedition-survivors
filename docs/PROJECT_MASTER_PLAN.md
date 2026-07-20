@@ -30,7 +30,7 @@ It must preserve unrelated changes, work from the active milestone branch, valid
 
 ### Suggested prompt for the next chat
 
-> Continue development of Expedition Survivors from `https://github.com/smarza/expedition-survivors`. Read `docs/PROJECT_MASTER_PLAN.md`, `README.md`, `RELEASE_NOTES.md`, `SECURITY.md` and the active PR before proposing or implementing work. The active milestone is 0.9.0 Presentation Foundation. Use branches and commits instead of ZIP handoffs. Preserve all non-negotiable decisions, especially Haldor Stormborn, gamepad ownership, readable UI, per-player co-op rewards and manual high-cooldown Ultimates.
+> Continue development of Expedition Survivors from `https://github.com/smarza/expedition-survivors`. Read `docs/PROJECT_MASTER_PLAN.md`, `README.md`, `RELEASE_NOTES.md`, `SECURITY.md` and the active PR before proposing or implementing work. The accepted baseline is `v0.10.0` Demonstration Content. Use branches and commits instead of ZIP handoffs. Preserve all non-negotiable decisions, especially Haldor Stormborn, gamepad ownership, readable UI, per-player co-op rewards and manual high-cooldown Ultimates.
 
 ## 2. Executive summary
 
@@ -464,7 +464,7 @@ Closeout gate:
 - final owner validation on desktop WebGL and the native Windows/device matrix;
 - merge and `v0.9.0` tag only after explicit owner acceptance.
 
-### 12.4 Active milestone: 0.10.0
+### 12.4 Milestone: 0.10.0
 
 Release candidate implemented:
 
@@ -475,11 +475,11 @@ Release candidate implemented:
 - 55 EditMode and 10 PlayMode tests in the release-candidate inventory;
 - demonstration content and acceptance guides in `DEMONSTRATION_CONTENT_0.10.md` and `TESTING_0.10.md`.
 
-Closeout gate:
+Final closeout completed on 2026-07-20:
 
-- static validation, all Unity tests, Web/Pages and Windows milestone compilation green;
-- external player completes the Scout expedition without developer instruction;
-- merge and `v0.10.0` tag only after explicit owner acceptance **and** green CI on the pull request.
+- PR #3 CI green: static validation, 55 EditMode + 10 PlayMode tests, Web build and Pages preview;
+- owner gameplay acceptance completed;
+- merged into `main` via PR #3 and tagged as `v0.10.0`.
 
 ## 13. Current technical architecture
 
@@ -876,11 +876,10 @@ Expedition Survivors is not launch-ready merely because a run can be completed. 
 
 The next developer/agent should do the following, in order:
 
-1. Work on the 0.10.0 demonstration-content branch and its milestone PR.
-2. Verify the release-candidate workflow: static validation, 55 EditMode tests, 10 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
-3. Run the matrix in `docs/TESTING_0.10.md` through the Pages preview, then use the Windows artifact for native audio/device validation.
+1. Branch from accepted `main` at `v0.10.0` for milestone 0.11.0 Camp and Progression.
+2. Verify the release-candidate workflow: static validation, Unity tests, Web compilation/Pages deployment and patched Windows milestone compilation.
+3. Run the acceptance matrix for the active milestone through the Pages preview, then use the Windows artifact for native audio/device validation.
 4. Record any failure with its seed, target, resolution, settings, devices, reproduction steps and screenshot/video or Console/log output.
-5. After explicit owner acceptance **and green CI on the pull request**, merge into `main` and tag `v0.10.0`.
-6. Begin 0.11.0 Camp and Progression only from the updated accepted `main`.
+5. Merge and tag only after explicit owner acceptance and green CI on the pull request.
 
-Do not merge or tag before CI is green. Do not begin camp/progression systems before the demonstration gate is accepted. Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.
+Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.
