@@ -34,7 +34,13 @@ namespace ProjectExpedition
         UltimateCooldown,
         UltimateDamage,
         Heal,
-        ShieldDamageAndSpeed
+        ShieldDamageAndSpeed,
+        OrbitDamage,
+        OrbitSpeed,
+        ExtraOrbit,
+        RadialDamage,
+        RadialSpeed,
+        ExtraRadial
     }
 
     [Serializable]
@@ -62,5 +68,6 @@ namespace ProjectExpedition
         public int BestKills;
         public float BestTime;
         public int HaldorMastery;
+        public string[] RelicsCollected = new string[0];
     }
 }

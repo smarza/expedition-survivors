@@ -1,4 +1,4 @@
-# Project Expedition — Presentation Foundation 0.9.0 (release candidate)
+# Project Expedition — Demonstration Content 0.10.0 (release candidate)
 
 An original survivors-like prototype built for Unity 6 LTS. The milestone is intentionally self-contained: it has no purchased packages or external asset dependencies and bootstraps itself from an empty scene.
 
@@ -23,10 +23,10 @@ The `Unity CI` GitHub Actions workflow runs the static validator, all EditMode a
 
 Unity Test Framework `1.4.6` is part of the project. After Unity finishes resolving packages, open **Window → General → Test Runner** and run both suites:
 
-1. **EditMode** — 48 deterministic simulation, content, persistence, presentation-settings, safe-layout, glyph, audio-asset and music-routing tests.
-2. **PlayMode** — 9 bootstrap, shared-model/reward, presentation-service, VFX-pool, settings, level-up, replay-seed and result-flow tests.
+1. **EditMode** — 55 deterministic simulation, content, route, weapon-registry, persistence, presentation-settings, safe-layout, glyph, audio-asset and music-routing tests.
+2. **PlayMode** — 10 bootstrap, shared-model/reward, presentation-service, VFX-pool, settings, level-up, replay-seed, scout extraction-victory and result-flow tests.
 
-The PlayMode tests explicitly disable campaign persistence, so they do not overwrite the developer's local save. The current presentation acceptance matrix is in [`docs/TESTING_0.9.md`](docs/TESTING_0.9.md).
+The PlayMode tests explicitly disable campaign persistence, so they do not overwrite the developer's local save. The current demonstration acceptance matrix is in [`docs/TESTING_0.10.md`](docs/TESTING_0.10.md).
 
 ## Controls
 

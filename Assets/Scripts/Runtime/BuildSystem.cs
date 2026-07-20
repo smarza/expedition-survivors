@@ -49,32 +49,144 @@ namespace ProjectExpedition
         }
 
         public string EffectDescriptionAtLevel(int level) =>
-            UpgradeDescriptions.For(EffectAtLevel(level));
+            UpgradeDescriptions.For(EffectAtLevel(level), Id);
     }
 
     public static class UpgradeDescriptions
     {
-        public static string For(UpgradeId id)
+        public static string For(UpgradeId id, string itemId = null)
         {
+            var weaponLabel = ResolveWeaponLabel(itemId);
+            var pulseLabel = ResolvePulseLabel(itemId);
+            var orbitLabel = ResolveOrbitLabel(itemId);
+            var radialLabel = ResolveRadialLabel(itemId);
+
             switch (id)
             {
-                case UpgradeId.AxeDamage: return "+26% Frost Axe damage";
-                case UpgradeId.AxeSpeed: return "-14% Frost Axe interval";
-                case UpgradeId.ExtraAxe: return "+1 projectile per Frost Axe volley";
-                case UpgradeId.AxePierce: return "+1 Frost Axe pierce";
+                case UpgradeId.AxeDamage:
+                    return weaponLabel != null
+                        ? $"+26% {weaponLabel} damage"
+                        : "+26% Frost Axe damage";
+                case UpgradeId.AxeSpeed:
+                    return weaponLabel != null
+                        ? $"-14% {weaponLabel} interval"
+                        : "-14% Frost Axe interval";
+                case UpgradeId.ExtraAxe:
+                    return weaponLabel != null
+                        ? $"+1 projectile per {weaponLabel} volley"
+                        : "+1 projectile per Frost Axe volley";
+                case UpgradeId.AxePierce:
+                    return weaponLabel != null
+                        ? $"+1 {weaponLabel} pierce"
+                        : "+1 Frost Axe pierce";
                 case UpgradeId.MoveSpeed: return "+0.46 movement speed";
                 case UpgradeId.MaxHealth: return "+24 maximum and current health";
                 case UpgradeId.Armor: return "+1 armor";
                 case UpgradeId.Magnet: return "+0.55 XP pickup radius";
-                case UpgradeId.ShieldPulse: return "Activate Raven Guard";
-                case UpgradeId.ShieldDamage: return "+42% Raven Guard damage";
-                case UpgradeId.CriticalRunes: return "+9 percentage points critical chance";
+                case UpgradeId.ShieldPulse:
+                    return pulseLabel != null
+                        ? $"Activate {pulseLabel}"
+                        : "Activate Raven Guard";
+                case UpgradeId.ShieldDamage:
+                    return pulseLabel != null
+                        ? $"+42% {pulseLabel} damage"
+                        : "+42% Raven Guard damage";
+                case UpgradeId.CriticalRunes:
+                    return weaponLabel != null
+                        ? $"+9 percentage points {weaponLabel} critical chance"
+                        : "+9 percentage points critical chance";
                 case UpgradeId.UltimateCooldown: return "-10% base Ultimate cooldown";
                 case UpgradeId.UltimateDamage: return "+30% Ultimate damage and derived area";
                 case UpgradeId.Heal: return "Restore 24 health immediately";
                 case UpgradeId.ShieldDamageAndSpeed:
-                    return "+42% Raven Guard damage and -14% interval";
+                    return pulseLabel != null
+                        ? $"+42% {pulseLabel} damage and -14% interval"
+                        : "+42% Raven Guard damage and -14% interval";
+                case UpgradeId.OrbitDamage:
+                    return orbitLabel != null
+                        ? $"+30% {orbitLabel} blade damage"
+                        : "+30% orbit blade damage";
+                case UpgradeId.OrbitSpeed:
+                    return orbitLabel != null
+                        ? $"+20% {orbitLabel} speed and -14% interval"
+                        : "+20% orbit speed and -14% interval";
+                case UpgradeId.ExtraOrbit:
+                    return orbitLabel != null
+                        ? $"+1 {orbitLabel} blade"
+                        : "+1 orbit blade";
+                case UpgradeId.RadialDamage:
+                    return radialLabel != null
+                        ? $"+28% {radialLabel} burst damage"
+                        : "+28% radial burst damage";
+                case UpgradeId.RadialSpeed:
+                    return radialLabel != null
+                        ? $"-14% {radialLabel} interval"
+                        : "-14% radial burst interval";
+                case UpgradeId.ExtraRadial:
+                    return radialLabel != null
+                        ? $"+1 projectile per {radialLabel} burst"
+                        : "+1 projectile per radial burst";
                 default: return "Base item level; no additional modifier";
+            }
+        }
+
+        private static string ResolveWeaponLabel(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId))
+            {
+                return null;
+            }
+
+            switch (itemId)
+            {
+                case "weapon.frost_axe": return "Frost Axe";
+                case "weapon.north_wind_spear": return "North Wind Spear";
+                case "weapon.rune_bolt": return "Rune Bolt";
+                case "weapon.signal_flare": return "Signal Flare";
+                case "weapon.tide_caller": return "Tide Caller";
+                default: return null;
+            }
+        }
+
+        private static string ResolvePulseLabel(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId))
+            {
+                return null;
+            }
+
+            switch (itemId)
+            {
+                case "weapon.raven_guard": return "Raven Guard";
+                case "weapon.grove_thorn_lash": return "Grove Thorn Lash";
+                case "weapon.supply_pulse": return "Supply Pulse";
+                case "weapon.iron_beacon": return "Iron Beacon";
+                default: return null;
+            }
+        }
+
+        private static string ResolveOrbitLabel(string itemId)
+        {
+            if (itemId == "weapon.oath_ring")
+            {
+                return "Oath Ring";
+            }
+
+            return null;
+        }
+
+        private static string ResolveRadialLabel(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId))
+            {
+                return null;
+            }
+
+            switch (itemId)
+            {
+                case "weapon.canopy_vortex": return "Canopy Vortex";
+                case "weapon.driftwood_staff": return "Driftwood Staff";
+                default: return null;
             }
         }
 
@@ -111,13 +223,28 @@ namespace ProjectExpedition
         public int WeaponSlots { get; private set; }
         public int GearSlots { get; private set; }
 
-        public void Initialize(int weaponSlots, int gearSlots)
+        public void Initialize(int weaponSlots, int gearSlots, string[] starterWeaponIds = null)
         {
             WeaponSlots = Mathf.Max(1, weaponSlots);
             GearSlots = Mathf.Max(1, gearSlots);
             _items.Clear();
-            AddStarter(ItemCatalog.FrostAxe.Id);
-            AddStarter(ItemCatalog.RavenGuard.Id);
+
+            if (starterWeaponIds == null || starterWeaponIds.Length == 0)
+            {
+                AddStarter(ItemCatalog.FrostAxe.Id);
+                AddStarter(ItemCatalog.RavenGuard.Id);
+                return;
+            }
+
+            for (var i = 0; i < starterWeaponIds.Length; i++)
+            {
+                if (string.IsNullOrEmpty(starterWeaponIds[i]))
+                {
+                    continue;
+                }
+
+                AddStarter(starterWeaponIds[i]);
+            }
         }
 
         private void AddStarter(string itemId) => _items.Add(new ItemState { ItemId = itemId, Level = 1 });
@@ -225,6 +352,68 @@ namespace ProjectExpedition
                 UpgradeId.ShieldDamageAndSpeed, UpgradeId.Armor, UpgradeId.ShieldDamage,
                 UpgradeId.ShieldDamageAndSpeed));
 
+        public static ItemDefinition NorthWindSpear { get; private set; } = new ItemDefinition(
+            "weapon.north_wind_spear", "North Wind Spear", "SPEAR", "Directed spear projectile. Each level grants the listed damage, interval or pierce modifier.",
+            ItemCategory.Weapon, 8, new Color(0.75f, 0.88f, 0.95f), Effects(
+                UpgradeId.None, UpgradeId.AxeDamage, UpgradeId.AxeSpeed, UpgradeId.AxePierce,
+                UpgradeId.AxeDamage, UpgradeId.AxePierce, UpgradeId.AxeSpeed, UpgradeId.AxeDamage));
+
+        public static ItemDefinition RuneBolt { get; private set; } = new ItemDefinition(
+            "weapon.rune_bolt", "Rune Bolt", "BOLT", "Fast rune projectile. Each level grants the listed damage, interval or projectile modifier.",
+            ItemCategory.Weapon, 8, new Color(0.65f, 0.45f, 0.92f), Effects(
+                UpgradeId.None, UpgradeId.AxeSpeed, UpgradeId.AxeDamage, UpgradeId.AxeSpeed,
+                UpgradeId.ExtraAxe, UpgradeId.AxeDamage, UpgradeId.AxeSpeed, UpgradeId.AxeDamage));
+
+        public static ItemDefinition OathRing { get; private set; } = new ItemDefinition(
+            "weapon.oath_ring", "Oath Ring", "RING", "Orbiting oath blades. Each level grants the listed damage, speed or blade modifier.",
+            ItemCategory.Weapon, 8, new Color(0.55f, 0.82f, 0.45f), Effects(
+                UpgradeId.None, UpgradeId.OrbitDamage, UpgradeId.OrbitSpeed, UpgradeId.OrbitDamage,
+                UpgradeId.ExtraOrbit, UpgradeId.OrbitDamage, UpgradeId.OrbitSpeed, UpgradeId.ExtraOrbit));
+
+        public static ItemDefinition GroveThornLash { get; private set; } = new ItemDefinition(
+            "weapon.grove_thorn_lash", "Grove Thorn Lash", "LASH", "Fast thorn pulse centered on its owner. Each level grants the listed damage or interval modifier.",
+            ItemCategory.Weapon, 8, new Color(0.42f, 0.78f, 0.38f), Effects(
+                UpgradeId.None, UpgradeId.ShieldDamage, UpgradeId.ShieldDamageAndSpeed, UpgradeId.ShieldDamage,
+                UpgradeId.ShieldDamage, UpgradeId.ShieldDamageAndSpeed, UpgradeId.ShieldDamage,
+                UpgradeId.ShieldDamageAndSpeed));
+
+        public static ItemDefinition CanopyVortex { get; private set; } = new ItemDefinition(
+            "weapon.canopy_vortex", "Canopy Vortex", "VORTEX", "Radial canopy burst. Each level grants the listed damage, interval or projectile modifier.",
+            ItemCategory.Weapon, 8, new Color(0.38f, 0.85f, 0.72f), Effects(
+                UpgradeId.None, UpgradeId.RadialDamage, UpgradeId.RadialSpeed, UpgradeId.RadialDamage,
+                UpgradeId.ExtraRadial, UpgradeId.RadialDamage, UpgradeId.RadialSpeed, UpgradeId.ExtraRadial));
+
+        public static ItemDefinition DriftwoodStaff { get; private set; } = new ItemDefinition(
+            "weapon.driftwood_staff", "Driftwood Staff", "STAFF", "Slow radial driftwood burst. Each level grants the listed damage, interval or projectile modifier.",
+            ItemCategory.Weapon, 8, new Color(0.55f, 0.48f, 0.35f), Effects(
+                UpgradeId.None, UpgradeId.RadialDamage, UpgradeId.RadialDamage, UpgradeId.ExtraRadial,
+                UpgradeId.RadialDamage, UpgradeId.RadialSpeed, UpgradeId.RadialDamage, UpgradeId.ExtraRadial));
+
+        public static ItemDefinition SignalFlare { get; private set; } = new ItemDefinition(
+            "weapon.signal_flare", "Signal Flare", "FLARE", "Explosive signal projectile. Each level grants the listed damage, interval or projectile modifier.",
+            ItemCategory.Weapon, 8, new Color(0.95f, 0.55f, 0.22f), Effects(
+                UpgradeId.None, UpgradeId.AxeDamage, UpgradeId.AxeDamage, UpgradeId.AxeSpeed,
+                UpgradeId.AxeDamage, UpgradeId.ExtraAxe, UpgradeId.AxeSpeed, UpgradeId.AxeDamage));
+
+        public static ItemDefinition SupplyPulse { get; private set; } = new ItemDefinition(
+            "weapon.supply_pulse", "Supply Pulse", "SUPPLY", "Periodic heal pulse centered on its owner. Each level grants the listed interval or potency modifier.",
+            ItemCategory.Weapon, 8, new Color(0.48f, 0.82f, 0.55f), Effects(
+                UpgradeId.None, UpgradeId.ShieldDamageAndSpeed, UpgradeId.ShieldDamageAndSpeed, UpgradeId.ShieldPulse,
+                UpgradeId.ShieldDamageAndSpeed, UpgradeId.ShieldDamageAndSpeed, UpgradeId.ShieldDamageAndSpeed,
+                UpgradeId.ShieldDamageAndSpeed));
+
+        public static ItemDefinition IronBeacon { get; private set; } = new ItemDefinition(
+            "weapon.iron_beacon", "Iron Beacon", "BEACON", "Large defensive pulse centered on its owner. Each level grants the listed damage, armor or interval modifier.",
+            ItemCategory.Weapon, 8, new Color(0.58f, 0.65f, 0.78f), Effects(
+                UpgradeId.None, UpgradeId.ShieldDamage, UpgradeId.ShieldDamage, UpgradeId.ShieldDamageAndSpeed,
+                UpgradeId.ShieldDamage, UpgradeId.Armor, UpgradeId.ShieldDamageAndSpeed, UpgradeId.ShieldDamage));
+
+        public static ItemDefinition TideCaller { get; private set; } = new ItemDefinition(
+            "weapon.tide_caller", "Tide Caller", "TIDE", "Wide shore projectile volley. Each level grants the listed damage, interval or projectile modifier.",
+            ItemCategory.Weapon, 8, new Color(0.35f, 0.72f, 0.88f), Effects(
+                UpgradeId.None, UpgradeId.AxeDamage, UpgradeId.ExtraAxe, UpgradeId.AxeSpeed,
+                UpgradeId.AxeDamage, UpgradeId.ExtraAxe, UpgradeId.AxeSpeed, UpgradeId.AxeDamage));
+
         public static ItemDefinition LongshipBoots { get; private set; } = Gear(
             "gear.longship_boots", "Longship Boots", "BOOTS", "Increases movement speed.", 5,
             new Color(0.4f, 0.84f, 0.62f), UpgradeId.MoveSpeed);
@@ -249,9 +438,41 @@ namespace ProjectExpedition
             "gear.final_verse", "Final Verse", "ULT", "Increases Ultimate damage and impact area.", 5,
             new Color(0.95f, 0.45f, 0.25f), UpgradeId.UltimateDamage);
 
+        public static ItemDefinition WindsweptCloak { get; private set; } = Gear(
+            "gear.windswept_cloak", "Windswept Cloak", "CLOAK", "Increases movement speed.", 5,
+            new Color(0.62f, 0.72f, 0.82f), UpgradeId.MoveSpeed);
+
+        public static ItemDefinition HollowGourds { get; private set; } = Gear(
+            "gear.hollow_gourds", "Hollow Gourds", "GOURD", "Increases maximum health and heals the same amount.", 5,
+            new Color(0.78f, 0.62f, 0.28f), UpgradeId.MaxHealth);
+
+        public static ItemDefinition OathFeather { get; private set; } = Gear(
+            "gear.oath_feather", "Oath Feather", "FEATHER", "Reduces every contact hit.", 5,
+            new Color(0.82f, 0.92f, 0.78f), UpgradeId.Armor);
+
+        public static ItemDefinition SignalMagnet { get; private set; } = Gear(
+            "gear.signal_magnet", "Signal Magnet", "MAGNET", "Increases XP pickup radius.", 5,
+            new Color(0.92f, 0.82f, 0.35f), UpgradeId.Magnet);
+
+        public static ItemDefinition FieldManual { get; private set; } = Gear(
+            "gear.field_manual", "Field Manual", "MANUAL", "Ultimate recharges 10% faster per level.", 5,
+            new Color(0.72f, 0.65f, 0.48f), UpgradeId.UltimateCooldown);
+
         public static ItemDefinition JotunnRune { get; private set; } = new ItemDefinition(
             "gear.jotunn_rune", "Jotunn Rune", "RUNE", "A rare catalyst that prepares Frost Axe for evolution.",
             ItemCategory.Gear, 1, new Color(0.75f, 0.35f, 0.85f), Effects(UpgradeId.AxePierce));
+
+        public static ItemDefinition GroveSeed { get; private set; } = new ItemDefinition(
+            "gear.grove_seed", "Grove Seed", "SEED", "A rare catalyst that prepares Grove Thorn Lash for evolution.",
+            ItemCategory.Gear, 1, new Color(0.48f, 0.68f, 0.32f), Effects(UpgradeId.ExtraRadial));
+
+        public static ItemDefinition FlareCore { get; private set; } = new ItemDefinition(
+            "gear.flare_core", "Flare Core", "CORE", "A rare catalyst that prepares Signal Flare for evolution.",
+            ItemCategory.Gear, 1, new Color(0.98f, 0.62f, 0.18f), Effects(UpgradeId.ExtraAxe));
+
+        public static ItemDefinition OathBand { get; private set; } = new ItemDefinition(
+            "gear.oath_band", "Oath Band", "BAND", "A rare catalyst that prepares Oath Ring for evolution.",
+            ItemCategory.Gear, 1, new Color(0.55f, 0.75f, 0.62f), Effects(UpgradeId.ExtraOrbit));
 
         public static ItemDefinition JotunnCleaver { get; private set; } = new ItemDefinition(
             "evolution.jotunn_cleaver", "Jotunn Cleaver", "CLEAVER", "Frost axes explode and split their damage across clustered enemies.",
@@ -261,14 +482,35 @@ namespace ProjectExpedition
             "evolution.storm_aegis", "Storm Aegis", "AEGIS", "Raven Guard becomes larger and restores health whenever it erupts.",
             ItemCategory.Evolution, 1, new Color(0.35f, 0.95f, 0.8f), Effects(UpgradeId.None), RavenGuard.Id, BearBlooded.Id);
 
+        public static ItemDefinition GroveCrown { get; private set; } = new ItemDefinition(
+            "evolution.grove_crown", "Grove Crown", "CROWN", "Grove Thorn Lash leaves damaging thorn patches where it strikes.",
+            ItemCategory.Evolution, 1, new Color(0.55f, 0.88f, 0.42f), Effects(UpgradeId.None), GroveThornLash.Id, GroveSeed.Id);
+
+        public static ItemDefinition SignalStorm { get; private set; } = new ItemDefinition(
+            "evolution.signal_storm", "Signal Storm", "STORM", "Signal Flares chain to two nearby enemies after impact.",
+            ItemCategory.Evolution, 1, new Color(0.98f, 0.48f, 0.15f), Effects(UpgradeId.None), SignalFlare.Id, FlareCore.Id);
+
+        public static ItemDefinition OathMaelstrom { get; private set; } = new ItemDefinition(
+            "evolution.oath_maelstrom", "Oath Maelstrom", "MAEL", "Oath Ring gains an extra blade and a wider orbit radius.",
+            ItemCategory.Evolution, 1, new Color(0.42f, 0.92f, 0.55f), Effects(UpgradeId.None), OathRing.Id, OathBand.Id);
+
+        public static ItemDefinition IronSanctuary { get; private set; } = new ItemDefinition(
+            "evolution.iron_sanctuary", "Iron Sanctuary", "SANCT", "Iron Beacon persists as a moving shield zone after each pulse.",
+            ItemCategory.Evolution, 1, new Color(0.52f, 0.58f, 0.72f), Effects(UpgradeId.None), IronBeacon.Id, FieldManual.Id);
+
         public static ItemDefinition FieldRations { get; private set; } = new ItemDefinition(
             "boon.field_rations", "Field Rations", "HEAL", "Immediately restores health. Does not occupy a build slot.",
             ItemCategory.Boon, 99, new Color(0.45f, 0.85f, 0.48f), Effects(UpgradeId.Heal));
 
         public static ItemDefinition[] All { get; private set; } = new[]
         {
-            FrostAxe, RavenGuard, LongshipBoots, BearBlooded, RavenArmor, SagaCarver,
-            RavenHourglass, FinalVerse, JotunnRune, JotunnCleaver, StormAegis, FieldRations
+            FrostAxe, RavenGuard, NorthWindSpear, RuneBolt, OathRing, GroveThornLash, CanopyVortex,
+            DriftwoodStaff, SignalFlare, SupplyPulse, IronBeacon, TideCaller,
+            LongshipBoots, BearBlooded, RavenArmor, SagaCarver, RavenHourglass, FinalVerse,
+            WindsweptCloak, HollowGourds, OathFeather, SignalMagnet, FieldManual,
+            JotunnRune, GroveSeed, FlareCore, OathBand,
+            JotunnCleaver, StormAegis, GroveCrown, SignalStorm, OathMaelstrom, IronSanctuary,
+            FieldRations
         };
 
         private static ItemDefinition Gear(string id, string name, string shortName, string description, int maxLevel, Color color, UpgradeId effect)
@@ -320,8 +562,30 @@ namespace ProjectExpedition
             RavenHourglass = Find(definitions, "gear.raven_hourglass") ?? RavenHourglass;
             FinalVerse = Find(definitions, "gear.final_verse") ?? FinalVerse;
             JotunnRune = Find(definitions, "gear.jotunn_rune") ?? JotunnRune;
+            GroveSeed = Find(definitions, "gear.grove_seed") ?? GroveSeed;
+            FlareCore = Find(definitions, "gear.flare_core") ?? FlareCore;
+            OathBand = Find(definitions, "gear.oath_band") ?? OathBand;
             JotunnCleaver = Find(definitions, "evolution.jotunn_cleaver") ?? JotunnCleaver;
             StormAegis = Find(definitions, "evolution.storm_aegis") ?? StormAegis;
+            GroveCrown = Find(definitions, "evolution.grove_crown") ?? GroveCrown;
+            SignalStorm = Find(definitions, "evolution.signal_storm") ?? SignalStorm;
+            OathMaelstrom = Find(definitions, "evolution.oath_maelstrom") ?? OathMaelstrom;
+            IronSanctuary = Find(definitions, "evolution.iron_sanctuary") ?? IronSanctuary;
+            NorthWindSpear = Find(definitions, "weapon.north_wind_spear") ?? NorthWindSpear;
+            RuneBolt = Find(definitions, "weapon.rune_bolt") ?? RuneBolt;
+            OathRing = Find(definitions, "weapon.oath_ring") ?? OathRing;
+            GroveThornLash = Find(definitions, "weapon.grove_thorn_lash") ?? GroveThornLash;
+            CanopyVortex = Find(definitions, "weapon.canopy_vortex") ?? CanopyVortex;
+            DriftwoodStaff = Find(definitions, "weapon.driftwood_staff") ?? DriftwoodStaff;
+            SignalFlare = Find(definitions, "weapon.signal_flare") ?? SignalFlare;
+            SupplyPulse = Find(definitions, "weapon.supply_pulse") ?? SupplyPulse;
+            IronBeacon = Find(definitions, "weapon.iron_beacon") ?? IronBeacon;
+            TideCaller = Find(definitions, "weapon.tide_caller") ?? TideCaller;
+            WindsweptCloak = Find(definitions, "gear.windswept_cloak") ?? WindsweptCloak;
+            HollowGourds = Find(definitions, "gear.hollow_gourds") ?? HollowGourds;
+            OathFeather = Find(definitions, "gear.oath_feather") ?? OathFeather;
+            SignalMagnet = Find(definitions, "gear.signal_magnet") ?? SignalMagnet;
+            FieldManual = Find(definitions, "gear.field_manual") ?? FieldManual;
         }
 
         private static ItemDefinition Find(List<ItemDefinition> definitions, string id)
