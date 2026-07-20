@@ -91,7 +91,8 @@ namespace ProjectExpedition.Tests
         {
             SaveService.AssignDataForTests(new MetaProgress
             {
-                LastCampLeaderId = "ironway.mara"
+                LastCampLeaderId = "ironway.mara",
+                UnlockedContentIds = new[] { SharedMetaProgressionModel.HaldorId, SharedMetaProgressionModel.MaraId }
             });
 
             Assert.That(SaveService.ResolveCampLeader().Id, Is.EqualTo("ironway.mara"));
@@ -115,7 +116,13 @@ namespace ProjectExpedition.Tests
             SaveService.AssignDataForTests(new MetaProgress
             {
                 LastCampLeaderId = "ironway.mara",
-                LastCoopPartnerId = "oathbound.sylva"
+                LastCoopPartnerId = "oathbound.sylva",
+                UnlockedContentIds = new[]
+                {
+                    SharedMetaProgressionModel.HaldorId,
+                    SharedMetaProgressionModel.MaraId,
+                    SharedMetaProgressionModel.SylvaId
+                }
             });
 
             Assert.That(SaveService.ResolveLastCharacterSelectionIndex(0),

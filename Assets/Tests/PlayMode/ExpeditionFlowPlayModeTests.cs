@@ -249,7 +249,8 @@ namespace ProjectExpedition.Tests
             Assert.That(director.Outcome, Is.EqualTo(RunOutcome.Victory));
             Assert.That(Time.timeScale, Is.Zero);
             Assert.That(SaveService.Data.RunsCompleted, Is.EqualTo(1));
-            Assert.That(SaveService.Data.TotalRenown, Is.GreaterThanOrEqualTo(50));
+            Assert.That(SaveService.Data.TotalRenown, Is.EqualTo(
+                SharedMetaProgressionModel.CalculateRunRenownEarned(0, director.Kills, true)));
 
             director.EndRun(true);
             Assert.That(SaveService.Data.RunsCompleted, Is.EqualTo(1));
