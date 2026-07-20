@@ -156,12 +156,12 @@ namespace ProjectExpedition
                 return;
             }
 
-            AddStatRow("MAX HEALTH", $"{definition.MaxHealth:0}");
-            AddStatRow("MOVE SPEED", $"{definition.MoveSpeed:0.0}");
-            AddStatRow("ARMOR", $"{definition.Armor:0.0}");
-            AddStatRow("ULTIMATE CD", $"{definition.UltimateCooldown:0}s");
-            AddStatRow("ULT DMG", $"{definition.UltimateDamage:0}");
-            AddStatRow("ULT RADIUS", $"{definition.UltimateRadius:0.0}");
+            AddStatRow(CharacterSelectPresentation.HealthLabel, $"{definition.MaxHealth:0}");
+            AddStatRow(CharacterSelectPresentation.SpeedLabel, $"{definition.MoveSpeed:0.0}");
+            AddStatRow(CharacterSelectPresentation.ArmorLabel, $"{definition.Armor:0.0}");
+            AddStatRow(CharacterSelectPresentation.UltimateCooldownLabel, $"{definition.UltimateCooldown:0}s");
+            AddStatRow(CharacterSelectPresentation.UltimateDamageLabel, $"{definition.UltimateDamage:0}");
+            AddStatRow(CharacterSelectPresentation.UltimateRangeLabel, $"{definition.UltimateRadius:0.0}");
         }
 
         private void AddStatRow(string label, string value)

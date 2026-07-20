@@ -1,6 +1,8 @@
 # UI Layout Guide — Character Select Pilot
 
-This guide documents the compact presentation layout introduced for the Character Select screen. It complements `docs/PRESENTATION_FOUNDATION_0.9.md` and the readability rules in `docs/PROJECT_MASTER_PLAN.md` §9.2.
+This guide documents the **layout zones and metrics** for the Character Select screen. For colors, typography, components, vector scaling and migration steps for other menus, see **`docs/SURVIVORS_UI_STYLE_GUIDE.md`**.
+
+Complements `docs/PRESENTATION_FOUNDATION_0.9.md` and the readability rules in `docs/PROJECT_MASTER_PLAN.md` §9.2.
 
 ## Why the old screen felt cramped
 
@@ -37,7 +39,8 @@ Side columns are **280px** each. The roster grid expands to fill remaining width
 2. Use short expedition labels (`SCOUT — Frostbound Shore`) instead of full map titles.
 3. Stat rows use a cursor layout with 34px row height inside the stats panel.
 4. Footer shows passive description only; numeric stats live in the left column.
-5. Grid tiles use a fixed 32px name band at the bottom.
+5. Grid tiles use a fixed 32px name band at the top (Vampire Survivors layout).
+6. Ultimate stat labels use full words (`ULT COOLDOWN`, `ULT DAMAGE`, `ULT RANGE`) — see `CharacterSelectPresentation.*Label`.
 
 ## Spacing tokens
 
@@ -91,6 +94,10 @@ Phase 2 assets live under:
 - `Assets/Scripts/Runtime/CharacterSelectUiToolkitScreen.cs`
 
 IMGUI remains the active renderer. Set `CharacterSelectUiToolkitScreen.EnabledByDefault = true` to switch after validating PanelSettings scaling and input routing.
+
+## Style reference
+
+Visual treatment (palette, buttons, badges, borders, migration checklist) lives in **`docs/SURVIVORS_UI_STYLE_GUIDE.md`**. This file covers Character Select geometry only.
 
 ## Manual acceptance checklist
 

@@ -23,13 +23,21 @@ namespace ProjectExpedition
     {
         public const int GridColumns = CharacterSelectLayoutMetrics.SoloGridColumns;
 
+        public const string HealthLabel = "HEALTH";
+        public const string SpeedLabel = "SPEED";
+        public const string ArmorLabel = "ARMOR";
+        public const string UltimateCooldownLabel = "ULT COOLDOWN";
+        public const string UltimateDamageLabel = "ULT DAMAGE";
+        public const string UltimateRangeLabel = "ULT RANGE";
+        public const string MagnetLabel = "MAGNET";
+
         public static int GridColumnsFor(int playerCount) =>
             CharacterSelectLayoutMetrics.GridColumnsFor(playerCount);
 
         public static void DrawPortrait(Rect rect, CharacterDefinition definition, bool unlocked,
             CharacterPortraitSize size)
         {
-            DrawPanel(rect, new Color(0.02f, 0.045f, 0.065f, 1f));
+            DrawPanel(rect, SurvivorsStylePresentation.PanelNavyInset);
 
             if (definition == null)
             {
@@ -48,74 +56,75 @@ namespace ProjectExpedition
 
             var tint = unlocked ? definition.Color : Desaturate(definition.Color, 0.35f);
 
+            GUI.BeginGroup(rect);
+            var localRect = new Rect(0f, 0f, rect.width, rect.height);
+
             if (size == CharacterPortraitSize.Large)
             {
-                var glowRect = new Rect(rect.x + rect.width * 0.18f, rect.y + rect.height * 0.12f,
-                    rect.width * 0.64f, rect.height * 0.72f);
+                var glowRect = new Rect(localRect.width * 0.18f, localRect.height * 0.12f,
+                    localRect.width * 0.64f, localRect.height * 0.72f);
                 DrawPanel(glowRect, new Color(tint.r, tint.g, tint.b, 0.12f));
             }
 
-            DrawSilhouette(rect, definition.Id, tint, size);
+            DrawSilhouette(localRect, definition.Id, tint, size);
 
             if (!unlocked)
             {
-                DrawPanel(new Rect(rect.x, rect.y, rect.width, rect.height),
-                    new Color(0.02f, 0.03f, 0.04f, 0.55f));
+                DrawPanel(localRect, new Color(0.02f, 0.03f, 0.04f, 0.55f));
             }
+
+            GUI.EndGroup();
         }
 
         public static void DrawLockBadge(Rect rect)
         {
-            var badgeRect = new Rect(rect.xMax - 34f, rect.y + 8f, 26f, 26f);
-            DrawPanel(badgeRect, new Color(0.08f, 0.1f, 0.12f, 0.92f));
-            DrawBorder(badgeRect, new Color(0.55f, 0.58f, 0.62f, 0.95f), 2f);
-            GUI.Label(badgeRect, "LOCK", CreateLockStyle());
+            SurvivorsStylePresentation.DrawLockBadge(rect);
         }
 
         public static void DrawStatIcon(Rect rect, CharacterStatIconKind kind, Color tint)
         {
             var iconRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f);
             var color = ApplyHeroTint(ResolveStatBaseColor(kind), tint);
+            var iconScale = Mathf.Min(iconRect.width, iconRect.height) / 128f;
 
             switch (kind)
             {
                 case CharacterStatIconKind.Health:
-                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.42f, color);
+                    DrawEmblem(iconRect.center, 0.42f * iconScale, color);
                     break;
                 case CharacterStatIconKind.Speed:
-                    DrawDiamond(iconRect.center, new Vector2(0.34f, 0.48f) * (Mathf.Min(iconRect.width, iconRect.height) / 128f), color, 18f);
+                    DrawDiamond(iconRect.center, new Vector2(0.34f, 0.48f) * iconScale, color, 18f);
                     break;
                 case CharacterStatIconKind.Armor:
                     DrawPanel(iconRect, color);
-                    DrawBorder(iconRect, Color.Lerp(color, Color.white, 0.35f), 2f);
+                    DrawBorder(iconRect, Color.Lerp(color, Color.white, 0.35f), 1f);
                     break;
                 case CharacterStatIconKind.Magnet:
                     DrawDiamond(iconRect.center, Vector2.one * (iconRect.width / 160f), color);
                     break;
                 case CharacterStatIconKind.Cooldown:
-                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.34f,
+                    DrawEmblem(iconRect.center, 0.34f * iconScale,
                         new Color(color.r, color.g, color.b, 0.72f));
                     DrawDiamond(iconRect.center, Vector2.one * (iconRect.width / 220f), color, 45f);
                     break;
                 case CharacterStatIconKind.Damage:
-                    DrawDiamond(iconRect.center, new Vector2(0.18f, 0.42f) * (Mathf.Min(iconRect.width, iconRect.height) / 128f), color, -24f);
+                    DrawDiamond(iconRect.center, new Vector2(0.18f, 0.42f) * iconScale, color, -24f);
                     break;
                 case CharacterStatIconKind.Radius:
-                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.46f,
+                    DrawEmblem(iconRect.center, 0.46f * iconScale,
                         new Color(color.r, color.g, color.b, 0.28f));
-                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.24f, color);
+                    DrawEmblem(iconRect.center, 0.24f * iconScale, color);
                     break;
             }
         }
 
         public static void DrawStarterWeaponIcon(Rect rect, string weaponId, Color heroTint)
         {
-            DrawPanel(rect, new Color(0.03f, 0.06f, 0.08f, 0.95f));
-            DrawBorder(rect, new Color(0.35f, 0.42f, 0.48f, 0.85f), 2f);
+            DrawPanel(rect, SurvivorsStylePresentation.PanelNavyInset);
 
             var weaponColor = ResolveWeaponColor(weaponId, heroTint);
             var center = rect.center;
-            var scale = Mathf.Clamp(Mathf.Min(rect.width, rect.height) / 160f, 0.45f, 1.1f);
+            var scale = ResolveWeaponIconScale(rect);
 
             switch (weaponId)
             {
@@ -218,13 +227,20 @@ namespace ProjectExpedition
         private static float ResolveSilhouetteScale(Rect rect, CharacterPortraitSize size)
         {
             var minDimension = Mathf.Min(rect.width, rect.height);
+            var normalized = minDimension / 128f;
 
             if (size == CharacterPortraitSize.Large)
             {
-                return Mathf.Clamp(minDimension / 160f, 1.35f, 2.75f);
+                return normalized * 0.9f;
             }
 
-            return Mathf.Clamp(minDimension / 180f, 0.55f, 0.9f);
+            return normalized * 0.62f;
+        }
+
+        private static float ResolveWeaponIconScale(Rect rect)
+        {
+            var minDimension = Mathf.Min(rect.width, rect.height);
+            return minDimension / 96f;
         }
 
         private static Color ApplyHeroTint(Color baseColor, Color heroTint)
@@ -325,11 +341,17 @@ namespace ProjectExpedition
             var width = scale.x * 128f;
             var height = scale.y * 128f;
             var rect = new Rect(center.x - width * 0.5f, center.y - height * 0.5f, width, height);
-
             var previousMatrix = GUI.matrix;
-            GUIUtility.RotateAroundPivot(rotationDegrees, center);
-            DrawTintedSprite(rect, RuntimeAssets.Diamond.texture, color);
-            GUI.matrix = previousMatrix;
+
+            try
+            {
+                GUIUtility.RotateAroundPivot(rotationDegrees, center);
+                DrawTintedSprite(rect, RuntimeAssets.Diamond.texture, color);
+            }
+            finally
+            {
+                GUI.matrix = previousMatrix;
+            }
         }
 
         private static void DrawTintedSprite(Rect rect, Texture texture, Color color)
@@ -360,24 +382,6 @@ namespace ProjectExpedition
             DrawPanel(new Rect(rect.x, rect.yMax - thickness, rect.width, thickness), color);
             DrawPanel(new Rect(rect.x, rect.y, thickness, rect.height), color);
             DrawPanel(new Rect(rect.xMax - thickness, rect.y, thickness, rect.height), color);
-        }
-
-        private static GUIStyle _lockStyle;
-
-        private static GUIStyle CreateLockStyle()
-        {
-            if (_lockStyle != null)
-            {
-                return _lockStyle;
-            }
-
-            _lockStyle = new GUIStyle(GUI.skin.label)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = 14
-            };
-
-            return _lockStyle;
         }
     }
 }

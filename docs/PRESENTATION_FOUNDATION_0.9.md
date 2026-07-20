@@ -37,6 +37,8 @@ Version 0.9.0 adds a presentation layer around the shared simulation accepted in
 | `FrostboundAmbience` | Deterministic visual snow independent from the run seed sequence. |
 | `GameHUD` | Code-driven view adapter using the shared layout/theme/settings/input-prompt contracts. |
 
+For Survivors-style menu visuals (Character Select pilot and future screen migrations), see **`docs/SURVIVORS_UI_STYLE_GUIDE.md`** and **`docs/UI_LAYOUT_GUIDE.md`**.
+
 The current visuals and imported audio clips are original production placeholders. Audio is serialized as WAV source assets so Unity can convert it for Web builds instead of relying on partially supported runtime PCM creation. The foundation keeps asset lookup and playback behind services so final authored sprites, animation clips, music and SFX can replace them without changing simulation code.
 
 ## Rebinding contract

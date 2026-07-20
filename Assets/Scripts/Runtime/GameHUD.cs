@@ -57,6 +57,15 @@ namespace ProjectExpedition
         private GUIStyle _compactStatLabel;
         private GUIStyle _compactStatValue;
         private GUIStyle _compactFilterRow;
+        private GUIStyle _vsDisplay;
+        private GUIStyle _vsBody;
+        private GUIStyle _vsCaption;
+        private GUIStyle _vsMicro;
+        private GUIStyle _vsStatValue;
+        private GUIStyle _vsConfirmedLabel;
+        private GUIStyle _vsHint;
+        private GUIStyle _vsHeading;
+        private GUIStyle _vsFilterActive;
         private string _announcement;
         private float _announcementTimer;
         private int _mainSelection;
@@ -1034,7 +1043,7 @@ namespace ProjectExpedition
                 return;
             }
 
-            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.025f, 0.06f, 0.09f, 1f));
+            SurvivorsStylePresentation.DrawScreenBackground(new Rect(0f, 0f, 1920f, 1080f));
 
             var playerCount = _director.PendingPlayerCount;
             if (playerCount == 1)
@@ -1145,6 +1154,7 @@ namespace ProjectExpedition
                 footerTop,
                 1920f - CharacterSelectLayoutMetrics.ScreenPadding * 2f,
                 footerHeight);
+            SurvivorsStylePresentation.DrawFlatPanel(footerZone.Rect, SurvivorsStylePresentation.PanelNavy, 1f);
             DrawCharacterSelectFooter(footerZone.Rect, 0, 1);
 
             var hintZone = new Rect(320f, footerZone.Rect.yMax + 6f, 1280f, 24f);
@@ -1152,19 +1162,17 @@ namespace ProjectExpedition
             var unlocked = SaveService.IsCharacterUnlocked(selectedIndex);
             var hasSelected = _characterSelected[0];
             var isConfirmed = _characterReady[0];
-            DrawCharacterSelectActionHint(hintZone, 0, 1, unlocked, hasSelected, isConfirmed);
+            DrawCharacterSelectActionHint(hintZone, 0, 1, unlocked, hasSelected, isConfirmed, true);
         }
 
         private void DrawFramedPanel(Rect rect)
         {
-            DrawPanel(rect, new Color(0.055f, 0.105f, 0.145f, 1f));
-            DrawBorder(rect, new Color(0.93f, 0.7f, 0.24f, 0.42f), 2f);
+            DrawPanel(rect, SurvivorsStylePresentation.PanelNavy);
         }
 
-        private void DrawInsetPanel(Rect rect)
+        private void DrawInsetPanel(Rect rect, Color accentColor = default)
         {
-            DrawPanel(rect, new Color(0.045f, 0.085f, 0.115f, 1f));
-            DrawBorder(rect, new Color(0.22f, 0.48f, 0.58f, 0.35f), 1f);
+            SurvivorsStylePresentation.DrawInsetPanel(rect, accentColor);
         }
 
         private void DrawCharacterSelectCoop(int playerCount)
@@ -1198,27 +1206,17 @@ namespace ProjectExpedition
             var headerY = CharacterSelectLayoutMetrics.ScreenPadding;
             var headerHeight = CharacterSelectLayoutMetrics.SoloHeaderHeight;
 
-            DrawInsetPanel(new Rect(
-                CharacterSelectLayoutMetrics.ScreenPadding,
-                headerY,
-                240f,
-                headerHeight));
-            GUI.Label(
-                new Rect(
-                    CharacterSelectLayoutMetrics.ScreenPadding + 14f,
-                    headerY + 10f,
-                    212f,
-                    headerHeight - 20f),
-                $"RENOWN  {renown}",
-                _compactCaption);
+            SurvivorsStylePresentation.DrawCoinBadge(
+                new Rect(CharacterSelectLayoutMetrics.ScreenPadding, headerY, 260f, headerHeight),
+                renown.ToString());
 
             GUI.Label(
                 new Rect(360f, headerY, 1200f, headerHeight),
                 "CHOOSE YOUR SURVIVOR",
-                _compactDisplay);
+                _vsDisplay);
 
             var backRect = new Rect(1656f, headerY, 240f, headerHeight);
-            if (GUI.Button(backRect, $"{Prompt(BindingAction.Back)} BACK", _button))
+            if (SurvivorsStylePresentation.DrawButton(backRect, $"{Prompt(BindingAction.Back)} BACK", SurvivorsButtonKind.Red))
             {
                 _director.ReturnToMenu();
             }
@@ -1229,51 +1227,65 @@ namespace ProjectExpedition
             var index = _characterSelections[player];
             var definition = ContentCatalog.Character(index);
             var unlocked = SaveService.IsCharacterUnlocked(index);
+            var accent = unlocked ? definition.Color : new Color(0.25f, 0.28f, 0.32f);
 
-            DrawInsetPanel(columnRect);
-            DrawPanel(new Rect(columnRect.x, columnRect.y, columnRect.width, 4f),
-                unlocked ? definition.Color : new Color(0.25f, 0.28f, 0.32f));
+            DrawInsetPanel(columnRect, accent);
 
             var content = new LayoutZone(columnRect).Inset(PresentationSpacing.Space12);
-            GUI.Label(new Rect(content.Rect.x, content.Rect.y, content.Rect.width, 24f),
-                "SURVIVOR STATS", _compactCaption);
+            GUI.BeginGroup(content.Rect);
 
-            var cursorY = content.Rect.y + 30f;
+            var localContent = new Rect(0f, 0f, content.Rect.width, content.Rect.height);
+            SurvivorsStylePresentation.DrawSectionHeader(
+                new Rect(localContent.x, localContent.y, localContent.width, 28f),
+                "Survivor Stats");
+
+            var cursorY = 36f;
             if (!unlocked)
             {
                 var lockedHeight = PresentationTextMeasure.ClampHeight(
                     PresentationTextMeasure.MeasureHeight(
-                        _compactMicro,
+                        _vsMicro,
                         "Unlock this survivor in the CODEX to reveal full stats.",
-                        content.Rect.width),
+                        localContent.width),
                     36f,
-                    content.Rect.height - 36f);
+                    localContent.height - 36f);
                 GUI.Label(
-                    new Rect(content.Rect.x, cursorY, content.Rect.width, lockedHeight),
+                    new Rect(localContent.x, cursorY, localContent.width, lockedHeight),
                     "Unlock this survivor in the CODEX to reveal full stats.",
-                    _compactMicro);
+                    _vsMicro);
+                GUI.EndGroup();
                 return;
             }
 
-            cursorY = DrawCharacterStatRow(content.Rect, cursorY, CharacterStatIconKind.Health, "HEALTH",
+            var rowIndex = 0;
+            cursorY = DrawCharacterStatRow(localContent, cursorY, rowIndex++, CharacterStatIconKind.Health,
+                CharacterSelectPresentation.HealthLabel,
                 $"{definition.MaxHealth:0}", definition.Color);
-            cursorY = DrawCharacterStatRow(content.Rect, cursorY, CharacterStatIconKind.Speed, "SPEED",
+            cursorY = DrawCharacterStatRow(localContent, cursorY, rowIndex++, CharacterStatIconKind.Speed,
+                CharacterSelectPresentation.SpeedLabel,
                 $"{definition.MoveSpeed:0.0}", definition.Color);
-            cursorY = DrawCharacterStatRow(content.Rect, cursorY, CharacterStatIconKind.Armor, "ARMOR",
+            cursorY = DrawCharacterStatRow(localContent, cursorY, rowIndex++, CharacterStatIconKind.Armor,
+                CharacterSelectPresentation.ArmorLabel,
                 $"{definition.Armor:0.0}", definition.Color);
-            cursorY = DrawCharacterStatRow(content.Rect, cursorY, CharacterStatIconKind.Cooldown, "ULT CD",
+            cursorY = DrawCharacterStatRow(localContent, cursorY, rowIndex++, CharacterStatIconKind.Cooldown,
+                CharacterSelectPresentation.UltimateCooldownLabel,
                 $"{definition.UltimateCooldown:0}s", definition.Color);
-            cursorY = DrawCharacterStatRow(content.Rect, cursorY, CharacterStatIconKind.Damage, "ULT DMG",
+            cursorY = DrawCharacterStatRow(localContent, cursorY, rowIndex++, CharacterStatIconKind.Damage,
+                CharacterSelectPresentation.UltimateDamageLabel,
                 $"{definition.UltimateDamage:0}", definition.Color);
-            cursorY = DrawCharacterStatRow(content.Rect, cursorY, CharacterStatIconKind.Radius, "ULT RAD",
+            cursorY = DrawCharacterStatRow(localContent, cursorY, rowIndex++, CharacterStatIconKind.Radius,
+                CharacterSelectPresentation.UltimateRangeLabel,
                 $"{definition.UltimateRadius:0.0}", definition.Color);
-            DrawCharacterStatRow(content.Rect, cursorY, CharacterStatIconKind.Magnet, "MAGNET",
+            DrawCharacterStatRow(localContent, cursorY, rowIndex, CharacterStatIconKind.Magnet,
+                CharacterSelectPresentation.MagnetLabel,
                 "STD", definition.Color);
+            GUI.EndGroup();
         }
 
         private float DrawCharacterStatRow(
             Rect contentRect,
             float cursorY,
+            int rowIndex,
             CharacterStatIconKind iconKind,
             string label,
             string value,
@@ -1281,12 +1293,14 @@ namespace ProjectExpedition
         {
             var rowHeight = CharacterSelectLayoutMetrics.StatRowHeight;
             var rowRect = new Rect(contentRect.x, cursorY, contentRect.width, rowHeight);
-            var iconRect = new Rect(rowRect.x, rowRect.y + 3f, 26f, 26f);
+            SurvivorsStylePresentation.DrawAlternatingRowBackground(rowRect, rowIndex);
+
+            var iconRect = new Rect(rowRect.x + 4f, rowRect.y + 3f, 26f, 26f);
             CharacterSelectPresentation.DrawStatIcon(iconRect, iconKind, tint);
 
-            var labelWidth = rowRect.width - 108f;
-            GUI.Label(new Rect(rowRect.x + 34f, rowRect.y + 5f, labelWidth, 22f), label, _compactStatLabel);
-            GUI.Label(new Rect(rowRect.xMax - 68f, rowRect.y + 4f, 64f, 24f), value, _compactStatValue);
+            var labelWidth = rowRect.width - 112f;
+            GUI.Label(new Rect(rowRect.x + 36f, rowRect.y + 5f, labelWidth, 22f), label, _vsMicro);
+            GUI.Label(new Rect(rowRect.xMax - 72f, rowRect.y + 4f, 68f, 24f), value, _vsStatValue);
             return cursorY + rowHeight;
         }
 
@@ -1295,12 +1309,13 @@ namespace ProjectExpedition
             DrawInsetPanel(columnRect);
 
             var content = new LayoutZone(columnRect).Inset(PresentationSpacing.Space12);
-            GUI.Label(new Rect(content.Rect.x, content.Rect.y, content.Rect.width, 24f),
-                "ROSTER FILTER", _compactCaption);
+            SurvivorsStylePresentation.DrawSectionHeader(
+                new Rect(content.Rect.x, content.Rect.y, content.Rect.width, 28f),
+                "Roster Filter");
 
             var toggleLabel = _characterSelectUnlockedFilter ? "FILTER: ON" : "FILTER: OFF";
-            var toggleRect = new Rect(content.Rect.x, content.Rect.y + 30f, content.Rect.width, 38f);
-            if (GUI.Button(toggleRect, toggleLabel, _button))
+            var toggleRect = new Rect(content.Rect.x, content.Rect.y + 36f, content.Rect.width, 38f);
+            if (SurvivorsStylePresentation.DrawButton(toggleRect, toggleLabel, SurvivorsButtonKind.Blue))
             {
                 _characterSelectUnlockedFilter = !_characterSelectUnlockedFilter;
                 NavigateCue();
@@ -1310,25 +1325,26 @@ namespace ProjectExpedition
                 ? "Showing unlocked survivors only."
                 : "Showing the full roster.";
             var filterHintHeight = PresentationTextMeasure.ClampHeight(
-                PresentationTextMeasure.MeasureHeight(_compactMicro, filterHint, content.Rect.width),
+                PresentationTextMeasure.MeasureHeight(_vsMicro, filterHint, content.Rect.width),
                 22f,
                 44f);
             GUI.Label(
                 new Rect(content.Rect.x, toggleRect.yMax + 8f, content.Rect.width, filterHintHeight),
                 filterHint,
-                _compactMicro);
+                _vsMicro);
 
             var expeditionsHeaderY = toggleRect.yMax + filterHintHeight + 16f;
-            GUI.Label(new Rect(content.Rect.x, expeditionsHeaderY, content.Rect.width, 24f),
-                "EXPEDITIONS", _compactCaption);
+            SurvivorsStylePresentation.DrawSectionHeader(
+                new Rect(content.Rect.x, expeditionsHeaderY, content.Rect.width, 28f),
+                "Expeditions");
 
-            var mapY = expeditionsHeaderY + 28f;
+            var mapY = expeditionsHeaderY + 34f;
             var mapBottom = content.Rect.yMax;
             for (var mapIndex = 0; mapIndex < ContentCatalog.Maps.Length; mapIndex++)
             {
                 var map = ContentCatalog.Map(mapIndex);
                 var unlocked = SaveService.IsMapUnlocked(mapIndex);
-                var rowStyle = unlocked ? _compactFilterRow : _compactMicro;
+                var rowStyle = unlocked ? _vsFilterActive : _vsMicro;
                 var rowText = BuildExpeditionFilterLabel(map, unlocked);
                 var rowHeight = PresentationTextMeasure.ClampHeight(
                     PresentationTextMeasure.MeasureHeight(rowStyle, rowText, content.Rect.width),
@@ -1343,19 +1359,15 @@ namespace ProjectExpedition
                         GUI.Label(
                             new Rect(content.Rect.x, mapY, content.Rect.width, 20f),
                             $"+ {remaining} MORE",
-                            _compactMicro);
+                            _vsMicro);
                     }
 
                     break;
                 }
 
                 var rowRect = new Rect(content.Rect.x, mapY, content.Rect.width, rowHeight);
-                if (mapIndex % 2 == 0)
-                {
-                    DrawPanel(rowRect, new Color(0.03f, 0.06f, 0.08f, 0.55f));
-                }
-
-                GUI.Label(rowRect, rowText, rowStyle);
+                SurvivorsStylePresentation.DrawAlternatingRowBackground(rowRect, mapIndex);
+                GUI.Label(SurvivorsStylePresentation.InsetRect(rowRect, 4f), rowText, rowStyle);
                 mapY += rowHeight + 4f;
             }
         }
@@ -1389,7 +1401,6 @@ namespace ProjectExpedition
 
         private void DrawCharacterSelectFooter(Rect footerRect, int player, int playerCount)
         {
-            DrawFramedPanel(footerRect);
 
             var index = _characterSelections[player];
             var definition = ContentCatalog.Character(index);
@@ -1401,18 +1412,20 @@ namespace ProjectExpedition
             var disabledLabel = unlocked ? (hasSelected ? "READY" : "SELECT") : "LOCKED";
 
             var content = new LayoutZone(footerRect).Inset(PresentationSpacing.Space12);
-            var portraitSize = 128f;
-            var portraitRect = new Rect(content.Rect.x, content.Rect.y + 16f, portraitSize, portraitSize);
+            const float portraitSize = 128f;
+            const float weaponBoxSize = 88f;
+            const float footerBlockHeight = portraitSize;
+            var blockTop = content.Rect.y + (content.Rect.height - footerBlockHeight) * 0.5f;
+            var portraitRect = new Rect(content.Rect.x, blockTop, portraitSize, portraitSize);
             CharacterSelectPresentation.DrawPortrait(
                 portraitRect, definition, unlocked, CharacterPortraitSize.Large);
 
             var weaponId = CharacterSelectPresentation.ResolvePrimaryStarterWeaponId(definition);
             var weapon = ItemCatalog.Find(weaponId);
             var weaponName = weapon != null ? weapon.Name : weaponId;
-            var weaponBox = new Rect(portraitRect.xMax + 16f, content.Rect.y + 24f, 92f, 92f);
-            DrawInsetPanel(weaponBox);
-            CharacterSelectPresentation.DrawStarterWeaponIcon(
-                new Rect(weaponBox.x + 10f, weaponBox.y + 10f, 72f, 72f), weaponId, definition.Color);
+            var weaponTop = blockTop + (portraitSize - weaponBoxSize) * 0.5f;
+            var weaponBox = new Rect(portraitRect.xMax + 16f, weaponTop, weaponBoxSize, weaponBoxSize);
+            SurvivorsStylePresentation.DrawWeaponFrame(weaponBox, weaponId, definition.Color);
 
             var textX = weaponBox.xMax + 18f;
             var actionWidth = 228f;
@@ -1424,41 +1437,74 @@ namespace ProjectExpedition
             {
                 if (!hasSelected)
                 {
-                    DrawPrimaryActionButton(
+                    DrawVsFooterButton(
                         actionRect,
                         "SELECT",
                         canSelect,
                         false,
                         disabledLabel,
-                        PrimaryActionTheme.Select,
+                        SurvivorsButtonKind.Green,
                         () => TryConfirmCharacterSelect(player, playerCount));
                 }
                 else
                 {
-                    DrawPrimaryActionButton(
+                    DrawVsFooterButton(
                         actionRect,
                         "CONFIRM",
                         canReady,
                         isConfirmed,
                         disabledLabel,
-                        PrimaryActionTheme.Ready,
+                        SurvivorsButtonKind.Green,
                         () => TryConfirmCharacterReady(player, playerCount));
                 }
             }
             else
             {
-                DrawPrimaryActionButton(
+                DrawVsFooterButton(
                     actionRect,
                     "SELECT",
                     canSelect,
                     isConfirmed,
                     disabledLabel,
-                    PrimaryActionTheme.Select,
+                    SurvivorsButtonKind.Green,
                     () => TryConfirmCharacterSelect(player, playerCount));
             }
 
-            var weaponCaptionRect = new Rect(weaponBox.x - 4f, weaponBox.yMax + 4f, weaponBox.width + 8f, 18f);
-            GUI.Label(weaponCaptionRect, weaponName.ToUpperInvariant(), _compactMicro);
+            var weaponCaptionRect = new Rect(weaponBox.x, weaponBox.yMax + 6f, weaponBox.width, 16f);
+            GUI.Label(weaponCaptionRect, weaponName.ToUpperInvariant(), _vsMicro);
+        }
+
+        private void DrawVsFooterButton(
+            Rect actionRect,
+            string label,
+            bool canConfirm,
+            bool isConfirmed,
+            string disabledLabel,
+            SurvivorsButtonKind kind,
+            System.Action onConfirm)
+        {
+            if (isConfirmed)
+            {
+                SurvivorsStylePresentation.DrawFlatPanel(
+                    actionRect,
+                    new Color(0.08f, 0.34f, 0.2f, 0.98f),
+                    2f,
+                    SurvivorsStylePresentation.BorderGold);
+                GUI.Label(actionRect, label, _vsConfirmedLabel);
+                return;
+            }
+
+            if (!canConfirm)
+            {
+                SurvivorsStylePresentation.DrawFlatPanel(actionRect, new Color(0.08f, 0.1f, 0.12f, 0.92f), 1f);
+                GUI.Label(actionRect, disabledLabel, _campLocked);
+                return;
+            }
+
+            if (SurvivorsStylePresentation.DrawButton(actionRect, label, kind))
+            {
+                onConfirm();
+            }
         }
 
         private void DrawCharacterSelectFooterDetail(
@@ -1470,18 +1516,18 @@ namespace ProjectExpedition
             bool unlocked)
         {
             var nameHeight = PresentationTextMeasure.ClampHeight(
-                PresentationTextMeasure.MeasureHeight(_compactHeading, definition.Name.ToUpperInvariant(), textWidth),
+                PresentationTextMeasure.MeasureHeight(_vsDisplay, definition.Name.ToUpperInvariant(), textWidth),
                 24f,
                 48f);
-            GUI.Label(new Rect(textX, textY, textWidth, nameHeight), definition.Name.ToUpperInvariant(), _compactHeading);
+            GUI.Label(new Rect(textX, textY, textWidth, nameHeight), definition.Name.ToUpperInvariant(), _vsDisplay);
             textY += nameHeight + 2f;
 
             var roleLine = $"{definition.Tribe} — {definition.Role}";
             var roleHeight = PresentationTextMeasure.ClampHeight(
-                PresentationTextMeasure.MeasureHeight(_compactCaption, roleLine, textWidth),
+                PresentationTextMeasure.MeasureHeight(_vsCaption, roleLine, textWidth),
                 18f,
                 28f);
-            GUI.Label(new Rect(textX, textY, textWidth, roleHeight), roleLine, _compactCaption);
+            GUI.Label(new Rect(textX, textY, textWidth, roleHeight), roleLine, _vsCaption);
             textY += roleHeight + 8f;
 
             if (!unlocked)
@@ -1494,18 +1540,18 @@ namespace ProjectExpedition
                     ? roleLine
                     : definition.LockedPreviewLine;
                 var teaserHeight = PresentationTextMeasure.ClampHeight(
-                    PresentationTextMeasure.MeasureHeight(_compactBody, teaser, textWidth),
+                    PresentationTextMeasure.MeasureHeight(_vsBody, teaser, textWidth),
                     24f,
                     detailBottom - textY - 8f);
-                GUI.Label(new Rect(textX, textY, textWidth, teaserHeight), teaser, _compactBody);
+                GUI.Label(new Rect(textX, textY, textWidth, teaserHeight), teaser, _vsBody);
                 return;
             }
 
             var passiveHeight = PresentationTextMeasure.ClampHeight(
-                PresentationTextMeasure.MeasureHeight(_compactBody, definition.Description, textWidth),
+                PresentationTextMeasure.MeasureHeight(_vsBody, definition.Description, textWidth),
                 32f,
                 detailBottom - textY - 8f);
-            GUI.Label(new Rect(textX, textY, textWidth, passiveHeight), definition.Description, _compactBody);
+            GUI.Label(new Rect(textX, textY, textWidth, passiveHeight), definition.Description, _vsBody);
         }
 
         private void DrawCharacterSelectActionHint(
@@ -1514,48 +1560,20 @@ namespace ProjectExpedition
             int playerCount,
             bool unlocked,
             bool hasSelected,
-            bool isConfirmed)
+            bool isConfirmed,
+            bool centered = false)
         {
-            if (isConfirmed)
-            {
-                if (playerCount > 1 && !AllPlayersSelected(playerCount))
-                {
-                    GUI.Label(hintRect, $"P{player + 1} READY  •  WAITING FOR PARTNER", _compactMicro);
-                }
-                else
-                {
-                    GUI.Label(hintRect, $"P{player + 1} READY", _compactMicro);
-                }
-
-                return;
-            }
-
-            if (!unlocked)
-            {
-                GUI.Label(hintRect, $"P{player + 1}  •  BACK TO CAMP → CODEX", _compactMicro);
-                return;
-            }
-
-            if (hasSelected)
-            {
-                GUI.Label(hintRect,
-                    $"P{player + 1}  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}",
-                    _compactMicro);
-                return;
-            }
-
-            GUI.Label(hintRect,
-                $"P{player + 1}  •  ARROWS CHOOSE  •  {Prompt(BindingAction.Submit)} SELECT  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}",
-                _compactMicro);
+            var hintStyle = centered ? _vsHint : _vsMicro;
+            var hintText = BuildCharacterSelectHint(player, playerCount, unlocked, hasSelected, isConfirmed);
+            GUI.Label(hintRect, hintText, hintStyle);
         }
 
         private void DrawCharacterSelectPlayerPanel(Rect panel, int player, int playerCount)
         {
-            DrawPanel(panel, new Color(0.055f, 0.105f, 0.145f, 1f));
-            DrawBorder(panel, new Color(0.93f, 0.7f, 0.24f, 0.35f), 2f);
+            DrawFramedPanel(panel);
 
             GUI.Label(new Rect(panel.x + 24f, panel.y + 12f, panel.width - 48f, 28f),
-                $"PLAYER {player + 1}", _compactCaption);
+                $"PLAYER {player + 1}", _vsHeading);
 
             const float footerHeight = 220f;
             var gridRect = new Rect(panel.x + 24f, panel.y + 48f, panel.width - 48f, panel.height - footerHeight - 64f);
@@ -1567,7 +1585,7 @@ namespace ProjectExpedition
 
         private void DrawCharacterSelectCoopFooter(Rect footerRect, int player, int playerCount)
         {
-            DrawPanel(footerRect, new Color(0.045f, 0.085f, 0.115f, 1f));
+            DrawInsetPanel(footerRect);
 
             var index = _characterSelections[player];
             var definition = ContentCatalog.Character(index);
@@ -1577,26 +1595,32 @@ namespace ProjectExpedition
             var canSelect = unlocked && !hasSelected;
             var disabledLabel = unlocked ? "SELECT" : "LOCKED";
 
-            var portraitRect = new Rect(footerRect.x + 12f, footerRect.y + 12f, 88f, 88f);
+            var content = new LayoutZone(footerRect).Inset(PresentationSpacing.Space12);
+            var portraitRect = new Rect(content.Rect.x, content.Rect.y + 8f, 88f, 88f);
             CharacterSelectPresentation.DrawPortrait(
                 portraitRect, definition, unlocked, CharacterPortraitSize.Compact);
 
-            var textX = portraitRect.xMax + 12f;
-            var textWidth = Mathf.Max(120f, footerRect.xMax - textX - 160f);
-            DrawCharacterSelectDetailContent(
-                textX, footerRect.y + 12f, textWidth, footerRect.yMax - 12f, definition, unlocked, true);
+            var weaponId = CharacterSelectPresentation.ResolvePrimaryStarterWeaponId(definition);
+            var weaponBox = new Rect(portraitRect.xMax + 10f, content.Rect.y + 14f, 56f, 56f);
+            SurvivorsStylePresentation.DrawWeaponFrame(weaponBox, weaponId, definition.Color);
 
-            var hintRect = new Rect(textX, footerRect.yMax - 28f, textWidth, 20f);
+            var textX = weaponBox.xMax + 12f;
+            var actionWidth = 148f;
+            var textWidth = content.Rect.xMax - textX - actionWidth - 8f;
+            DrawCharacterSelectDetailContent(
+                textX, content.Rect.y + 8f, textWidth, content.Rect.yMax - 28f, definition, unlocked, true);
+
+            var hintRect = new Rect(textX, content.Rect.yMax - 22f, textWidth, 20f);
             DrawCharacterSelectActionHint(hintRect, player, playerCount, unlocked, hasSelected, isConfirmed);
 
-            var actionRect = new Rect(footerRect.xMax - 148f, footerRect.y + footerRect.height * 0.5f - 24f, 136f, 48f);
-            DrawPrimaryActionButton(
+            var actionRect = new Rect(content.Rect.xMax - actionWidth, content.Rect.y + content.Rect.height * 0.5f - 24f, actionWidth, 48f);
+            DrawVsFooterButton(
                 actionRect,
                 "SELECT",
                 canSelect,
                 isConfirmed,
                 disabledLabel,
-                PrimaryActionTheme.Select,
+                SurvivorsButtonKind.Green,
                 () => TryConfirmCharacterSelect(player, playerCount));
         }
 
@@ -1697,7 +1721,9 @@ namespace ProjectExpedition
             var selectedIndex = _characterSelections[player];
 
             DrawInsetPanel(gridRect);
-            GUI.Label(new Rect(gridRect.x + 12f, gridRect.y + 8f, 120f, 20f), "ROSTER", _compactCaption);
+            SurvivorsStylePresentation.DrawSectionHeader(
+                new Rect(gridRect.x + 12f, gridRect.y + 8f, 140f, 28f),
+                "Roster");
 
             var innerGrid = new Rect(
                 gridRect.x + 12f,
@@ -1729,7 +1755,7 @@ namespace ProjectExpedition
                 GUI.Label(
                     new Rect(gridRect.x + 12f, gridRect.yMax - 24f, gridRect.width - 24f, 20f),
                     $"{hiddenCount} LOCKED SURVIVORS HIDDEN",
-                    _compactMicro);
+                    _vsMicro);
             }
         }
 
@@ -1742,35 +1768,34 @@ namespace ProjectExpedition
         {
             var definition = ContentCatalog.Character(index);
             var unlocked = SaveService.IsCharacterUnlocked(index);
-            var tileBackground = isSelected
-                ? new Color(0.09f, 0.18f, 0.22f, 1f)
-                : new Color(0.04f, 0.075f, 0.105f, 1f);
-
-            DrawPanel(tileRect, tileBackground);
-            if (isSelected)
-            {
-                DrawBorder(tileRect, new Color(0.93f, 0.7f, 0.24f), playerCount == 1 ? 4f : 3f);
-            }
-
-            DrawPanel(new Rect(tileRect.x, tileRect.y, tileRect.width, 4f),
-                unlocked ? definition.Color : new Color(0.25f, 0.28f, 0.32f));
+            SurvivorsStylePresentation.DrawCharacterTileFrame(tileRect, isSelected, definition.Color, unlocked);
 
             var nameBandHeight = CharacterSelectLayoutMetrics.GridNameBandHeight;
-            var nameBand = new Rect(tileRect.x, tileRect.yMax - nameBandHeight, tileRect.width, nameBandHeight);
-            DrawPanel(nameBand, new Color(0.02f, 0.04f, 0.055f, 0.95f));
+            var nameBand = new Rect(tileRect.x + 3f, tileRect.y + 7f, tileRect.width - 6f, nameBandHeight);
+            DrawPanel(nameBand, SurvivorsStylePresentation.PanelNavyInset);
+
+            const float lastRunBadgeHeight = 16f;
+            var showLastRun = IsLastPlayedCharacter(player, index);
+            var portraitTop = nameBand.yMax + 6f;
+
+            if (showLastRun)
+            {
+                portraitTop += lastRunBadgeHeight + 2f;
+            }
 
             var weaponIconSize = 28f;
             var portraitRect = new Rect(
                 tileRect.x + 10f,
-                tileRect.y + 10f,
+                portraitTop,
                 tileRect.width - 20f,
-                tileRect.height - nameBandHeight - 16f);
+                tileRect.yMax - portraitTop - weaponIconSize - 12f);
             CharacterSelectPresentation.DrawPortrait(
                 portraitRect, definition, unlocked, CharacterPortraitSize.Compact);
 
             var weaponId = CharacterSelectPresentation.ResolvePrimaryStarterWeaponId(definition);
             CharacterSelectPresentation.DrawStarterWeaponIcon(
-                new Rect(nameBand.xMax - weaponIconSize - 6f, nameBand.y + 2f, weaponIconSize, nameBandHeight - 4f),
+                new Rect(tileRect.xMax - weaponIconSize - 10f, tileRect.yMax - weaponIconSize - 8f,
+                    weaponIconSize, weaponIconSize),
                 weaponId,
                 definition.Color);
 
@@ -1779,31 +1804,30 @@ namespace ProjectExpedition
                 CharacterSelectPresentation.DrawLockBadge(tileRect);
             }
 
-            if (IsLastPlayedCharacter(player, index))
+            if (showLastRun)
             {
-                var badgeRect = new Rect(tileRect.x + 6f, tileRect.y + 6f, tileRect.width - 12f, 22f);
-                DrawPanel(badgeRect, new Color(0.92f, 0.58f, 0.14f, 0.92f));
-                GUI.Label(badgeRect, "LAST EXPEDITION", _gridBadge);
+                var badgeRect = new Rect(tileRect.x + 6f, nameBand.yMax + 2f, tileRect.width - 12f, lastRunBadgeHeight);
+                SurvivorsStylePresentation.DrawLastRunBadge(badgeRect);
             }
 
             var otherPlayerBadge = FindOtherPlayerClaim(player, index, playerCount);
             if (!string.IsNullOrEmpty(otherPlayerBadge))
             {
-                var claimRect = new Rect(tileRect.x + 6f, tileRect.y + 6f, 44f, 18f);
+                var claimRect = new Rect(tileRect.x + 8f, nameBand.yMax + 4f, 44f, 18f);
                 DrawPanel(claimRect, new Color(0.32f, 0.68f, 0.78f, 0.9f));
                 GUI.Label(new Rect(claimRect.x, claimRect.y + 1f, claimRect.width, claimRect.height - 2f),
                     otherPlayerBadge, _gridBadge);
             }
 
-            var nameStyle = unlocked ? _compactCaption : _compactMicro;
             var nameText = definition.Name.ToUpperInvariant();
-            var nameWidth = nameBand.width - weaponIconSize - 16f;
+            var nameWidth = nameBand.width - 8f;
+            var nameStyle = unlocked ? SurvivorsStylePresentation.TileNameStyle : _vsMicro;
             var nameHeight = PresentationTextMeasure.ClampHeight(
                 PresentationTextMeasure.MeasureHeight(nameStyle, nameText, nameWidth),
                 16f,
-                nameBandHeight - 4f);
+                nameBandHeight - 2f);
             GUI.Label(
-                new Rect(nameBand.x + 8f, nameBand.y + (nameBandHeight - nameHeight) * 0.5f, nameWidth, nameHeight),
+                new Rect(nameBand.x + 4f, nameBand.y + (nameBandHeight - nameHeight) * 0.5f, nameWidth, nameHeight),
                 nameText,
                 nameStyle);
 
@@ -1867,9 +1891,9 @@ namespace ProjectExpedition
             bool unlocked,
             bool compact = false)
         {
-            var nameStyle = compact ? _compactHeading : _compactHeading;
-            var roleStyle = compact ? _compactMicro : _compactCaption;
-            var bodyStyle = compact ? _compactMicro : _compactBody;
+            var nameStyle = compact ? _vsHeading : _compactHeading;
+            var roleStyle = compact ? _vsCaption : _compactCaption;
+            var bodyStyle = compact ? _vsMicro : _compactBody;
             var nameHeight = PresentationTextMeasure.ClampHeight(
                 PresentationTextMeasure.MeasureHeight(nameStyle, definition.Name.ToUpperInvariant(), textWidth),
                 compact ? 24f : 28f,
@@ -4015,6 +4039,34 @@ namespace ProjectExpedition
                 TextAnchor.UpperLeft);
             _compactFilterRow.wordWrap = true;
             _compactFilterRow.clipping = TextClipping.Overflow;
+
+            SurvivorsStylePresentation.EnsureStyles();
+            _vsDisplay = SurvivorsStylePresentation.CreateLabelStyle(
+                34, FontStyle.Bold, SurvivorsStylePresentation.TextGold, TextAnchor.MiddleCenter);
+            _vsBody = SurvivorsStylePresentation.CreateBodyStyle(TextAnchor.UpperLeft);
+            _vsBody.wordWrap = true;
+            _vsBody.clipping = TextClipping.Overflow;
+            _vsCaption = SurvivorsStylePresentation.CreateLabelStyle(
+                13, FontStyle.Bold, SurvivorsStylePresentation.TextMuted, TextAnchor.UpperLeft);
+            _vsCaption.wordWrap = true;
+            _vsMicro = SurvivorsStylePresentation.CreateLabelStyle(
+                11, FontStyle.Bold, SurvivorsStylePresentation.TextMuted, TextAnchor.UpperLeft);
+            _vsMicro.wordWrap = true;
+            _vsMicro.clipping = TextClipping.Overflow;
+            _vsStatValue = SurvivorsStylePresentation.CreateLabelStyle(
+                13, FontStyle.Bold, SurvivorsStylePresentation.StatPositive, TextAnchor.MiddleRight);
+            _vsConfirmedLabel = SurvivorsStylePresentation.CreateLabelStyle(
+                24, FontStyle.Bold, new Color(0.78f, 0.98f, 0.84f), TextAnchor.MiddleCenter);
+            _vsHint = SurvivorsStylePresentation.CreateLabelStyle(
+                11, FontStyle.Bold, SurvivorsStylePresentation.TextMuted, TextAnchor.MiddleCenter);
+            _vsHeading = SurvivorsStylePresentation.CreateLabelStyle(
+                22, FontStyle.Bold, SurvivorsStylePresentation.TextGold, TextAnchor.UpperLeft);
+            _vsHeading.wordWrap = true;
+            _vsHeading.clipping = TextClipping.Overflow;
+            _vsFilterActive = SurvivorsStylePresentation.CreateLabelStyle(
+                11, FontStyle.Bold, SurvivorsStylePresentation.TextLight, TextAnchor.UpperLeft);
+            _vsFilterActive.wordWrap = true;
+            _vsFilterActive.clipping = TextClipping.Overflow;
         }
 
         private static GUIStyle MakeCompactStyle(
