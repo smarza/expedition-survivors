@@ -137,7 +137,7 @@ namespace ProjectExpedition
                 "frostbound.scout", "The Frostbound Shore", "Jotunn Coast",
                 "A shorter expedition used to learn the shore, complete a build and confront its Jotunn guardian.",
                 "SCOUT EXPEDITION — 5 MIN", 300f, 240f, 0.86f, 0.24f, 46f,
-                new Color(0.075f, 0.13f, 0.16f), 4, 4, 120, 5, 15f, 0f, 14f),
+                new Color(0.075f, 0.13f, 0.16f), 4, 4, 150, 5, 15f, 0f, 14f),
             new MapDefinition(
                 "frostbound.saga", "The Frostbound Shore: Long Night", "Jotunn Coast",
                 "The full twelve-minute route. Denser phases, stronger elites and a late Jotunn confrontation.",
@@ -147,6 +147,42 @@ namespace ProjectExpedition
 
         public static CharacterDefinition Character(int index) =>
             Characters[Mathf.Clamp(index, 0, Characters.Length - 1)];
+
+        public static CharacterDefinition FindCharacter(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId))
+            {
+                return null;
+            }
+
+            for (var i = 0; i < Characters.Length; i++)
+            {
+                if (Characters[i].Id == characterId)
+                {
+                    return Characters[i];
+                }
+            }
+
+            return null;
+        }
+
+        public static int CharacterIndex(string characterId)
+        {
+            if (string.IsNullOrWhiteSpace(characterId))
+            {
+                return -1;
+            }
+
+            for (var i = 0; i < Characters.Length; i++)
+            {
+                if (Characters[i].Id == characterId)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
 
         public static MapDefinition Map(int index) =>
             Maps[Mathf.Clamp(index, 0, Maps.Length - 1)];

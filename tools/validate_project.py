@@ -384,7 +384,8 @@ def main() -> int:
         "proportional UI canvas": "PresentationLayout.Calculate" in hud_source and "DrawLetterbox" in hud_source,
         "stable label hover": "SetAllTextColors" in hud_source and "style.hover.textColor = color" in hud_source,
         "opaque modal hierarchy": "case RunState.LevelUp: DrawLevelUp();" in hud_source and "case RunState.BuildDetails: DrawBuildDetails();" in hud_source,
-        "readable item grid": "visibleIndex % 3" in hud_source and "row * 78" in hud_source,
+        "readable item grid": "visibleIndex % 3" in hud_source and (
+            "DrawBuildItemCard" in hud_source or "row * 78" in hud_source),
         "complete build statistics": '"SURVIVOR"' in hud_source and '"INTERVAL"' in hud_source and (
             "DrawWeaponStatColumn" in hud_source or "EquippedWeapons" in hud_source),
         "exact reward preview": "RewardEffectPreview" in hud_source and
@@ -481,7 +482,7 @@ def main() -> int:
     if not scout_route:
         fail("frostbound.scout is missing required expedition route fields")
     kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y = scout_route.groups()
-    if (kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y) != ("120", "5", "15", "0", "14"):
+    if (kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y) != ("150", "5", "15", "0", "14"):
         fail("frostbound.scout route objectives or extraction beacon do not match the 0.10.0 contract")
 
     foundation_meta = (ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs.meta").read_text(encoding="utf-8")
