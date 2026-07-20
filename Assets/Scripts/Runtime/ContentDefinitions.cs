@@ -137,12 +137,12 @@ namespace ProjectExpedition
                 "frostbound.scout", "The Frostbound Shore", "Jotunn Coast",
                 "A shorter expedition used to learn the shore, complete a build and confront its Jotunn guardian.",
                 "SCOUT EXPEDITION — 5 MIN", 300f, 240f, 0.86f, 0.24f, 46f,
-                new Color(0.075f, 0.13f, 0.16f), 4, 4, 120, 5, 15f, 0f, 14f),
+                new Color(0.075f, 0.13f, 0.16f), 4, 4, 80, 5, 15f, 0f, 14f),
             new MapDefinition(
                 "frostbound.saga", "The Frostbound Shore: Long Night", "Jotunn Coast",
                 "The full twelve-minute route. Denser phases, stronger elites and a late Jotunn confrontation.",
                 "QUICK EXPEDITION — 12 MIN", 720f, 630f, 0.82f, 0.18f, 42f,
-                new Color(0.055f, 0.105f, 0.145f), 6, 6, 180, 5, 15f, 0f, 14f)
+                new Color(0.055f, 0.105f, 0.145f), 6, 6, 120, 5, 15f, 0f, 14f)
         };
 
         public static CharacterDefinition Character(int index) =>
