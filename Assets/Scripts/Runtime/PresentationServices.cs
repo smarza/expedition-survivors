@@ -147,6 +147,7 @@ namespace ProjectExpedition
         private AudioClip[] _musicClips;
         private AudioClip[] _sfxClips;
         private PresentationMusicState _pendingMusic;
+        private bool _audioReady;
 #if UNITY_WEBGL
         private bool _unlocked;
 #else
@@ -176,6 +177,7 @@ namespace ProjectExpedition
             for (var i = 0; i < _sfxClips.Length; i++)
                 _sfxClips[i] = Resources.Load<AudioClip>(SfxResourcePath((PresentationCue)i));
             for (var i = 0; i < _voices.Length; i++) _voices[i] = CreateSource($"SFX Voice {i + 1}", false);
+            _audioReady = true;
         }
 
         private AudioSource CreateSource(string sourceName, bool loop)
@@ -191,12 +193,15 @@ namespace ProjectExpedition
 
         private void Update()
         {
-            if (_music == null) return;
+            if (!_audioReady || _music == null) return;
             if (!_unlocked) _unlocked = HasInteraction();
             var data = PresentationPreferences.Data;
             _music.volume = PresentationMix.LinearBusVolume(data.MasterVolume, data.MusicVolume);
             for (var i = 0; i < _voices.Length; i++)
+            {
+                if (_voices[i] == null) continue;
                 _voices[i].volume = PresentationMix.LinearBusVolume(data.MasterVolume, data.SfxVolume);
+            }
             if (_unlocked && !_music.isPlaying)
             {
                 _music.clip = _musicClips[(int)_pendingMusic];
@@ -207,7 +212,7 @@ namespace ProjectExpedition
         public void SetMusicState(PresentationMusicState state)
         {
             _pendingMusic = state;
-            if (_music == null || !_unlocked) return;
+            if (!_audioReady || _music == null || !_unlocked) return;
             var clip = _musicClips[(int)state];
             if (clip == null) return;
             if (_music.clip == clip && _music.isPlaying) return;
@@ -218,6 +223,7 @@ namespace ProjectExpedition
 
         public void Play(PresentationCue cue)
         {
+            if (!_audioReady) return;
             if (!_unlocked) _unlocked = HasInteraction();
             if (!_unlocked || _voices[0] == null) return;
             var priority = PresentationMix.Priority(cue);
@@ -225,6 +231,7 @@ namespace ProjectExpedition
             var weakestPriority = -1;
             for (var i = 0; i < _voices.Length; i++)
             {
+                if (_voices[i] == null) continue;
                 if (!_voices[i].isPlaying) { selected = i; break; }
                 var activePriority = PresentationMix.Priority(_voiceCues[i]);
                 if (activePriority > weakestPriority && priority < activePriority)

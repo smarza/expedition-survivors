@@ -739,6 +739,38 @@ Status: release-candidate documentation and 55 EditMode + 10 PlayMode tests prep
 4. Run the matrix in `docs/TESTING_0.10.md` through Pages preview and the Windows artifact.
 5. Merge and tag only after explicit owner acceptance.
 
+## 15C. Detailed 0.11.0 execution plan
+
+#### Phase A — Progression model and persistence
+
+Status: implemented.
+
+1. Add `SharedMetaProgressionModel` with unlock catalog, renown purchases, mastery and codex rules.
+2. Extend `MetaProgress` and save envelope v4 with migration from v3.
+3. Add EditMode regressions for purchases, migration, mastery and codex visibility.
+
+Exit gate: progression rules are presentation-free and covered by automated tests.
+
+#### Phase B — Run-time discovery and gating
+
+Status: implemented.
+
+1. Gate character and map selection to purchased unlocks.
+2. Discover codex entries on hero/map start, level-up offers, applied rewards and relic grants.
+3. Award per-hero mastery on run completion; apply mastery to primary starter weapons.
+
+Exit gate: locked content cannot enter a run; discoveries persist after return to camp.
+
+#### Phase C — Camp UI, codex and onboarding
+
+Status: release-candidate documentation and 74 EditMode + 13 PlayMode tests prepared; CI/manual gates pending.
+
+1. Add Unlock Board, updated ledger, Codex screen and results renown summary.
+2. Add first-visit camp onboarding and extended Scout combat hints.
+3. Pass static validation, all Unity tests, Web/Pages and Windows milestone compilation.
+4. Run the matrix in `docs/TESTING_0.11.md` through Pages preview and the Windows artifact.
+5. Merge and tag only after explicit owner acceptance.
+
 ## 16. Roadmap to 1.0
 
 Dates are intentionally absent until production velocity and asset capacity are measured. A version advances only after its exit criteria are met.
@@ -876,10 +908,10 @@ Expedition Survivors is not launch-ready merely because a run can be completed. 
 
 The next developer/agent should do the following, in order:
 
-1. Branch from accepted `main` at `v0.10.0` for milestone 0.11.0 Camp and Progression.
+1. Branch from accepted `main` at `v0.10.0` for milestone 0.11.0 Camp and Progression (or continue the active `agent/0.11.0-*` branch through owner acceptance).
 2. Verify the release-candidate workflow: static validation, Unity tests, Web compilation/Pages deployment and patched Windows milestone compilation.
-3. Run the acceptance matrix for the active milestone through the Pages preview, then use the Windows artifact for native audio/device validation.
+3. Run the acceptance matrix for 0.11.0 in `docs/TESTING_0.11.md` through the Pages preview, then use the Windows artifact for native audio/device validation.
 4. Record any failure with its seed, target, resolution, settings, devices, reproduction steps and screenshot/video or Console/log output.
-5. Merge and tag only after explicit owner acceptance and green CI on the pull request.
+5. Merge and tag `v0.11.0` only after explicit owner acceptance and green CI on the pull request.
 
 Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.

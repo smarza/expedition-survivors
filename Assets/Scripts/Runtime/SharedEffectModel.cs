@@ -104,6 +104,9 @@ namespace ProjectExpedition
 
         public void ApplyMastery(int mastery) => Registry.ApplyMastery(mastery);
 
+        public void ApplyHeroMastery(string characterId, int mastery) =>
+            Registry.ApplyHeroMastery(characterId, mastery);
+
         public WeaponAdvanceResult Advance(float deltaTime)
         {
             Registry.Advance(deltaTime);

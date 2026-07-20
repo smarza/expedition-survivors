@@ -382,12 +382,24 @@ namespace ProjectExpedition
 
         public void ApplyMastery(int mastery)
         {
-            if (_frostAxe == null)
+            ApplyHeroMastery(SharedMetaProgressionModel.HaldorId, mastery);
+        }
+
+        public void ApplyHeroMastery(string characterId, int mastery)
+        {
+            var weaponId = SharedMetaProgressionModel.ResolveMasteryWeaponId(characterId);
+            if (string.IsNullOrWhiteSpace(weaponId))
             {
                 return;
             }
 
-            _frostAxe.Damage *= 1f + Mathf.Min(0.15f, Mathf.Max(0, mastery) * 0.005f);
+            var weapon = FindInstance(weaponId);
+            if (weapon == null)
+            {
+                return;
+            }
+
+            weapon.Damage *= SharedMetaProgressionModel.MasteryDamageMultiplier(mastery);
         }
 
         public IReadOnlyList<WeaponFireEvent> Advance(float deltaTime)

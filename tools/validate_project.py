@@ -70,6 +70,7 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedEffectModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedWeaponRegistry.cs",
         ROOT / "Assets/Scripts/Runtime/SharedExpeditionRouteModel.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedMetaProgressionModel.cs",
         ROOT / "Assets/Scripts/Runtime/RuneShardPickup.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
@@ -88,6 +89,7 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SharedExpeditionRouteModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedWeaponRegistryTests.cs",
         ROOT / "Assets/Tests/EditMode/PresentationFoundationTests.cs",
+        ROOT / "Assets/Tests/EditMode/MetaProgressionTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -103,6 +105,8 @@ def main() -> int:
         ROOT / "docs/CONTINUOUS_INTEGRATION.md",
         ROOT / "docs/PRESENTATION_FOUNDATION_0.9.md",
         ROOT / "docs/TESTING_0.9.md",
+        ROOT / "docs/CAMP_AND_PROGRESSION_0.11.md",
+        ROOT / "docs/TESTING_0.11.md",
         ROOT / ".github/workflows/unity-ci.yml",
         ROOT / "Packages/manifest.json",
         ROOT / "ProjectSettings/ProjectSettings.asset",
@@ -265,7 +269,10 @@ def main() -> int:
                               "Glyphs_ExposeKeyboardAndControllerSpecificPrompts",
                               "AudioMix_UsesMasterBusAndProtectsImportantVoices",
                               "MusicRouting_FollowsMenuRunBossRewardAndResultStates",
-                              "PresentationAudioAssets_AreImportedForEveryMusicStateAndCue")
+                              "PresentationAudioAssets_AreImportedForEveryMusicStateAndCue",
+                              "FreshSave_StartsWithHaldorAndScoutOnly",
+                              "PurchaseUnlock_DeductsRenownAndUnlocksContent",
+                              "VersionThreeSave_MigratesToVersionFourWithRetroactiveSylva")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -277,7 +284,10 @@ def main() -> int:
                               "EnemyAdapter_ProjectsSharedEnemyStateAndDamage", "RunSimulationPhase.Reward",
                               "RunSimulationPhase.Completed",
                               "PresentationFoundation_InitializesAndFollowsRunState",
-                              "PresentationVfx_ReusesPoolAndSettingsReturnToTheirOwnerState")
+                              "PresentationVfx_ReusesPoolAndSettingsReturnToTheirOwnerState",
+                              "MetaProgression_FreshSaveStartsWithHaldorAndScoutOnly",
+                              "MetaProgression_RunCompletionIncreasesRenownAndMastery",
+                              "MetaProgression_PurchaseUnlockSpendsAvailableRenown")
     if any(requirement not in play_tests for requirement in play_test_requirements):
         fail("PlayMode expedition flow coverage is incomplete")
 
@@ -339,13 +349,14 @@ def main() -> int:
     content_source = (ROOT / "Assets/Scripts/Runtime/ContentDefinitions.cs").read_text(encoding="utf-8")
     input_source = (ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs").read_text(encoding="utf-8")
     hud_source = (ROOT / "Assets/Scripts/Runtime/GameHUD.cs").read_text(encoding="utf-8")
+    meta_source = (ROOT / "Assets/Scripts/Runtime/SharedMetaProgressionModel.cs").read_text(encoding="utf-8")
     game_types_source = (ROOT / "Assets/Scripts/Runtime/GameTypes.cs").read_text(encoding="utf-8")
     database_source = (ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs").read_text(encoding="utf-8")
     online_runtime = ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs"
     if online_runtime.exists() or "OnlineSpike" in game_types_source or "ONLINE CO-OP" in hud_source:
         fail("Online Co-op is deferred; its duplicate runtime, state and menu entry must remain outside the active product")
-    if "Wrap(_mainSelection + direction, 3)" not in hud_source or '"SETTINGS"' not in hud_source:
-        fail("the active main menu must expose Solo, Local Co-op and presentation settings")
+    if "MainMenuButtonCount = 4" not in hud_source or '"CODEX"' not in hud_source or '"SETTINGS"' not in hud_source:
+        fail("the active main menu must expose Solo, Local Co-op, Codex and presentation settings")
 
     workflow_source = (ROOT / ".github/workflows/unity-ci.yml").read_text(encoding="utf-8")
     workflow_requirements = (
@@ -391,8 +402,11 @@ def main() -> int:
         "exact reward preview": "RewardEffectPreview" in hud_source and
             "EffectDescriptionAtLevel" in hud_source,
         "fully clickable rewards": "GUI.Button(rect, GUIContent.none, GUIStyle.none)" in hud_source,
-        "separated character controls": "var ultimateRect" in hud_source and "rect.y + 592" in hud_source,
-        "responsive map titles": "_mapTitle" in hud_source and "rect.y + 190, rect.width - 80, 78" in hud_source,
+        "character select grid": "DrawCharacterSelectGrid" in hud_source and "DrawCharacterSelectDetail" in hud_source,
+        "character roster navigation": "NextCharacterIndex" in meta_source and "CharacterSelectPresentation" in hud_source,
+        "map select grid": "DrawMapSelectGrid" in hud_source and "DrawMapSelectDetail" in hud_source,
+        "map roster navigation": "NextMapIndex" in meta_source and "MapSelectPresentation" in hud_source,
+        "shared selection action button": "DrawPrimaryActionButton" in hud_source,
         "compact combat hint": "Prompt(BindingAction.Ultimate)" in hud_source and "Prompt(BindingAction.Pause)" in hud_source,
         "aligned local statistics": "DrawStatColumn" in hud_source and "_statValue" in hud_source,
         "safe result summary": "var summary = new Rect" in hud_source and "_director.SelectedMap.Name.ToUpperInvariant()" in hud_source,

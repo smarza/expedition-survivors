@@ -35,6 +35,7 @@ MonoBehaviour:
     tribe: Ravenbound Vikings
     role: Storm Scout
     description: A swift pathfinder whose ravens mark openings before the enemy realizes it has been surrounded.
+    lockedPreviewLine: A Ravenbound pathfinder whose ravens find openings before the enemy realizes it has been surrounded.
     color: {r: 0.88, g: 0.52, b: 0.24, a: 1}
     maxHealth: 122
     moveSpeed: 5.05
@@ -52,6 +53,7 @@ MonoBehaviour:
     tribe: Oathbound Grove
     role: Canopy Warden
     description: An oathbound grove warden who binds thorn and canopy magic — fictional woodland culture, not any real people.
+    lockedPreviewLine: An Oathbound grove warden — thorn and canopy magic still waiting to be revealed.
     color: {r: 0.38, g: 0.78, b: 0.42, a: 1}
     maxHealth: 128
     moveSpeed: 4.85
@@ -69,6 +71,7 @@ MonoBehaviour:
     tribe: Ironway Expedition Corps
     role: Field Captain
     description: A modern expedition corps captain who marks targets with signal gear and keeps the squad alive in the field.
+    lockedPreviewLine: An Ironway field captain — battlefield tactics and squad support still to be discovered.
     color: {r: 0.62, g: 0.68, b: 0.78, a: 1}
     maxHealth: 135
     moveSpeed: 4.65
@@ -104,6 +107,7 @@ MonoBehaviour:
     displayName: 'The Frostbound Shore: Long Night'
     region: Jotunn Coast
     description: The full twelve-minute route. Denser phases, stronger elites and a late Jotunn confrontation.
+    lockedPreviewLine: The full Frostbound Shore route — denser phases and a late Jotunn confrontation still await unlock.
     durationLabel: QUICK EXPEDITION — 12 MIN
     duration: 720
     bossSpawnTime: 630

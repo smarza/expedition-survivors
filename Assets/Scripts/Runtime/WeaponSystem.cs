@@ -47,6 +47,9 @@ namespace ProjectExpedition
 
         public void ApplyMastery(int mastery) => Model.ApplyMastery(mastery);
 
+        public void ApplyHeroMastery(string characterId, int mastery) =>
+            Model.ApplyHeroMastery(characterId, mastery);
+
         public void SyncFromBuild(PlayerBuild build) => Model.SyncFromBuild(build);
 
         public void Tick(float deltaTime)
