@@ -20,18 +20,6 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
-        public void Version2Save_MigratesRelicsCollected()
-        {
-            const string versionTwo = "{\"Version\":2,\"Progress\":{\"TotalRenown\":10,\"RunsCompleted\":2,\"BestKills\":40,\"BestTime\":180,\"HaldorMastery\":4}}";
-
-            var progress = SaveMigration.Deserialize(versionTwo, out var sourceVersion);
-
-            Assert.That(sourceVersion, Is.EqualTo(2));
-            Assert.That(progress.RelicsCollected, Is.Not.Null);
-            Assert.That(progress.RelicsCollected.Length, Is.Zero);
-        }
-
-        [Test]
         public void CurrentSave_RoundTripsThroughVersionedEnvelope()
         {
             var original = new MetaProgress
@@ -40,8 +28,7 @@ namespace ProjectExpedition.Tests
                 RunsCompleted = 6,
                 BestKills = 144,
                 BestTime = 612.25f,
-                HaldorMastery = 19,
-                RelicsCollected = new[] { "relic.jotunn_echo" }
+                HaldorMastery = 19
             };
 
             var json = SaveMigration.Serialize(original);
@@ -53,7 +40,6 @@ namespace ProjectExpedition.Tests
             Assert.That(restored.BestKills, Is.EqualTo(original.BestKills));
             Assert.That(restored.BestTime, Is.EqualTo(original.BestTime));
             Assert.That(restored.HaldorMastery, Is.EqualTo(original.HaldorMastery));
-            Assert.That(restored.RelicsCollected, Is.EqualTo(original.RelicsCollected));
         }
     }
 }

@@ -21,12 +21,10 @@ namespace ProjectExpedition
         public float ultimateCooldown = 60f;
         public float ultimateDamage = 120f;
         public float ultimateRadius = 6f;
-        public string[] starterWeaponIds = new[] { "weapon.frost_axe", "weapon.raven_guard" };
 
         public CharacterDefinition Build() => new CharacterDefinition(
             id, displayName, tribe, role, description, color, maxHealth, moveSpeed, armor,
-            ultimateName, ultimateDescription, ultimateCooldown, ultimateDamage, ultimateRadius,
-            starterWeaponIds);
+            ultimateName, ultimateDescription, ultimateCooldown, ultimateDamage, ultimateRadius);
     }
 
     [Serializable]
@@ -45,17 +43,10 @@ namespace ProjectExpedition
         public Color groundColor = new Color(0.075f, 0.13f, 0.16f);
         public int weaponSlots = 4;
         public int gearSlots = 4;
-        public int requiredKillObjective = 80;
-        public int optionalShardObjective = 5;
-        public float extractionDuration = 15f;
-        public float extractionBeaconX;
-        public float extractionBeaconY = 14f;
 
         public MapDefinition Build() => new MapDefinition(
             id, displayName, region, description, durationLabel, duration, bossSpawnTime,
-            baseSpawnInterval, minimumSpawnInterval, difficultyRamp, groundColor, weaponSlots, gearSlots,
-            requiredKillObjective, optionalShardObjective, extractionDuration, extractionBeaconX,
-            extractionBeaconY);
+            baseSpawnInterval, minimumSpawnInterval, difficultyRamp, groundColor, weaponSlots, gearSlots);
     }
 
     [Serializable]
@@ -155,11 +146,6 @@ namespace ProjectExpedition
             9f, 0.6f, 0.28f, 0.43f, 2, 5,
             new Color(0.35f, 0.46f, 0.39f), new Color(0.43f, 0.35f, 0.47f));
 
-        public static EnemyDefinition FrostWraithCaptain { get; private set; } = new EnemyDefinition(
-            "enemy.frost_wraith_captain", "Frost Wraith Captain", false, 95f, 18f, 1.5f, 2.0f, 0.02f,
-            14f, 1.0f, 0.38f, 0.52f, 8, 14,
-            new Color(0.55f, 0.82f, 0.95f), new Color(0.35f, 0.65f, 0.88f));
-
         public static EnemyDefinition Jotunn { get; private set; } = new EnemyDefinition(
             "enemy.jotunn_warlord", "Jotunn Warlord", true, 620f, 80f, 1.35f, 1.35f, 0f,
             22f, 0f, 0.85f, 0.85f, 60, 61,
@@ -169,7 +155,7 @@ namespace ProjectExpedition
 
         static EnemyCatalog()
         {
-            All = new[] { Draugr, FrostWraithCaptain, Jotunn };
+            All = new[] { Draugr, Jotunn };
         }
 
         public static void Apply(ProductionContentDatabase database)
@@ -182,10 +168,6 @@ namespace ProjectExpedition
             if (draugr == null || jotunn == null) return;
             Draugr = draugr;
             Jotunn = jotunn;
-            var frostWraith = Find(definitions, "enemy.frost_wraith_captain");
-            if (frostWraith != null)
-                FrostWraithCaptain = frostWraith;
-
             All = definitions.ToArray();
         }
 

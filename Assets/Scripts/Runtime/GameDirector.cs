@@ -16,8 +16,7 @@ namespace ProjectExpedition
         public int Kills { get; private set; }
         public int RunRenown { get; private set; }
         public float Elapsed => _runModel.Elapsed;
-        public bool BossSpawned => _routeModel.BossSpawned;
-        public SharedExpeditionRouteModel Route => _routeModel;
+        public bool BossSpawned => _runModel.BossTriggered;
         public int RunSeed { get; private set; } = 1;
         public RunRandom Rng { get; private set; } = new RunRandom(1);
         public PerformanceMetrics Metrics { get; } = new PerformanceMetrics();
@@ -43,28 +42,22 @@ namespace ProjectExpedition
         private readonly List<Enemy> _spatialScratch = new List<Enemy>(192);
         private bool _runRecorded;
         private readonly SharedRunModel _runModel = new SharedRunModel();
-        private readonly SharedExpeditionRouteModel _routeModel = new SharedExpeditionRouteModel();
         private readonly SharedSpawnModel _spawnModel = new SharedSpawnModel();
         private Transform _poolRoot;
         private ComponentPool<Enemy> _enemyPool;
         private ComponentPool<AxeProjectile> _projectilePool;
         private ComponentPool<ExperienceGem> _gemPool;
-        private ComponentPool<RuneShardPickup> _shardPool;
         private ComponentPool<PulseVisual> _pulsePool;
         private ComponentPool<UltimatePulseVisual> _ultimatePulsePool;
         private SpatialHashGrid<Enemy> _enemyGrid;
-        private bool _warlordEliteSpawned;
-        private GameObject _extractionBeacon;
-        private GameObject _extractionBeaconPlaceholder;
 
         public int ActiveProjectiles => _projectilePool?.ActiveCount ?? 0;
         public int ActiveGems => _gemPool?.ActiveCount ?? 0;
         public int PooledEnemyCount => _enemyPool?.AvailableCount ?? 0;
         public int PooledProjectileCount => _projectilePool?.AvailableCount ?? 0;
         public int PooledGemCount => _gemPool?.AvailableCount ?? 0;
-        public int PooledShardCount => _shardPool?.AvailableCount ?? 0;
-        public int CreatedPooledObjects => (_enemyPool?.Created ?? 0) + (_projectilePool?.Created ?? 0) + (_gemPool?.Created ?? 0) + (_shardPool?.Created ?? 0) + (_pulsePool?.Created ?? 0) + (_ultimatePulsePool?.Created ?? 0);
-        public int ReusedPooledObjects => (_enemyPool?.Reused ?? 0) + (_projectilePool?.Reused ?? 0) + (_gemPool?.Reused ?? 0) + (_shardPool?.Reused ?? 0) + (_pulsePool?.Reused ?? 0) + (_ultimatePulsePool?.Reused ?? 0);
+        public int CreatedPooledObjects => (_enemyPool?.Created ?? 0) + (_projectilePool?.Created ?? 0) + (_gemPool?.Created ?? 0) + (_pulsePool?.Created ?? 0) + (_ultimatePulsePool?.Created ?? 0);
+        public int ReusedPooledObjects => (_enemyPool?.Reused ?? 0) + (_projectilePool?.Reused ?? 0) + (_gemPool?.Reused ?? 0) + (_pulsePool?.Reused ?? 0) + (_ultimatePulsePool?.Reused ?? 0);
         public int SpatialCellCount => _enemyGrid?.OccupiedCellCount ?? 0;
 
         private void Awake()
@@ -138,38 +131,20 @@ namespace ProjectExpedition
 
             _runModel.Advance(Time.deltaTime);
             CleanupEnemyList();
-            _routeModel.Advance(Elapsed, GroupCenter);
 
-            var routeAnnouncement = _routeModel.ConsumeAnnouncement();
-            if (!string.IsNullOrEmpty(routeAnnouncement))
-                _hud.SetAnnouncement(routeAnnouncement, 3.6f);
+            var spawn = _spawnModel.Advance(Time.deltaTime, Elapsed, SelectedMap, Enemies.Count,
+                _runModel.TryTriggerBoss(SelectedMap.BossSpawnTime));
+            for (var i = 0; i < spawn.RegularEnemyCount; i++)
+                SpawnEnemy(false, spawn.Difficulty);
 
-            if (_routeModel.IsExtractionComplete())
+            if (spawn.SpawnBoss)
             {
-                EndRun(true);
-                return;
+                SpawnEnemy(true, spawn.Difficulty);
+                _hud.SetAnnouncement("THE JOTUNN HAS FOUND YOU", 3.6f);
             }
 
-            if (!_routeModel.BossKilled)
-            {
-                if (_routeModel.CanSpawnBoss())
-                {
-                    _runModel.TryTriggerBoss(SelectedMap.BossSpawnTime);
-                }
-
-                var spawn = _spawnModel.Advance(Time.deltaTime, Elapsed, SelectedMap, Enemies.Count,
-                    _routeModel.CanSpawnBoss() && !_routeModel.BossSpawned);
-                TrySpawnWarlordElite(spawn.Difficulty);
-
-                for (var i = 0; i < spawn.RegularEnemyCount; i++)
-                    SpawnEnemy(false, spawn.Difficulty);
-
-                if (spawn.SpawnBoss && !_routeModel.BossSpawned)
-                {
-                    SpawnEnemy(true, spawn.Difficulty);
-                    _routeModel.MarkBossSpawned();
-                }
-            }
+            // This map ends only when its Jotunn is defeated. The configured
+            // duration marks the target expedition length, not a free victory.
         }
 
         public void BeginRunSetup(int playerCount)
@@ -209,8 +184,6 @@ namespace ProjectExpedition
         {
             Time.timeScale = 1f;
             ReleasePooledSimulation();
-            ClearExtractionBeacon();
-            _extractionBeaconPlaceholder = null;
             if (_runRoot != null) Destroy(_runRoot.gameObject);
             Enemies.Clear();
             Players.Clear();
@@ -233,14 +206,10 @@ namespace ProjectExpedition
                 Players.Add(player);
             }
             _runModel.Begin(playerCount, BalanceRules.ExperienceToNext);
-            _routeModel.Begin(SelectedMap.Id);
             Kills = 0;
             RunRenown = 0;
             _spawnModel.Begin();
             _runRecorded = false;
-            _warlordEliteSpawned = false;
-            ClearExtractionBeacon();
-            SpawnRuneShards();
             State = RunState.Playing;
             var expeditionLabel = playerCount > 1
                 ? $"{SelectedCharacters[0].Name.ToUpperInvariant()} + {SelectedCharacters[1].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}"
@@ -248,9 +217,6 @@ namespace ProjectExpedition
             _hud.SetAnnouncement(replayingSeed
                 ? $"REPLAYING SEED {RunSeed} — {expeditionLabel}"
                 : expeditionLabel, 3f);
-            var openingRouteAnnouncement = _routeModel.ConsumeAnnouncement();
-            if (!string.IsNullOrEmpty(openingRouteAnnouncement))
-                _hud.SetAnnouncement(openingRouteAnnouncement, 3.6f);
         }
 
         private void CreateArena()
@@ -274,111 +240,9 @@ namespace ProjectExpedition
                 renderer.color = i % 5 == 0 ? new Color(0.22f, 0.45f, 0.49f) : new Color(0.17f, 0.25f, 0.28f);
                 renderer.sortingOrder = -10;
             }
-
-            CreateAuthoredLandmarks();
         }
 
-        private void CreateAuthoredLandmarks()
-        {
-            CreateDriftwoodWreck(new Vector3(-12f, -8f, 0f));
-            CreateRuneCircle(new Vector3(8f, 6f, 0f));
-            CreateBossApproachMarkers();
-            _extractionBeaconPlaceholder = CreateLandmark(
-                "Extraction Beacon Placeholder",
-                new Vector3(SelectedMap.ExtractionBeaconX, SelectedMap.ExtractionBeaconY, 0f),
-                RuntimeAssets.Diamond,
-                ExpeditionPhase.Extraction,
-                new Vector3(1.1f, 1.45f, 1f),
-                -4);
-        }
-
-        private void CreateDriftwoodWreck(Vector3 position)
-        {
-            var wreckRoot = new GameObject("Driftwood Wreck");
-            wreckRoot.transform.SetParent(_runRoot, false);
-            wreckRoot.transform.position = position;
-            wreckRoot.transform.rotation = Quaternion.Euler(0f, 0f, 18f);
-
-            AddLandmarkPart(wreckRoot.transform, "Hull Spine", RuntimeAssets.Circle,
-                ExpeditionPhase.Driftwood, new Vector3(0f, 0f, 0f), new Vector3(2.4f, 0.72f, 1f), -8);
-            AddLandmarkPart(wreckRoot.transform, "Broken Mast", RuntimeAssets.Diamond,
-                ExpeditionPhase.Driftwood, new Vector3(0.42f, 0.55f, 0f), new Vector3(0.22f, 1.05f, 1f), -7)
-                .transform.rotation = Quaternion.Euler(0f, 0f, -12f);
-            AddLandmarkPart(wreckRoot.transform, "Rib Timbers", RuntimeAssets.Diamond,
-                ExpeditionPhase.Driftwood, new Vector3(-0.55f, -0.12f, 0f), new Vector3(0.95f, 0.38f, 1f), -7);
-        }
-
-        private void CreateRuneCircle(Vector3 center)
-        {
-            var circleRoot = new GameObject("Rune Circle");
-            circleRoot.transform.SetParent(_runRoot, false);
-            circleRoot.transform.position = center;
-
-            AddLandmarkPart(circleRoot.transform, "Rune Heart", RuntimeAssets.Circle,
-                ExpeditionPhase.Shoreline, Vector3.zero, new Vector3(0.72f, 0.72f, 1f), -6);
-
-            for (var i = 0; i < 6; i++)
-            {
-                var angle = i * (Mathf.PI * 2f / 6f);
-                var offset = new Vector3(Mathf.Cos(angle) * 1.05f, Mathf.Sin(angle) * 1.05f, 0f);
-                AddLandmarkPart(circleRoot.transform, $"Rune Stone {i + 1}", RuntimeAssets.Diamond,
-                    ExpeditionPhase.Shoreline, offset, Vector3.one * 0.28f, -5);
-            }
-        }
-
-        private void CreateBossApproachMarkers()
-        {
-            var markerPositions = new[]
-            {
-                new Vector3(-6f, 9f, 0f),
-                new Vector3(0f, 11f, 0f),
-                new Vector3(6f, 9f, 0f)
-            };
-
-            for (var i = 0; i < markerPositions.Length; i++)
-            {
-                var marker = CreateLandmark(
-                    $"Boss Approach Marker {i + 1}",
-                    markerPositions[i],
-                    RuntimeAssets.Diamond,
-                    ExpeditionPhase.WarlordApproach,
-                    new Vector3(0.34f, 0.62f, 1f),
-                    -3);
-                marker.transform.rotation = Quaternion.Euler(0f, 0f, 180f);
-            }
-        }
-
-        private GameObject CreateLandmark(string landmarkName, Vector3 position, Sprite sprite,
-            ExpeditionPhase homePhase, Vector3 scale, int sortingOrder)
-        {
-            var landmark = new GameObject(landmarkName);
-            landmark.transform.SetParent(_runRoot, false);
-            landmark.transform.position = position;
-            landmark.transform.localScale = scale;
-            AddPhaseTint(landmark, sprite, homePhase, sortingOrder);
-            return landmark;
-        }
-
-        private GameObject AddLandmarkPart(Transform parent, string partName, Sprite sprite,
-            ExpeditionPhase homePhase, Vector3 localPosition, Vector3 localScale, int sortingOrder)
-        {
-            var part = new GameObject(partName);
-            part.transform.SetParent(parent, false);
-            part.transform.localPosition = localPosition;
-            part.transform.localScale = localScale;
-            AddPhaseTint(part, sprite, homePhase, sortingOrder);
-            return part;
-        }
-
-        private static void AddPhaseTint(GameObject target, Sprite sprite, ExpeditionPhase homePhase, int sortingOrder)
-        {
-            var renderer = target.AddComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.sortingOrder = sortingOrder;
-            target.AddComponent<FrostboundLandmarkTint>().Initialize(renderer, homePhase);
-        }
-
-        private void SpawnEnemy(bool boss, float difficulty, bool elite = false)
+        private void SpawnEnemy(bool boss, float difficulty)
         {
             if (Players.Count == 0) return;
             var angle = Rng.Range(0f, Mathf.PI * 2f);
@@ -386,71 +250,9 @@ namespace ProjectExpedition
                 SharedSpawnModel.MaximumSpawnDistance);
             var position = SharedSpawnModel.CalculateSpawnPosition(GroupCenter, angle, distance);
             var enemy = _enemyPool.Get(position);
-            enemy.Initialize(this, difficulty, boss, elite);
+            enemy.Initialize(this, difficulty, boss);
             Enemies.Add(enemy);
             _enemyGrid.Add(enemy);
-        }
-
-        private void TrySpawnWarlordElite(float difficulty)
-        {
-            if (_warlordEliteSpawned || _routeModel.BossSpawned || _routeModel.BossKilled)
-                return;
-
-            if (_routeModel.CurrentPhase != ExpeditionPhase.WarlordApproach)
-                return;
-
-            var halfObjective = _routeModel.RequiredKillObjective / 2;
-            if (_routeModel.DraugrKills < halfObjective)
-                return;
-
-            _warlordEliteSpawned = true;
-            SpawnEnemy(false, difficulty, true);
-            _hud.SetAnnouncement("A FROST WRAITH CAPTAIN EMERGES", 3.2f);
-        }
-
-        private void SpawnRuneShards()
-        {
-            _shardPool?.ReleaseAll();
-            var shardCount = SelectedMap.OptionalShardObjective;
-            if (shardCount <= 0)
-                return;
-
-            for (var i = 0; i < shardCount; i++)
-            {
-                var angle = Rng.Range(0f, Mathf.PI * 2f);
-                var distance = Rng.Range(7f, 30f);
-                var position = new Vector3(Mathf.Cos(angle) * distance, Mathf.Sin(angle) * distance, 0f);
-                _shardPool.Get(position).Initialize(this);
-            }
-        }
-
-        private void SpawnExtractionBeacon()
-        {
-            ClearExtractionBeacon();
-            if (_extractionBeaconPlaceholder != null)
-                _extractionBeaconPlaceholder.SetActive(false);
-
-            _extractionBeacon = new GameObject("Extraction Beacon");
-            _extractionBeacon.transform.SetParent(_runRoot, false);
-            _extractionBeacon.transform.position = new Vector3(
-                SelectedMap.ExtractionBeaconX, SelectedMap.ExtractionBeaconY, 0f);
-            _extractionBeacon.transform.localScale = Vector3.one * 1.6f;
-            var renderer = _extractionBeacon.AddComponent<SpriteRenderer>();
-            renderer.sprite = RuntimeAssets.Diamond;
-            renderer.color = new Color(0.96f, 0.78f, 0.22f, 0.82f);
-            renderer.sortingOrder = 3;
-        }
-
-        private void ClearExtractionBeacon()
-        {
-            if (_extractionBeacon == null)
-                return;
-
-            Destroy(_extractionBeacon);
-            _extractionBeacon = null;
-
-            if (_extractionBeaconPlaceholder != null)
-                _extractionBeaconPlaceholder.SetActive(true);
         }
 
         public Enemy GetNearestEnemy(Vector2 origin)
@@ -532,7 +334,7 @@ namespace ProjectExpedition
             return hitCount;
         }
 
-        public void OnEnemyKilled(Enemy enemy, int experienceValue, bool boss, bool elite)
+        public void OnEnemyKilled(Enemy enemy, int experienceValue, bool boss)
         {
             if (enemy == null) return;
             Kills++;
@@ -544,20 +346,7 @@ namespace ProjectExpedition
                 boss ? new Color(1f, 0.45f, 0.22f) : new Color(0.5f, 0.82f, 0.9f),
                 boss ? 2.4f : 0.7f);
             ReleaseEnemy(enemy);
-            _routeModel.OnEnemyKilled(boss, elite);
-
-            var routeAnnouncement = _routeModel.ConsumeAnnouncement();
-            if (!string.IsNullOrEmpty(routeAnnouncement))
-                _hud.SetAnnouncement(routeAnnouncement, 3.6f);
-
-            if (boss)
-                SpawnExtractionBeacon();
-        }
-
-        public void OnRuneShardCollected(RuneShardPickup shard)
-        {
-            _routeModel.OnShardCollected();
-            ReleaseRuneShard(shard);
+            if (boss) EndRun(true);
         }
 
         public void OnPlayerDowned(PlayerController player)
@@ -629,13 +418,6 @@ namespace ProjectExpedition
             if (!_runRecorded)
             {
                 SaveService.RecordRun(Kills, RunRenown, Elapsed, victory);
-                if (victory)
-                {
-                    var relicId = _routeModel.ResolveVictoryRelicId();
-                    if (!string.IsNullOrEmpty(relicId))
-                        SaveService.RecordRelicCollected(relicId);
-                }
-
                 _runRecorded = true;
             }
         }
@@ -647,7 +429,6 @@ namespace ProjectExpedition
             State = RunState.MainMenu;
             LocalInputRouter.BeginSession(1);
             ReleasePooledSimulation();
-            ClearExtractionBeacon();
             if (_runRoot != null) Destroy(_runRoot.gameObject);
             Enemies.Clear();
             Players.Clear();
@@ -741,8 +522,6 @@ namespace ProjectExpedition
 
         public void ReleaseExperienceGem(ExperienceGem gem) => _gemPool.Release(gem);
 
-        public void ReleaseRuneShard(RuneShardPickup shard) => _shardPool.Release(shard);
-
         private void ReleaseEnemy(Enemy enemy)
         {
             _enemyGrid.Remove(enemy);
@@ -758,7 +537,6 @@ namespace ProjectExpedition
             _enemyPool = new ComponentPool<Enemy>(() => CreatePooled<Enemy>("Pooled Enemy"), _poolRoot, 96);
             _projectilePool = new ComponentPool<AxeProjectile>(() => CreatePooled<AxeProjectile>("Pooled Frost Axe"), _poolRoot, 64);
             _gemPool = new ComponentPool<ExperienceGem>(() => CreatePooled<ExperienceGem>("Pooled Experience"), _poolRoot, 96);
-            _shardPool = new ComponentPool<RuneShardPickup>(() => CreatePooled<RuneShardPickup>("Pooled Rune Shard"), _poolRoot, 16);
             _pulsePool = new ComponentPool<PulseVisual>(() => CreatePooled<PulseVisual>("Pooled Raven Guard Pulse"), _poolRoot, 16);
             _ultimatePulsePool = new ComponentPool<UltimatePulseVisual>(() => CreatePooled<UltimatePulseVisual>("Pooled Ultimate Pulse"), _poolRoot, 4);
             if (ProductionFoundationChecks.Run(out var report))
@@ -785,7 +563,6 @@ namespace ProjectExpedition
             _enemyPool?.ReleaseAll();
             _projectilePool?.ReleaseAll();
             _gemPool?.ReleaseAll();
-            _shardPool?.ReleaseAll();
             _pulsePool?.ReleaseAll();
             _ultimatePulsePool?.ReleaseAll();
             _enemyGrid?.Clear();
@@ -920,84 +697,6 @@ namespace ProjectExpedition
             _time = 0f;
             _radius = 0f;
             transform.localScale = Vector3.zero;
-        }
-    }
-
-    public sealed class FrostboundLandmarkTint : MonoBehaviour
-    {
-        private SpriteRenderer _renderer;
-        private ExpeditionPhase _homePhase;
-        private GameDirector _director;
-
-        public void Initialize(SpriteRenderer renderer, ExpeditionPhase homePhase)
-        {
-            _renderer = renderer;
-            _homePhase = homePhase;
-            _renderer.color = DimmedPhaseColor(homePhase);
-        }
-
-        private void Update()
-        {
-            if (_renderer == null)
-                return;
-
-            if (_director == null)
-            {
-                var directors = Object.FindObjectsByType<GameDirector>();
-                _director = directors.Length > 0 ? directors[0] : null;
-            }
-
-            if (_director == null || _director.State != RunState.Playing)
-            {
-                _renderer.color = DimmedPhaseColor(_homePhase);
-                return;
-            }
-
-            var currentPhase = _director.Route.CurrentPhase;
-            var phaseActive = IsPhaseActive(currentPhase);
-            var phaseColor = PhaseColor(_homePhase);
-            var alpha = phaseActive ? 0.84f : 0.28f;
-
-            if (_homePhase == ExpeditionPhase.Extraction &&
-                (currentPhase == ExpeditionPhase.Extraction || currentPhase == ExpeditionPhase.Completed))
-            {
-                alpha = 0.92f;
-            }
-
-            _renderer.color = new Color(phaseColor.r, phaseColor.g, phaseColor.b, alpha);
-        }
-
-        private bool IsPhaseActive(ExpeditionPhase currentPhase)
-        {
-            if (currentPhase == ExpeditionPhase.Completed)
-                return _homePhase == ExpeditionPhase.Extraction;
-
-            return (int)currentPhase >= (int)_homePhase;
-        }
-
-        private static Color PhaseColor(ExpeditionPhase phase)
-        {
-            switch (phase)
-            {
-                case ExpeditionPhase.Shoreline:
-                    return new Color(0.22f, 0.45f, 0.49f);
-                case ExpeditionPhase.Driftwood:
-                    return new Color(0.42f, 0.32f, 0.22f);
-                case ExpeditionPhase.WarlordApproach:
-                    return new Color(0.55f, 0.38f, 0.42f);
-                case ExpeditionPhase.Boss:
-                    return new Color(0.72f, 0.22f, 0.28f);
-                case ExpeditionPhase.Extraction:
-                    return new Color(0.96f, 0.78f, 0.22f);
-                default:
-                    return new Color(0.17f, 0.25f, 0.28f);
-            }
-        }
-
-        private static Color DimmedPhaseColor(ExpeditionPhase phase)
-        {
-            var color = PhaseColor(phase);
-            return new Color(color.r, color.g, color.b, 0.24f);
         }
     }
 }

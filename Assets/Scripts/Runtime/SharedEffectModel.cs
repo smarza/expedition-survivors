@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectExpedition
@@ -65,86 +64,166 @@ namespace ProjectExpedition
     }
 
     /// <summary>
-    /// Presentation-free automatic-weapon facade. Delegates state, timing and upgrades
-    /// to SharedWeaponRegistry while preserving the legacy public surface for tests.
+    /// Presentation-free automatic-weapon state. The adapter supplies targets,
+    /// seeded critical rolls and presentation while this model owns timing,
+    /// derived statistics, upgrades and evolution behavior.
     /// </summary>
     public sealed class SharedWeaponModel
     {
-        internal SharedWeaponRegistry Registry { get; } = new SharedWeaponRegistry();
+        private const float InitialAxeDelay = 0.25f;
+        private const float InitialPulseDelay = 4.5f;
+        private const float InitialPulseCooldown = 5.2f;
+        private const float ProjectileSpeed = 9.5f;
+        private const float ProjectileDuration = 3.2f;
 
-        public float AxeDamage => Registry.AxeDamage;
-        public float AxeCooldown => Registry.AxeCooldown;
-        public int AxeCount => Registry.AxeCount;
-        public int AxePierce => Registry.AxePierce;
-        public float CriticalChance => Registry.CriticalChance;
-        public bool HasShieldPulse => Registry.HasShieldPulse;
-        public float ShieldDamage => Registry.ShieldDamage;
-        public float ShieldCooldown => Registry.ShieldCooldown;
-        public bool FrostAxeEvolved => Registry.FrostAxeEvolved;
-        public bool RavenGuardEvolved => Registry.RavenGuardEvolved;
-        public float AxeProjectileSpeed => Registry.AxeProjectileSpeed;
-        public float AxeProjectileDuration => Registry.AxeProjectileDuration;
-        public float AxeHitRadius => Registry.AxeHitRadius;
-        public float CriticalAxeHitRadius => Registry.CriticalAxeHitRadius;
-        public float AxeKnockback => Registry.AxeKnockback;
-        public float CriticalAxeKnockback => Registry.CriticalAxeKnockback;
-        public float CriticalDamageMultiplier => Registry.CriticalDamageMultiplier;
-        public float ShieldRadius => Registry.ShieldRadius;
-        public float ShieldKnockback => Registry.ShieldKnockback;
-        public float ShieldHealingPerHit => Registry.ShieldHealingPerHit;
-        public float ShieldHealingCap => Registry.ShieldHealingCap;
-        public float CleaverExplosionDamageMultiplier => Registry.CleaverExplosionDamageMultiplier;
-        public float CleaverExplosionRadius => Registry.CleaverExplosionRadius;
+        private float _axeTimer;
+        private float _pulseTimer;
+
+        public float AxeDamage { get; private set; }
+        public float AxeCooldown { get; private set; }
+        public int AxeCount { get; private set; }
+        public int AxePierce { get; private set; }
+        public float CriticalChance { get; private set; }
+        public bool HasShieldPulse { get; private set; }
+        public float ShieldDamage { get; private set; }
+        public float ShieldCooldown { get; private set; }
+        public bool FrostAxeEvolved { get; private set; }
+        public bool RavenGuardEvolved { get; private set; }
+        public float AxeProjectileSpeed => ProjectileSpeed;
+        public float AxeProjectileDuration => ProjectileDuration;
+        public float AxeHitRadius => 0.25f;
+        public float CriticalAxeHitRadius => 0.32f;
+        public float AxeKnockback => 0.18f;
+        public float CriticalAxeKnockback => 0.42f;
+        public float CriticalDamageMultiplier => 2f;
+        public float ShieldRadius => RavenGuardEvolved ? 3.35f : 2.55f;
+        public float ShieldKnockback => 0.72f;
+        public float ShieldHealingPerHit => RavenGuardEvolved ? 0.65f : 0f;
+        public float ShieldHealingCap => RavenGuardEvolved ? 9f : 0f;
+        public float CleaverExplosionDamageMultiplier => FrostAxeEvolved ? 0.42f : 0f;
+        public float CleaverExplosionRadius => FrostAxeEvolved ? 1.25f : 0f;
 
         public SharedWeaponModel() => Begin();
 
-        public void Begin() => Registry.Begin();
+        public void Begin()
+        {
+            AxeDamage = 24f;
+            AxeCooldown = 0.82f;
+            AxeCount = 1;
+            AxePierce = 1;
+            CriticalChance = 0.08f;
+            HasShieldPulse = true;
+            ShieldDamage = 20f;
+            ShieldCooldown = InitialPulseCooldown;
+            FrostAxeEvolved = false;
+            RavenGuardEvolved = false;
+            _axeTimer = InitialAxeDelay;
+            _pulseTimer = InitialPulseDelay;
+        }
 
-        public void SyncFromBuild(PlayerBuild build) => Registry.SyncFromBuild(build);
-
-        public void ApplyMastery(int mastery) => Registry.ApplyMastery(mastery);
+        public void ApplyMastery(int mastery) =>
+            AxeDamage *= 1f + Mathf.Min(0.15f, Mathf.Max(0, mastery) * 0.005f);
 
         public WeaponAdvanceResult Advance(float deltaTime)
         {
-            Registry.Advance(deltaTime);
-            return Registry.MapLegacyAdvanceResult();
+            if (deltaTime <= 0f) return WeaponAdvanceResult.None;
+            _axeTimer -= deltaTime;
+            _pulseTimer -= deltaTime;
+            var result = WeaponAdvanceResult.None;
+
+            if (_axeTimer <= 0f)
+            {
+                _axeTimer = AxeCooldown;
+                result |= WeaponAdvanceResult.FireAxeVolley;
+            }
+            if (HasShieldPulse && _pulseTimer <= 0f)
+            {
+                _pulseTimer = ShieldCooldown;
+                result |= WeaponAdvanceResult.TriggerRavenGuard;
+            }
+            return result;
         }
 
-        public IReadOnlyList<WeaponFireEvent> LastFireEvents => Registry.LastFireEvents;
+        public Vector2 CalculateAxeDirection(Vector2 baseDirection, int projectileIndex)
+        {
+            var normalized = baseDirection.sqrMagnitude > 0.0001f
+                ? baseDirection.normalized
+                : Vector2.right;
+            var offsetDegrees = (projectileIndex - (AxeCount - 1) * 0.5f) * 10f;
+            var radians = offsetDegrees * Mathf.Deg2Rad;
+            var cosine = Mathf.Cos(radians);
+            var sine = Mathf.Sin(radians);
+            return new Vector2(normalized.x * cosine - normalized.y * sine,
+                normalized.x * sine + normalized.y * cosine);
+        }
 
-        public Vector2 CalculateAxeDirection(Vector2 baseDirection, int projectileIndex) =>
-            Registry.CalculateAxeDirection(baseDirection, projectileIndex);
+        public SharedEffectRequest CreateAxeEffect(bool critical) => new SharedEffectRequest(
+            SharedEffectKind.Projectile, SharedEffectTarget.Enemies,
+            SharedEffectStacking.Independent, AxeDamage * (critical ? 2f : 1f),
+            critical ? CriticalAxeHitRadius : AxeHitRadius,
+            critical ? CriticalAxeKnockback : AxeKnockback,
+            ProjectileSpeed, ProjectileDuration, AxePierce, critical, FrostAxeEvolved);
 
-        public SharedEffectRequest CreateAxeEffect(bool critical) => Registry.CreateAxeEffect(critical);
-
-        public SharedEffectRequest CreateRavenGuardEffect() => Registry.CreateRavenGuardEffect();
+        public SharedEffectRequest CreateRavenGuardEffect() => new SharedEffectRequest(
+            SharedEffectKind.AreaDamage, SharedEffectTarget.Enemies,
+            SharedEffectStacking.Independent, ShieldDamage,
+            ShieldRadius, ShieldKnockback, evolved: RavenGuardEvolved);
 
         public float CalculateRavenGuardHealing(int hitCount) =>
-            Registry.CalculateRavenGuardHealing(hitCount);
+            RavenGuardEvolved && hitCount > 0
+                ? Mathf.Min(ShieldHealingCap, hitCount * ShieldHealingPerHit)
+                : 0f;
 
-        public bool ApplyUpgrade(UpgradeId id) => Registry.ApplyUpgrade(id);
+        public bool ApplyUpgrade(UpgradeId id)
+        {
+            switch (id)
+            {
+                case UpgradeId.AxeDamage: AxeDamage *= 1.26f; return true;
+                case UpgradeId.AxeSpeed:
+                    AxeCooldown = Mathf.Max(0.24f, AxeCooldown * 0.86f);
+                    return true;
+                case UpgradeId.ExtraAxe: AxeCount = Mathf.Min(5, AxeCount + 1); return true;
+                case UpgradeId.AxePierce: AxePierce += 1; return true;
+                case UpgradeId.ShieldPulse: HasShieldPulse = true; _pulseTimer = 0.1f; return true;
+                case UpgradeId.ShieldDamage: ShieldDamage *= 1.42f; return true;
+                case UpgradeId.ShieldDamageAndSpeed:
+                    ShieldDamage *= 1.42f;
+                    ShieldCooldown = Mathf.Max(1.6f, ShieldCooldown * 0.86f);
+                    return true;
+                case UpgradeId.CriticalRunes:
+                    CriticalChance = Mathf.Min(0.55f, CriticalChance + 0.09f);
+                    return true;
+                default: return false;
+            }
+        }
 
-        public bool ApplyUpgrade(string weaponId, UpgradeId id) => Registry.ApplyUpgrade(weaponId, id);
-
-        public bool ApplyEvolution(string evolutionId) => Registry.ApplyEvolution(evolutionId);
+        public bool ApplyEvolution(string evolutionId)
+        {
+            if (evolutionId == "evolution.jotunn_cleaver" && !FrostAxeEvolved)
+            {
+                FrostAxeEvolved = true;
+                AxeDamage *= 1.55f;
+                AxePierce += 2;
+                return true;
+            }
+            if (evolutionId == "evolution.storm_aegis" && !RavenGuardEvolved)
+            {
+                RavenGuardEvolved = true;
+                ShieldDamage *= 1.35f;
+                return true;
+            }
+            return false;
+        }
     }
 
     public static class SharedEffectPipeline
     {
         public static bool ApplyUpgrade(SharedPlayerModel player, SharedWeaponModel weapons,
-            UpgradeId id, string weaponId = null)
+            UpgradeId id)
         {
             if (player == null) throw new ArgumentNullException(nameof(player));
             if (weapons == null) throw new ArgumentNullException(nameof(weapons));
-
-            if (!string.IsNullOrEmpty(weaponId))
-            {
-                if (weapons.ApplyUpgrade(weaponId, id)) return true;
-            }
-            else if (weapons.ApplyUpgrade(id))
-            {
-                return true;
-            }
+            if (weapons.ApplyUpgrade(id)) return true;
 
             switch (id)
             {

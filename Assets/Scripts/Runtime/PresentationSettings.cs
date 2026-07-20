@@ -105,7 +105,6 @@ namespace ProjectExpedition
         public float MasterVolume = 0.8f;
         public float MusicVolume = 0.55f;
         public float SfxVolume = 0.8f;
-        public bool FirstRunHintsSeen;
         public InputBindingProfile Keyboard = new InputBindingProfile();
     }
 

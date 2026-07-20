@@ -1,9 +1,8 @@
 # Expedition Survivors — build, reward and character reference
 
-> **Applies to:** 0.10.0 Demonstration Content release candidate
+> **Applies to:** 0.8.0 Shared Simulation release candidate
 > **Purpose:** player-facing rules reference and authoring contract for future content
-> **Runtime sources of truth:** `ContentDefinitions.cs`, `BuildSystem.cs`, `SharedPlayerModel.cs`, `SharedWeaponRegistry.cs`, `SharedExpeditionRouteModel.cs` and `ProductionContent.asset`
-> **Design brief:** `docs/DEMONSTRATION_CONTENT_0.10.md`
+> **Runtime sources of truth:** `ContentDefinitions.cs`, `BuildSystem.cs`, `SharedPlayerModel.cs`, `SharedEffectModel.cs` and `ProductionContent.asset`
 
 ## 1. The most important level rule
 
@@ -37,14 +36,12 @@ Multiplicative upgrades compound. Two `+26%` damage levels produce `base × 1.26
 
 ## 3. Characters and powers
 
-Characters begin each expedition with faction-specific starter weapons at level 1. The shared reward pool includes all 12 weapons and 12 gear items documented in `docs/DEMONSTRATION_CONTENT_0.10.md`.
+All current characters can receive the same 0.8.0 item pool and begin every expedition with Frost Axe level 1 and Raven Guard level 1. Character-exclusive weapons and reward pools do not exist yet.
 
-| Character | Stable ID | Faction | Role | Health | Move speed | Armor | Ultimate | Starters |
-| --- | --- | --- | --- | ---: | ---: | ---: | --- | --- |
-| Haldor Stormborn | `ravenbound.haldor` | Ravenbound Vikings | Expedition Leader | 150 | 4.45 | 2.0 | Ravenstorm | Frost Axe + Raven Guard |
-| Eira Raven-Sworn | `ravenbound.eira` | Ravenbound Vikings | Storm Scout | 122 | 5.05 | 0.5 | Murder of Ravens | Frost Axe + Raven Guard |
-| Sylva Reedwalker | `oathbound.sylva` | Oathbound Grove | Canopy Warden | 128 | 4.85 | 1.0 | Verdant Tempest | Grove Thorn Lash + Canopy Vortex |
-| Captain Mara Voss | `ironway.mara` | Ironway Expedition Corps | Field Captain | 135 | 4.65 | 1.5 | Orbital Barrage | Signal Flare + Supply Pulse |
+| Character | Stable ID | Role | Health | Move speed | Armor | Ultimate |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| Haldor Stormborn | `ravenbound.haldor` | Expedition Leader | 150 | 4.45 | 2.0 | Ravenstorm |
+| Eira Raven-Sworn | `ravenbound.eira` | Storm Scout | 122 | 5.05 | 0.5 | Murder of Ravens |
 
 ### Haldor Stormborn — Ravenstorm
 

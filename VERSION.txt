@@ -1,1 +1,1 @@
-0.10.0-demonstration-content
+0.8.0-shared-simulation-dev

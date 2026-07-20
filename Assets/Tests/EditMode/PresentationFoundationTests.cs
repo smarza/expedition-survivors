@@ -17,8 +17,7 @@ namespace ProjectExpedition.Tests
                 ScreenShake = 0.3f,
                 MasterVolume = 0.7f,
                 MusicVolume = 0.4f,
-                SfxVolume = 0.9f,
-                FirstRunHintsSeen = true
+                SfxVolume = 0.9f
             };
             source.Keyboard.Set(BindingAction.Ultimate, Key.Q);
 
@@ -31,7 +30,6 @@ namespace ProjectExpedition.Tests
             Assert.That(restored.MasterVolume, Is.EqualTo(0.7f).Within(0.0001f));
             Assert.That(restored.MusicVolume, Is.EqualTo(0.4f).Within(0.0001f));
             Assert.That(restored.SfxVolume, Is.EqualTo(0.9f).Within(0.0001f));
-            Assert.That(restored.FirstRunHintsSeen, Is.True);
             Assert.That(restored.Keyboard.Get(BindingAction.Ultimate), Is.EqualTo(Key.Q));
         }
 

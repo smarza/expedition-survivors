@@ -13,7 +13,7 @@ namespace ProjectExpedition
 
     public static class SaveMigration
     {
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 2;
 
         public static MetaProgress Deserialize(string json, out int sourceVersion)
         {
@@ -29,22 +29,11 @@ namespace ProjectExpedition
                 if (envelope.Version > CurrentVersion)
                     throw new InvalidOperationException($"Save version {envelope.Version} is newer than supported version {CurrentVersion}.");
                 sourceVersion = envelope.Version;
-                return Migrate(envelope.Progress ?? new MetaProgress(), sourceVersion);
+                return envelope.Progress ?? new MetaProgress();
             }
 
             sourceVersion = 1;
-            return Migrate(JsonUtility.FromJson<MetaProgress>(json) ?? new MetaProgress(), sourceVersion);
-        }
-
-        private static MetaProgress Migrate(MetaProgress progress, int sourceVersion)
-        {
-            if (progress == null)
-                progress = new MetaProgress();
-
-            if (sourceVersion < 3 && progress.RelicsCollected == null)
-                progress.RelicsCollected = new string[0];
-
-            return progress;
+            return JsonUtility.FromJson<MetaProgress>(json) ?? new MetaProgress();
         }
 
         public static string Serialize(MetaProgress progress) => JsonUtility.ToJson(new SaveEnvelope
@@ -88,27 +77,6 @@ namespace ProjectExpedition
             Data.BestTime = Mathf.Max(Data.BestTime, time);
             Data.TotalRenown += recoveredRenown + Mathf.Max(1, kills / 10) + (victory ? 50 : 0);
             Data.HaldorMastery += Mathf.Max(1, kills / 25) + (victory ? 3 : 0);
-            Save();
-        }
-
-        public static void RecordRelicCollected(string relicId)
-        {
-            if (string.IsNullOrWhiteSpace(relicId))
-                return;
-
-            var relics = Data.RelicsCollected ?? new string[0];
-            for (var i = 0; i < relics.Length; i++)
-            {
-                if (relics[i] == relicId)
-                    return;
-            }
-
-            var updated = new string[relics.Length + 1];
-            for (var i = 0; i < relics.Length; i++)
-                updated[i] = relics[i];
-
-            updated[relics.Length] = relicId;
-            Data.RelicsCollected = updated;
             Save();
         }
 
