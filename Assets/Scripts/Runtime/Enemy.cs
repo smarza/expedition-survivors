@@ -6,6 +6,7 @@ namespace ProjectExpedition
     {
         public bool Alive => _model.Alive;
         public bool Boss => _model.Boss;
+        public bool Elite => _elite;
         public float Health => _model.Health;
         public float Speed => _model.Speed;
         public float ContactDamage => _model.ContactDamage;
@@ -15,6 +16,7 @@ namespace ProjectExpedition
 
         private GameDirector _director;
         private readonly SharedEnemyModel _model = new SharedEnemyModel();
+        private bool _elite;
         private SpriteRenderer _renderer;
         private GameObject _crown;
         private Color _baseColor;
@@ -37,10 +39,13 @@ namespace ProjectExpedition
             _crown.SetActive(false);
         }
 
-        public void Initialize(GameDirector director, float difficulty, bool boss)
+        public void Initialize(GameDirector director, float difficulty, bool boss, bool elite = false)
         {
             _director = director;
-            var definition = boss ? EnemyCatalog.Jotunn : EnemyCatalog.Draugr;
+            _elite = elite && !boss;
+            var definition = boss ? EnemyCatalog.Jotunn
+                : _elite ? EnemyCatalog.FrostWraithCaptain
+                : EnemyCatalog.Draugr;
             gameObject.name = definition.Name;
             var rolledBaseSpeed = director.Rng.Range(definition.MinimumSpeed, definition.MaximumSpeed);
             var rolledRadius = director.Rng.Range(definition.MinimumRadius, definition.MaximumRadius);
@@ -48,9 +53,11 @@ namespace ProjectExpedition
             _model.Begin(transform.position, definition, difficulty, rolledBaseSpeed, rolledRadius,
                 rolledExperience);
             transform.localScale = Vector3.one * Radius * 2f;
-            _baseColor = boss || !director.Rng.Chance(0.5f) ? definition.PrimaryColor : definition.AlternateColor;
+            _baseColor = boss || _elite || !director.Rng.Chance(0.5f)
+                ? definition.PrimaryColor
+                : definition.AlternateColor;
             _renderer.color = _baseColor;
-            _renderer.sortingOrder = boss ? 8 : 5;
+            _renderer.sortingOrder = boss ? 8 : _elite ? 7 : 5;
             _crown.SetActive(boss);
             _animationSeed = transform.position.x * 0.31f + transform.position.y * 0.17f;
         }
@@ -87,7 +94,7 @@ namespace ProjectExpedition
             CancelInvoke(nameof(RestoreColor));
             Invoke(nameof(RestoreColor), 0.07f);
             if ((result & EnemyDamageResult.Killed) != 0)
-                _director.OnEnemyKilled(this, ExperienceValue, Boss);
+                _director.OnEnemyKilled(this, ExperienceValue, Boss, Elite);
             return result;
         }
 
@@ -102,6 +109,7 @@ namespace ProjectExpedition
             _model.Stop();
             CancelInvoke();
             _director = null;
+            _elite = false;
             transform.localScale = Vector3.one;
             transform.rotation = Quaternion.identity;
             if (_crown != null) _crown.SetActive(false);

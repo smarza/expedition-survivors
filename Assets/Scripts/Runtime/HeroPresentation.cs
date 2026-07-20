@@ -20,8 +20,14 @@ namespace ProjectExpedition
             _rune = rune;
             _baseColor = baseColor;
             _playerIndex = playerIndex;
-            if (definition != null && definition.Id == "ravenbound.haldor") BuildHaldorSilhouette();
-            else BuildEiraSilhouette();
+            if (definition != null && definition.Id == "ravenbound.haldor")
+                BuildHaldorSilhouette();
+            else if (definition != null && definition.Id == "oathbound.sylva")
+                BuildSylvaSilhouette();
+            else if (definition != null && definition.Id == "ironway.mara")
+                BuildMaraSilhouette();
+            else
+                BuildEiraSilhouette();
         }
 
         public void Tick(Vector2 movement, bool invulnerable, bool downed, float deltaTime)
@@ -67,6 +73,32 @@ namespace ProjectExpedition
             var axe = AddPart("Readied Frost Axe", RuntimeAssets.Diamond, new Color(0.42f, 0.91f, 1f),
                 new Vector3(0.56f, 0.1f, 0f), new Vector3(0.18f, 0.42f, 1f), 11);
             axe.transform.rotation = Quaternion.Euler(0f, 0f, -24f);
+        }
+
+        private void BuildSylvaSilhouette()
+        {
+            AddPart("Leaf Cloak", RuntimeAssets.Diamond, new Color(0.14f, 0.34f, 0.22f),
+                new Vector3(0f, 0.12f, 0f), new Vector3(0.92f, 1.12f, 1f), 9);
+            AddPart("Canopy Layer", RuntimeAssets.Circle, new Color(0.22f, 0.48f, 0.28f),
+                new Vector3(-0.08f, 0.28f, 0f), new Vector3(0.78f, 0.52f, 1f), 10);
+            AddPart("Antler Brooch", RuntimeAssets.Diamond, new Color(0.78f, 0.62f, 0.36f),
+                new Vector3(0.02f, 0.18f, 0f), Vector3.one * 0.16f, 13);
+            var staff = AddPart("Thorn Staff", RuntimeAssets.Diamond, new Color(0.36f, 0.58f, 0.32f),
+                new Vector3(0.52f, -0.04f, 0f), new Vector3(0.14f, 0.72f, 1f), 11);
+            staff.transform.rotation = Quaternion.Euler(0f, 0f, 14f);
+        }
+
+        private void BuildMaraSilhouette()
+        {
+            AddPart("Field Pack", RuntimeAssets.Circle, new Color(0.24f, 0.28f, 0.26f),
+                new Vector3(-0.18f, 0.16f, 0f), new Vector3(0.62f, 0.82f, 1f), 9);
+            AddPart("Shell Plate", RuntimeAssets.Diamond, new Color(0.34f, 0.38f, 0.4f),
+                new Vector3(0.04f, 0.08f, 0f), new Vector3(0.72f, 0.96f, 1f), 10);
+            AddPart("Visor Band", RuntimeAssets.Diamond, new Color(0.42f, 0.82f, 0.92f),
+                new Vector3(0.1f, 0.34f, 0f), new Vector3(0.46f, 0.12f, 1f), 12);
+            var launcher = AddPart("Flare Launcher", RuntimeAssets.Diamond, new Color(0.92f, 0.48f, 0.18f),
+                new Vector3(0.58f, 0.06f, 0f), new Vector3(0.2f, 0.34f, 1f), 11);
+            launcher.transform.rotation = Quaternion.Euler(0f, 0f, -18f);
         }
 
         private void BuildEiraSilhouette()

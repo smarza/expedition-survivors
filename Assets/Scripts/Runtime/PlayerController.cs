@@ -45,7 +45,8 @@ namespace ProjectExpedition
             _model.Begin(Definition.MaxHealth, Definition.MoveSpeed, Definition.Armor,
                 Definition.UltimateCooldown, Definition.UltimateDamage, Definition.UltimateRadius,
                 BalanceRules.UltimateCooldown);
-            Build.Initialize(director.SelectedMap.WeaponSlots, director.SelectedMap.GearSlots);
+            Build.Initialize(director.SelectedMap.WeaponSlots, director.SelectedMap.GearSlots,
+                Definition.StarterWeaponIds);
             _body = gameObject.AddComponent<SpriteRenderer>();
             _body.sprite = RuntimeAssets.Circle;
             _body.color = _heroColor;
@@ -83,6 +84,7 @@ namespace ProjectExpedition
             _presentation.Initialize(_body, runeRenderer, _heroColor, Definition, PlayerIndex);
 
             Weapons = new WeaponSystem(director, this);
+            Weapons.SyncFromBuild(Build);
             if (Definition.Id == "ravenbound.haldor") Weapons.ApplyMastery(SaveService.Data.HaldorMastery);
         }
 
@@ -166,10 +168,21 @@ namespace ProjectExpedition
             if (result.Evolution)
             {
                 Weapons.Model.ApplyEvolution(result.Item.Id);
+                Weapons.SyncFromBuild(Build);
                 return;
             }
-            SharedEffectPipeline.ApplyUpgrade(_model, Weapons.Model,
-                result.Item.EffectAtLevel(result.NewLevel));
+
+            var upgradeId = result.Item.EffectAtLevel(result.NewLevel);
+            if (result.Item.Category == ItemCategory.Weapon)
+            {
+                SharedEffectPipeline.ApplyUpgrade(_model, Weapons.Model, upgradeId, result.Item.Id);
+            }
+            else
+            {
+                SharedEffectPipeline.ApplyUpgrade(_model, Weapons.Model, upgradeId);
+            }
+
+            Weapons.SyncFromBuild(Build);
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectExpedition
@@ -35,6 +36,8 @@ namespace ProjectExpedition
         private int _resultSelection;
         private int _settingsSelection;
         private int _styleRevision = -1;
+        private int _buildDetailsWeaponScroll;
+        private int _dismissedFirstRunHints;
         private static readonly BindingAction[] RebindableActions =
         {
             BindingAction.MoveUp, BindingAction.MoveDown, BindingAction.MoveLeft,
@@ -376,7 +379,96 @@ namespace ProjectExpedition
             GUI.Label(new Rect(1270, 79, 590, 28),
                 $"ULTIMATE {Prompt(BindingAction.Ultimate)}   •   PAUSE {Prompt(BindingAction.Pause)}", _micro);
             DrawBuildTray();
+            DrawObjectivePanel();
+            DrawFirstRunHints();
             if (_director.ShowPerformanceMetrics) DrawPerformancePanel();
+        }
+
+        private void DrawObjectivePanel()
+        {
+            var route = _director.Route;
+            if (route == null)
+            {
+                return;
+            }
+
+            const float panelX = 735f;
+            const float panelY = 130f;
+            const float panelWidth = 450f;
+            const float panelHeight = 118f;
+            DrawPanel(new Rect(panelX, panelY, panelWidth, panelHeight), new Color(0.025f, 0.055f, 0.075f, 0.92f));
+            DrawPanel(new Rect(panelX, panelY, panelWidth, 4), new Color(0.32f, 0.68f, 0.78f, 0.85f));
+            GUI.Label(new Rect(panelX + 18, panelY + 10, panelWidth - 36, 26), "EXPEDITION OBJECTIVES", _statSection);
+
+            var killLine = $"DRAUGR  {route.DraugrKills} / {route.RequiredKillObjective}";
+            var shardLine = route.OptionalShardObjective > 0
+                ? $"SHARDS  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
+                : string.Empty;
+            var objectiveBody = killLine;
+            if (shardLine.Length > 0)
+            {
+                objectiveBody += $"\n{shardLine}";
+            }
+
+            if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+            {
+                var extractionRemaining = Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed);
+                objectiveBody += $"\nREACH THE BEACON — {FormatTime(extractionRemaining)} REMAINING";
+            }
+            else if (route.CanSpawnBoss() && !route.BossSpawned)
+            {
+                objectiveBody += "\nOBJECTIVES MET — JOTUNN ELIGIBLE";
+            }
+
+            GUI.Label(new Rect(panelX + 18, panelY + 36, panelWidth - 36, panelHeight - 44), objectiveBody, _microLeft);
+        }
+
+        private void DrawFirstRunHints()
+        {
+            if (PresentationPreferences.Data.FirstRunHintsSeen)
+            {
+                return;
+            }
+
+            const int hintCount = 4;
+            var nextHint = -1;
+            for (var i = 0; i < hintCount; i++)
+            {
+                var dismissed = (_dismissedFirstRunHints & (1 << i)) != 0;
+                if (!dismissed)
+                {
+                    nextHint = i;
+                    break;
+                }
+            }
+
+            if (nextHint < 0)
+            {
+                PresentationPreferences.Data.FirstRunHintsSeen = true;
+                PresentationPreferences.Save();
+                return;
+            }
+
+            var messages = new[]
+            {
+                $"{Prompt(BindingAction.MoveUp)} {Prompt(BindingAction.MoveDown)} {Prompt(BindingAction.MoveLeft)} {Prompt(BindingAction.MoveRight)} — MOVE TO DODGE AND COLLECT XP",
+                "WEAPONS FIRE AUTOMATICALLY — POSITIONING IS YOUR MAIN SKILL",
+                $"{Prompt(BindingAction.Ultimate)} — USE YOUR ULTIMATE WHEN THE EXPEDITION TIGHTENS",
+                "LEVEL UP OFFERS FOUR REWARD CARDS — BUILD WEAPONS, GEAR AND EVOLUTIONS"
+            };
+            var rect = new Rect(520f, 880f, 880f, 92f);
+            DrawPanel(rect, new Color(0.018f, 0.045f, 0.062f, 0.96f));
+            DrawBorder(rect, PresentationTheme.Accent, 3f);
+            GUI.Label(new Rect(rect.x + 22, rect.y + 10, rect.width - 190, rect.height - 20), messages[nextHint], _body);
+            if (GUI.Button(new Rect(rect.xMax - 150, rect.y + 24, 130, 44), "DISMISS", _button))
+            {
+                _dismissedFirstRunHints |= 1 << nextHint;
+                if ((_dismissedFirstRunHints & ((1 << hintCount) - 1)) == ((1 << hintCount) - 1))
+                {
+                    PresentationPreferences.Data.FirstRunHintsSeen = true;
+                    PresentationPreferences.Save();
+                }
+            }
         }
 
         private void DrawLevelUp()
@@ -407,7 +499,7 @@ namespace ProjectExpedition
                     option.Item.Description, _rewardDescription);
                 GUI.Label(new Rect(rect.x + 28, rect.y + 278, rect.width - 56, 72),
                     RewardEffectPreview(option), _rewardEffect);
-                GUI.Label(new Rect(rect.x + 28, rect.y + 350, rect.width - 56, 28), EvolutionHint(option.Item), _small);
+                GUI.Label(new Rect(rect.x + 28, rect.y + 350, rect.width - 56, 28), EvolutionHint(option), _small);
                 if (GUI.Button(new Rect(rect.x + 28, rect.y + 385, rect.width - 56, 64), "CHOOSE REWARD", _button))
                     _director.ChooseReward(i);
                 if (GUI.Button(rect, GUIContent.none, GUIStyle.none)) _director.ChooseReward(i);
@@ -464,23 +556,51 @@ namespace ProjectExpedition
                 DrawPanel(rect, new Color(0.035f, 0.08f, 0.108f, 1f));
                 DrawPanel(new Rect(rect.x, rect.y, rect.width, 14), player.Definition.Color);
                 GUI.Label(new Rect(rect.x + 35, rect.y + 31, rect.width - 70, 55), $"P{playerIndex + 1} — {player.HeroName.ToUpperInvariant()}", _heading);
+                var equippedWeapons = player.Weapons.EquippedWeapons;
+                const int weaponColumnsPerRow = 2;
+                var weaponCount = equippedWeapons.Count;
+                var maxScroll = Mathf.Max(0, weaponCount - weaponColumnsPerRow);
+                _buildDetailsWeaponScroll = Mathf.Clamp(_buildDetailsWeaponScroll, 0, maxScroll);
                 var statGap = 10f;
-                var statWidth = (rect.width - 60f - statGap * 2f) / 3f;
+                var columnCount = 1 + Mathf.Min(weaponColumnsPerRow, weaponCount);
+                var statWidth = (rect.width - 60f - statGap * (columnCount - 1)) / columnCount;
                 var survivorStats = new Rect(rect.x + 30, rect.y + 95, statWidth, 310);
-                var axeStats = new Rect(survivorStats.xMax + statGap, rect.y + 95, statWidth, 310);
-                var guardStats = new Rect(axeStats.xMax + statGap, rect.y + 95, statWidth, 310);
                 DrawStatColumn(survivorStats, "SURVIVOR",
                     new[] { "HEALTH", "ARMOR", "MOVE SPEED", "XP MAGNET", "STATUS", "ULTIMATE", "ULT DAMAGE", "ULT RADIUS", "ULT INTERVAL", "ULT CHARGE" },
                     new[] { $"{player.Health:0} / {player.MaxHealth:0}", $"{player.Armor:0.0}", $"{player.MoveSpeed:0.00}", $"{player.MagnetRadius:0.00}", player.IsDowned ? "DOWNED" : "ACTIVE", player.UltimateName, $"{player.UltimateDamage:0.0}", $"{player.UltimateRadius:0.00}", $"{player.UltimateCooldown:0.00}s", player.UltimateReady ? "READY" : $"{player.UltimateRemaining:0.0}s" },
                     player.Definition.Color);
-                DrawStatColumn(axeStats, "FROST AXE",
-                    new[] { "DAMAGE", "INTERVAL", "RATE", "PROJECTILES", "PIERCE", "CRITICAL", "CRIT DAMAGE", "PROJ SPEED", "LIFETIME", "HIT RADIUS", "KNOCKBACK", "EVOLUTION" },
-                    new[] { $"{player.Weapons.AxeDamage:0.0}", $"{player.Weapons.AxeCooldown:0.000}s", $"{1f / Mathf.Max(0.01f, player.Weapons.AxeCooldown):0.00}/s", $"{player.Weapons.AxeCount}", $"{player.Weapons.AxePierce}", $"{player.Weapons.CriticalChance * 100f:0}%", $"x{player.Weapons.CriticalDamageMultiplier:0.0}", $"{player.Weapons.AxeProjectileSpeed:0.0}", $"{player.Weapons.AxeProjectileDuration:0.0}s", $"{player.Weapons.AxeHitRadius:0.00}/{player.Weapons.CriticalAxeHitRadius:0.00}", $"{player.Weapons.AxeKnockback:0.00}/{player.Weapons.CriticalAxeKnockback:0.00}", player.Weapons.FrostAxeEvolved ? $"{player.Weapons.CleaverExplosionDamageMultiplier * 100f:0}% @ {player.Weapons.CleaverExplosionRadius:0.00}" : "NONE" },
-                    new Color(0.54f, 0.72f, 0.9f));
-                DrawStatColumn(guardStats, "RAVEN GUARD",
-                    new[] { "DAMAGE", "INTERVAL", "RATE", "RADIUS", "KNOCKBACK", "HEAL / HIT", "HEAL CAP", "EVOLUTION" },
-                    new[] { $"{player.Weapons.ShieldDamage:0.0}", $"{player.Weapons.ShieldCooldown:0.000}s", $"{1f / Mathf.Max(0.01f, player.Weapons.ShieldCooldown):0.00}/s", $"{player.Weapons.ShieldRadius:0.00}", $"{player.Weapons.ShieldKnockback:0.00}", $"{player.Weapons.ShieldHealingPerHit:0.00}", $"{player.Weapons.ShieldHealingCap:0.0}", player.Weapons.RavenGuardEvolved ? "STORM AEGIS" : "NONE" },
-                    new Color(0.45f, 0.9f, 0.72f));
+                for (var weaponColumn = 0; weaponColumn < weaponColumnsPerRow; weaponColumn++)
+                {
+                    var weaponIndex = _buildDetailsWeaponScroll + weaponColumn;
+                    if (weaponIndex >= weaponCount)
+                    {
+                        continue;
+                    }
+
+                    var weaponRect = new Rect(
+                        survivorStats.xMax + statGap + weaponColumn * (statWidth + statGap),
+                        rect.y + 95, statWidth, 310);
+                    DrawWeaponStatColumn(weaponRect, equippedWeapons[weaponIndex]);
+                }
+
+                if (weaponCount > weaponColumnsPerRow)
+                {
+                    var scrollRect = new Rect(rect.x + 30, rect.y + 408, rect.width - 60, 28);
+                    GUI.Label(scrollRect,
+                        $"WEAPONS {_buildDetailsWeaponScroll + 1}-{_buildDetailsWeaponScroll + Mathf.Min(weaponColumnsPerRow, weaponCount - _buildDetailsWeaponScroll)} OF {weaponCount}",
+                        _micro);
+                    if (_buildDetailsWeaponScroll > 0 &&
+                        GUI.Button(new Rect(rect.x + 30, rect.y + 405, 42, 32), "◀", _button))
+                    {
+                        _buildDetailsWeaponScroll--;
+                    }
+
+                    if (_buildDetailsWeaponScroll < maxScroll &&
+                        GUI.Button(new Rect(rect.xMax - 72, rect.y + 405, 42, 32), "▶", _button))
+                    {
+                        _buildDetailsWeaponScroll++;
+                    }
+                }
 
                 GUI.Label(new Rect(rect.x + 35, rect.y + 418, rect.width - 340, 38), "ITEMS AND LEVEL EFFECTS", _cardTitle);
                 GUI.Label(new Rect(rect.xMax - 310, rect.y + 422, 270, 30),
@@ -574,12 +694,96 @@ namespace ProjectExpedition
             GUI.Label(rect, $"P{playerIndex + 1}", _badge);
         }
 
-        private static string EvolutionHint(ItemDefinition item)
+        private string EvolutionHint(RewardOption option)
         {
-            if (!item.IsEvolution) return item.Category.ToString().ToUpperInvariant();
-            var baseItem = ItemCatalog.Find(item.EvolutionOf);
-            var catalyst = ItemCatalog.Find(item.CatalystId);
-            return $"{baseItem.Name} MAX + {catalyst.Name}";
+            if (option == null || option.Item == null)
+            {
+                return string.Empty;
+            }
+
+            var item = option.Item;
+            if (item.IsEvolution)
+            {
+                var baseItem = ItemCatalog.Find(item.EvolutionOf);
+                var catalyst = ItemCatalog.Find(item.CatalystId);
+                return $"{baseItem.Name} MAX + {catalyst.Name} — CHOOSE TO EVOLVE";
+            }
+
+            var playerIndex = Mathf.Clamp(option.TargetPlayerIndex, 0, _director.Players.Count - 1);
+            var build = _director.Players[playerIndex].Build;
+            if (item.Category == ItemCategory.Weapon)
+            {
+                var evolution = FindEvolutionForWeapon(item.Id);
+                if (evolution != null)
+                {
+                    var state = build.Find(item.Id);
+                    var catalyst = ItemCatalog.Find(evolution.CatalystId);
+                    if (state != null && state.Level >= item.MaxLevel && !state.IsEvolved)
+                    {
+                        var hasCatalyst = build.Find(evolution.CatalystId) != null;
+                        if (hasCatalyst)
+                        {
+                            return "EVOLUTION READY — WATCH FOR EVOLUTION REWARD";
+                        }
+
+                        return $"MAX LEVEL — NEED {catalyst.Name} TO EVOLVE";
+                    }
+
+                    if (state != null && state.Level == item.MaxLevel - 1)
+                    {
+                        return $"NEXT LEVEL MAX — PAIR WITH {catalyst.Name} FOR EVOLUTION";
+                    }
+                }
+            }
+
+            if (item.Category == ItemCategory.Gear)
+            {
+                var evolution = FindEvolutionWithCatalyst(item.Id);
+                if (evolution != null)
+                {
+                    var baseDefinition = ItemCatalog.Find(evolution.EvolutionOf);
+                    var baseState = build.Find(evolution.EvolutionOf);
+                    if (baseState != null && baseState.Level >= baseDefinition.MaxLevel && !baseState.IsEvolved)
+                    {
+                        return $"CATALYST READY — {baseDefinition.Name} CAN EVOLVE";
+                    }
+
+                    if (baseState != null && baseState.Level < baseDefinition.MaxLevel)
+                    {
+                        return $"CATALYST — MAX {baseDefinition.Name} TO UNLOCK EVOLUTION";
+                    }
+                }
+            }
+
+            return item.Category.ToString().ToUpperInvariant();
+        }
+
+        private static ItemDefinition FindEvolutionForWeapon(string weaponId)
+        {
+            for (var i = 0; i < ItemCatalog.All.Length; i++)
+            {
+                var item = ItemCatalog.All[i];
+                if (item.IsEvolution && item.EvolutionOf == weaponId)
+                {
+                    return item;
+                }
+            }
+
+            return null;
+        }
+
+        private static ItemDefinition FindEvolutionWithCatalyst(string catalystId)
+        {
+            for (var i = 0; i < ItemCatalog.All.Length; i++)
+            {
+                var item = ItemCatalog.All[i];
+                if (item.IsEvolution && item.CatalystId == catalystId)
+                {
+                    return item;
+                }
+            }
+
+            return null;
         }
 
         private void DrawPause()
@@ -683,13 +887,133 @@ namespace ProjectExpedition
             DrawPanel(new Rect(summary.x + 30, summary.y + 105, summary.width - 60, 2), new Color(0.25f, 0.48f, 0.57f));
             GUI.Label(new Rect(summary.x + 30, summary.y + 112, summary.width - 60, 80),
                 $"TIME  {FormatTime(_director.Elapsed)}     •     ENEMIES  {_director.Kills}     •     RENOWN  {_director.RunRenown}\nSEED  {_director.RunSeed}", _small);
-            GUI.Label(new Rect(600, 565, 720, 80), victory
-                ? "The Jotunn falls. The tribe carries a new verse back to camp."
-                : "No expedition is wasted. The camp remembers what its survivors learned.", _center);
+
+            if (victory)
+            {
+                var relicId = _director.Route.ResolveVictoryRelicId();
+                if (!string.IsNullOrEmpty(relicId))
+                {
+                    var relicRect = new Rect(555, 555, 810, 72);
+                    DrawPanel(relicRect, new Color(0.018f, 0.048f, 0.068f, 1f));
+                    DrawPanel(new Rect(relicRect.x, relicRect.y, relicRect.width, 4), PresentationTheme.Accent);
+                    GUI.Label(new Rect(relicRect.x + 22, relicRect.y + 10, relicRect.width - 44, 24), "RELIC EARNED", _micro);
+                    GUI.Label(new Rect(relicRect.x + 22, relicRect.y + 32, relicRect.width - 44, 32),
+                        RelicDisplayName(relicId).ToUpperInvariant(), _center);
+                }
+            }
+
+            GUI.Label(new Rect(600, victory ? 640 : 565, 720, 80), victory
+                ? "The Jotunn falls. Your relic is saved — return to camp to plan the next expedition."
+                : "No expedition is wasted. Return to camp to keep your renown and try again.", _center);
             DrawSelection(new Rect(545, 700, 410, 100), _resultSelection == 0);
             if (GUI.Button(new Rect(555, 710, 390, 80), "REPLAY SAME SEED", _button)) _director.ReplayRun();
             DrawSelection(new Rect(965, 700, 410, 100), _resultSelection == 1);
             if (GUI.Button(new Rect(975, 710, 390, 80), "RETURN TO CAMP", _button)) _director.ReturnToMenu();
+        }
+
+        private void DrawWeaponStatColumn(Rect rect, WeaponInstance weapon)
+        {
+            var item = ItemCatalog.Find(weapon.WeaponId);
+            var title = item != null ? item.ShortName.ToUpperInvariant() : weapon.WeaponId.ToUpperInvariant();
+            var accent = item != null ? item.Color : PresentationTheme.Accent;
+            var labels = new List<string>();
+            var values = new List<string>();
+            labels.Add("DAMAGE");
+            values.Add($"{weapon.Damage:0.0}");
+            labels.Add("INTERVAL");
+            values.Add($"{weapon.Cooldown:0.000}s");
+            labels.Add("RATE");
+            values.Add($"{1f / Mathf.Max(0.01f, weapon.Cooldown):0.00}/s");
+
+            switch (weapon.Behavior)
+            {
+                case WeaponBehaviorKind.ProjectileVolley:
+                    labels.Add("PROJECTILES");
+                    values.Add($"{weapon.Count}");
+                    labels.Add("PIERCE");
+                    values.Add($"{weapon.Pierce}");
+                    labels.Add("CRITICAL");
+                    values.Add($"{weapon.CriticalChance * 100f:0}%");
+                    labels.Add("PROJ SPEED");
+                    values.Add($"{weapon.ProjectileSpeed:0.0}");
+                    labels.Add("LIFETIME");
+                    values.Add($"{weapon.ProjectileDuration:0.0}s");
+                    labels.Add("HIT RADIUS");
+                    values.Add($"{weapon.HitRadius:0.00}/{weapon.CriticalHitRadius:0.00}");
+                    labels.Add("KNOCKBACK");
+                    values.Add($"{weapon.Knockback:0.00}/{weapon.CriticalKnockback:0.00}");
+                    break;
+                case WeaponBehaviorKind.OwnerPulse:
+                    labels.Add("RADIUS");
+                    values.Add($"{weapon.PulseRadius:0.00}");
+                    labels.Add("KNOCKBACK");
+                    values.Add($"{weapon.PulseKnockback:0.00}");
+                    if (weapon.HealAmount > 0f)
+                    {
+                        labels.Add("HEAL PULSE");
+                        values.Add($"{weapon.HealAmount:0.0}");
+                    }
+                    else
+                    {
+                        labels.Add("HEAL / HIT");
+                        values.Add($"{weapon.PulseHealPerHit:0.00}");
+                        labels.Add("HEAL CAP");
+                        values.Add($"{weapon.PulseHealCap:0.0}");
+                    }
+                    break;
+                case WeaponBehaviorKind.RadialBurst:
+                    labels.Add("BURST COUNT");
+                    values.Add($"{weapon.RadialBurstCount}");
+                    labels.Add("RADIUS");
+                    values.Add($"{weapon.RadialRadius:0.00}");
+                    labels.Add("PROJ SPEED");
+                    values.Add($"{weapon.ProjectileSpeed:0.0}");
+                    labels.Add("KNOCKBACK");
+                    values.Add($"{weapon.Knockback:0.00}");
+                    break;
+                case WeaponBehaviorKind.OrbitBlade:
+                    labels.Add("BLADES");
+                    values.Add($"{weapon.Count}");
+                    labels.Add("ORBIT RADIUS");
+                    values.Add($"{weapon.OrbitRadius:0.00}");
+                    labels.Add("ORBIT SPEED");
+                    values.Add($"{weapon.OrbitSpeedDegrees:0.0}°/s");
+                    labels.Add("HIT RADIUS");
+                    values.Add($"{weapon.HitRadius:0.00}");
+                    break;
+            }
+
+            labels.Add("EVOLUTION");
+            if (weapon.IsEvolved && weapon.ExplosionDamageMultiplier > 0f)
+            {
+                values.Add($"{weapon.ExplosionDamageMultiplier * 100f:0}% @ {weapon.ExplosionRadius:0.00}");
+            }
+            else if (weapon.IsEvolved)
+            {
+                values.Add("ACTIVE");
+            }
+            else
+            {
+                values.Add("NONE");
+            }
+
+            DrawStatColumn(rect, title, labels.ToArray(), values.ToArray(), accent);
+        }
+
+        private static string RelicDisplayName(string relicId)
+        {
+            switch (relicId)
+            {
+                case "relic.jotunn_echo_warden": return "Jotunn Echo Warden";
+                case "relic.jotunn_echo": return "Jotunn Echo";
+                default:
+                    if (string.IsNullOrEmpty(relicId))
+                    {
+                        return string.Empty;
+                    }
+
+                    return relicId.Replace("relic.", string.Empty).Replace('_', ' ');
+            }
         }
 
         private void DrawStatColumn(Rect rect, string title, string[] labels, string[] values, Color accent)
