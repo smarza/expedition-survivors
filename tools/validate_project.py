@@ -117,7 +117,7 @@ def main() -> int:
         "Music/RewardVerse", "Music/SagaResult",
     ] + [f"SFX/{cue}" for cue in (
         "Navigate", "Confirm", "Back", "AxeThrow", "ProjectileTrail", "Impact",
-        "EnemyDefeated", "ExperiencePickup", "RavenGuard", "Ultimate", "LevelUp",
+        "EnemyDefeated", "ExperiencePickup", "RavenGuard", "Ultimate", "BossSpawn", "LevelUp",
         "PlayerDowned", "PlayerRevived", "Victory", "Defeat",
     )]
     missing_audio = [name for name in expected_audio
