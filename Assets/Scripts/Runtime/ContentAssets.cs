@@ -45,7 +45,7 @@ namespace ProjectExpedition
         public Color groundColor = new Color(0.075f, 0.13f, 0.16f);
         public int weaponSlots = 4;
         public int gearSlots = 4;
-        public int requiredKillObjective = 80;
+        public int requiredKillObjective = 120;
         public int optionalShardObjective = 5;
         public float extractionDuration = 15f;
         public float extractionBeaconX;

@@ -481,7 +481,7 @@ def main() -> int:
     if not scout_route:
         fail("frostbound.scout is missing required expedition route fields")
     kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y = scout_route.groups()
-    if (kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y) != ("80", "5", "15", "0", "14"):
+    if (kill_objective, shard_objective, extraction_duration, beacon_x, beacon_y) != ("120", "5", "15", "0", "14"):
         fail("frostbound.scout route objectives or extraction beacon do not match the 0.10.0 contract")
 
     foundation_meta = (ROOT / "Assets/Scripts/Runtime/ProductionContentDatabase.cs.meta").read_text(encoding="utf-8")

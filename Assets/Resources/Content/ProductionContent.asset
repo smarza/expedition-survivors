@@ -95,7 +95,7 @@ MonoBehaviour:
     groundColor: {r: 0.075, g: 0.13, b: 0.16, a: 1}
     weaponSlots: 4
     gearSlots: 4
-    requiredKillObjective: 80
+    requiredKillObjective: 120
     optionalShardObjective: 5
     extractionDuration: 15
     extractionBeaconX: 0
@@ -113,7 +113,7 @@ MonoBehaviour:
     groundColor: {r: 0.055, g: 0.105, b: 0.145, a: 1}
     weaponSlots: 6
     gearSlots: 6
-    requiredKillObjective: 120
+    requiredKillObjective: 180
     optionalShardObjective: 5
     extractionDuration: 15
     extractionBeaconX: 0
