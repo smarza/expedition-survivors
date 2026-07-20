@@ -14,6 +14,32 @@ namespace ProjectExpedition
         private const float MovementDeadzone = 0.2f;
         private static readonly int[] AssignedDeviceIds = { -1, -1 };
         private static int _sessionPlayerCount = 1;
+        private static BindingAction? _pendingBinding;
+        private static InputPromptDevice _currentPromptDevice = InputPromptDevice.Keyboard;
+
+        public static bool IsRebinding => _pendingBinding.HasValue;
+        public static BindingAction PendingBinding => _pendingBinding ?? BindingAction.MoveUp;
+        public static InputPromptDevice CurrentPromptDevice => _currentPromptDevice;
+
+        public static void BeginRebind(BindingAction action) => _pendingBinding = action;
+
+        public static void CancelRebind() => _pendingBinding = null;
+
+        public static bool PollRebind()
+        {
+            if (!_pendingBinding.HasValue || Keyboard.current == null) return false;
+            var keys = Keyboard.current.allKeys;
+            for (var i = 0; i < keys.Count; i++)
+            {
+                if (!keys[i].wasPressedThisFrame || keys[i].keyCode == Key.None) continue;
+                PresentationPreferences.Data.Keyboard.Set(_pendingBinding.Value, keys[i].keyCode);
+                PresentationPreferences.Save();
+                _pendingBinding = null;
+                _currentPromptDevice = InputPromptDevice.Keyboard;
+                return true;
+            }
+            return false;
+        }
 
         public static void BeginSession(int playerCount)
         {
@@ -31,14 +57,24 @@ namespace ProjectExpedition
             if (playerCount <= 1)
             {
                 var gamepadMove = StrongestGamepadMovement();
-                if (gamepadMove.sqrMagnitude > move.sqrMagnitude) move = gamepadMove;
+                if (gamepadMove.sqrMagnitude > move.sqrMagnitude)
+                {
+                    move = gamepadMove;
+                    MarkGamepad(MostRecentlyActiveGamepad());
+                }
             }
             else
             {
                 RefreshAssignments(playerCount);
                 var gamepad = AssignedGamepad(playerIndex);
-                if (gamepad != null) move += ApplyMovementDeadzone(gamepad.leftStick.ReadValue());
+                if (gamepad != null)
+                {
+                    var gamepadMove = ApplyMovementDeadzone(gamepad.leftStick.ReadValue());
+                    if (gamepadMove.sqrMagnitude > 0f) MarkGamepad(gamepad);
+                    move += gamepadMove;
+                }
             }
+            if (move.sqrMagnitude > 0f && ReadKeyboard(playerIndex, playerCount).sqrMagnitude > 0f) MarkKeyboard();
             return Vector2.ClampMagnitude(move, 1f);
         }
 
@@ -47,9 +83,9 @@ namespace ProjectExpedition
             EnsureSession(playerCount);
             var keyboard = Keyboard.current;
             var keyboardPressed = keyboard != null && (playerIndex == 0
-                ? keyboard.spaceKey.wasPressedThisFrame
+                ? KeyPressed(PresentationPreferences.Data.Keyboard.Ultimate)
                 : keyboard.enterKey.wasPressedThisFrame || keyboard.rightCtrlKey.wasPressedThisFrame);
-            if (keyboardPressed) return true;
+            if (keyboardPressed) { MarkKeyboard(); return true; }
             if (playerCount <= 1) return AnyGamepadUltimatePressed();
             RefreshAssignments(playerCount);
             return GamepadUltimatePressed(AssignedGamepad(playerIndex));
@@ -59,17 +95,17 @@ namespace ProjectExpedition
 
         public static bool PausePressed()
         {
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return true;
+            if (KeyPressed(PresentationPreferences.Data.Keyboard.Pause)) { MarkKeyboard(); return true; }
             for (var i = 0; i < Gamepad.all.Count; i++)
-                if (Gamepad.all[i].startButton.wasPressedThisFrame) return true;
+                if (Gamepad.all[i].startButton.wasPressedThisFrame) { MarkGamepad(Gamepad.all[i]); return true; }
             return false;
         }
 
         public static bool DetailsPressed()
         {
-            if (Keyboard.current != null && Keyboard.current.tabKey.wasPressedThisFrame) return true;
+            if (KeyPressed(PresentationPreferences.Data.Keyboard.BuildDetails)) { MarkKeyboard(); return true; }
             for (var i = 0; i < Gamepad.all.Count; i++)
-                if (Gamepad.all[i].selectButton.wasPressedThisFrame) return true;
+                if (Gamepad.all[i].selectButton.wasPressedThisFrame) { MarkGamepad(Gamepad.all[i]); return true; }
             return false;
         }
 
@@ -92,8 +128,8 @@ namespace ProjectExpedition
             {
                 if (playerIndex == 0)
                 {
-                    if (keyboard.aKey.wasPressedThisFrame || playerCount == 1 && keyboard.leftArrowKey.wasPressedThisFrame) return -1;
-                    if (keyboard.dKey.wasPressedThisFrame || playerCount == 1 && keyboard.rightArrowKey.wasPressedThisFrame) return 1;
+                    if (KeyPressed(PresentationPreferences.Data.Keyboard.MoveLeft) || playerCount == 1 && keyboard.leftArrowKey.wasPressedThisFrame) { MarkKeyboard(); return -1; }
+                    if (KeyPressed(PresentationPreferences.Data.Keyboard.MoveRight) || playerCount == 1 && keyboard.rightArrowKey.wasPressedThisFrame) { MarkKeyboard(); return 1; }
                 }
                 else
                 {
@@ -113,8 +149,8 @@ namespace ProjectExpedition
             {
                 if (playerIndex == 0)
                 {
-                    if (keyboard.wKey.wasPressedThisFrame || playerCount == 1 && keyboard.upArrowKey.wasPressedThisFrame) return -1;
-                    if (keyboard.sKey.wasPressedThisFrame || playerCount == 1 && keyboard.downArrowKey.wasPressedThisFrame) return 1;
+                    if (KeyPressed(PresentationPreferences.Data.Keyboard.MoveUp) || playerCount == 1 && keyboard.upArrowKey.wasPressedThisFrame) { MarkKeyboard(); return -1; }
+                    if (KeyPressed(PresentationPreferences.Data.Keyboard.MoveDown) || playerCount == 1 && keyboard.downArrowKey.wasPressedThisFrame) { MarkKeyboard(); return 1; }
                 }
                 else
                 {
@@ -132,13 +168,15 @@ namespace ProjectExpedition
             var keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                if (playerIndex == 0 && (keyboard.spaceKey.wasPressedThisFrame || playerCount == 1 && keyboard.enterKey.wasPressedThisFrame)) return true;
+                if (playerIndex == 0 && (KeyPressed(PresentationPreferences.Data.Keyboard.Submit) || playerCount == 1 && keyboard.enterKey.wasPressedThisFrame)) { MarkKeyboard(); return true; }
                 if (playerIndex == 1 && (keyboard.enterKey.wasPressedThisFrame || keyboard.rightCtrlKey.wasPressedThisFrame)) return true;
             }
             if (playerCount <= 1) return AnyGamepadSubmitPressed();
             RefreshAssignments(playerCount);
             var gamepad = AssignedGamepad(playerIndex);
-            return gamepad != null && gamepad.buttonSouth.wasPressedThisFrame;
+            if (gamepad == null || !gamepad.buttonSouth.wasPressedThisFrame) return false;
+            MarkGamepad(gamepad);
+            return true;
         }
 
         public static int AnyMenuHorizontalPressed()
@@ -146,8 +184,8 @@ namespace ProjectExpedition
             var keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                if (keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame) return -1;
-                if (keyboard.rightArrowKey.wasPressedThisFrame || keyboard.dKey.wasPressedThisFrame) return 1;
+                if (keyboard.leftArrowKey.wasPressedThisFrame || KeyPressed(PresentationPreferences.Data.Keyboard.MoveLeft)) { MarkKeyboard(); return -1; }
+                if (keyboard.rightArrowKey.wasPressedThisFrame || KeyPressed(PresentationPreferences.Data.Keyboard.MoveRight)) { MarkKeyboard(); return 1; }
             }
             for (var i = 0; i < Gamepad.all.Count; i++)
             {
@@ -162,8 +200,8 @@ namespace ProjectExpedition
             var keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                if (keyboard.upArrowKey.wasPressedThisFrame || keyboard.wKey.wasPressedThisFrame) return -1;
-                if (keyboard.downArrowKey.wasPressedThisFrame || keyboard.sKey.wasPressedThisFrame) return 1;
+                if (keyboard.upArrowKey.wasPressedThisFrame || KeyPressed(PresentationPreferences.Data.Keyboard.MoveUp)) { MarkKeyboard(); return -1; }
+                if (keyboard.downArrowKey.wasPressedThisFrame || KeyPressed(PresentationPreferences.Data.Keyboard.MoveDown)) { MarkKeyboard(); return 1; }
             }
             for (var i = 0; i < Gamepad.all.Count; i++)
             {
@@ -176,15 +214,15 @@ namespace ProjectExpedition
         public static bool AnyMenuSubmitPressed()
         {
             var keyboard = Keyboard.current;
-            if (keyboard != null && (keyboard.enterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame)) return true;
+            if (keyboard != null && (keyboard.enterKey.wasPressedThisFrame || KeyPressed(PresentationPreferences.Data.Keyboard.Submit))) { MarkKeyboard(); return true; }
             return AnyGamepadSubmitPressed();
         }
 
         public static bool MenuBackPressed()
         {
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return true;
+            if (KeyPressed(PresentationPreferences.Data.Keyboard.Back)) { MarkKeyboard(); return true; }
             for (var i = 0; i < Gamepad.all.Count; i++)
-                if (Gamepad.all[i].buttonEast.wasPressedThisFrame) return true;
+                if (Gamepad.all[i].buttonEast.wasPressedThisFrame) { MarkGamepad(Gamepad.all[i]); return true; }
             return false;
         }
 
@@ -200,10 +238,10 @@ namespace ProjectExpedition
             }
             var gamepad = playerCount <= 1 ? MostRecentlyActiveGamepad() : AssignedForMenu(playerIndex, playerCount);
             if (gamepad == null) return -1;
-            if (gamepad.buttonWest.wasPressedThisFrame) return 0;
-            if (gamepad.buttonNorth.wasPressedThisFrame) return 1;
-            if (gamepad.buttonEast.wasPressedThisFrame) return 2;
-            if (gamepad.rightShoulder.wasPressedThisFrame) return 3;
+            if (gamepad.buttonWest.wasPressedThisFrame) { MarkGamepad(gamepad); return 0; }
+            if (gamepad.buttonNorth.wasPressedThisFrame) { MarkGamepad(gamepad); return 1; }
+            if (gamepad.buttonEast.wasPressedThisFrame) { MarkGamepad(gamepad); return 2; }
+            if (gamepad.rightShoulder.wasPressedThisFrame) { MarkGamepad(gamepad); return 3; }
             return -1;
         }
 
@@ -296,10 +334,10 @@ namespace ProjectExpedition
             var move = Vector2.zero;
             if (playerIndex == 0)
             {
-                if (keyboard.aKey.isPressed) move.x--;
-                if (keyboard.dKey.isPressed) move.x++;
-                if (keyboard.sKey.isPressed) move.y--;
-                if (keyboard.wKey.isPressed) move.y++;
+                if (KeyDown(PresentationPreferences.Data.Keyboard.MoveLeft)) move.x--;
+                if (KeyDown(PresentationPreferences.Data.Keyboard.MoveRight)) move.x++;
+                if (KeyDown(PresentationPreferences.Data.Keyboard.MoveDown)) move.y--;
+                if (KeyDown(PresentationPreferences.Data.Keyboard.MoveUp)) move.y++;
                 if (playerCount <= 1)
                 {
                     if (keyboard.leftArrowKey.isPressed) move.x--;
@@ -352,30 +390,45 @@ namespace ProjectExpedition
             return false;
         }
 
-        private static bool GamepadUltimatePressed(Gamepad gamepad) =>
-            gamepad != null && (gamepad.rightShoulder.wasPressedThisFrame || gamepad.rightTrigger.wasPressedThisFrame);
+        private static bool GamepadUltimatePressed(Gamepad gamepad)
+        {
+            if (gamepad == null || (!gamepad.rightShoulder.wasPressedThisFrame &&
+                                    !gamepad.rightTrigger.wasPressedThisFrame)) return false;
+            MarkGamepad(gamepad);
+            return true;
+        }
 
         private static bool AnyGamepadSubmitPressed()
         {
             for (var i = 0; i < Gamepad.all.Count; i++)
-                if (Gamepad.all[i].buttonSouth.wasPressedThisFrame) return true;
+                if (Gamepad.all[i].buttonSouth.wasPressedThisFrame) { MarkGamepad(Gamepad.all[i]); return true; }
             return false;
         }
 
         private static int HorizontalFrom(Gamepad gamepad)
         {
             if (gamepad == null) return 0;
-            if (gamepad.dpad.left.wasPressedThisFrame || gamepad.leftStick.left.wasPressedThisFrame) return -1;
-            if (gamepad.dpad.right.wasPressedThisFrame || gamepad.leftStick.right.wasPressedThisFrame) return 1;
+            if (gamepad.dpad.left.wasPressedThisFrame || gamepad.leftStick.left.wasPressedThisFrame) { MarkGamepad(gamepad); return -1; }
+            if (gamepad.dpad.right.wasPressedThisFrame || gamepad.leftStick.right.wasPressedThisFrame) { MarkGamepad(gamepad); return 1; }
             return 0;
         }
 
         private static int VerticalFrom(Gamepad gamepad)
         {
             if (gamepad == null) return 0;
-            if (gamepad.dpad.up.wasPressedThisFrame || gamepad.leftStick.up.wasPressedThisFrame) return -1;
-            if (gamepad.dpad.down.wasPressedThisFrame || gamepad.leftStick.down.wasPressedThisFrame) return 1;
+            if (gamepad.dpad.up.wasPressedThisFrame || gamepad.leftStick.up.wasPressedThisFrame) { MarkGamepad(gamepad); return -1; }
+            if (gamepad.dpad.down.wasPressedThisFrame || gamepad.leftStick.down.wasPressedThisFrame) { MarkGamepad(gamepad); return 1; }
             return 0;
         }
+
+        private static bool KeyPressed(Key key) =>
+            Keyboard.current != null && key != Key.None && Keyboard.current[key].wasPressedThisFrame;
+
+        private static bool KeyDown(Key key) =>
+            Keyboard.current != null && key != Key.None && Keyboard.current[key].isPressed;
+
+        private static void MarkKeyboard() => _currentPromptDevice = InputPromptDevice.Keyboard;
+
+        private static void MarkGamepad(Gamepad gamepad) => _currentPromptDevice = InputGlyphs.Detect(gamepad);
     }
 }

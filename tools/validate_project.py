@@ -70,6 +70,9 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedEffectModel.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
+        ROOT / "Assets/Scripts/Runtime/PresentationSettings.cs",
+        ROOT / "Assets/Scripts/Runtime/PresentationServices.cs",
+        ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs",
         ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef",
         ROOT / "Assets/Tests/EditMode/DeterministicFoundationTests.cs",
         ROOT / "Assets/Tests/EditMode/BuildAndRewardTests.cs",
@@ -79,6 +82,7 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SharedEnemyModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedSpawnModelTests.cs",
         ROOT / "Assets/Tests/EditMode/SharedEffectModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/PresentationFoundationTests.cs",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -92,6 +96,8 @@ def main() -> int:
         ROOT / "docs/PROJECT_MASTER_PLAN.md",
         ROOT / "docs/TESTING_0.8.md",
         ROOT / "docs/CONTINUOUS_INTEGRATION.md",
+        ROOT / "docs/PRESENTATION_FOUNDATION_0.9.md",
+        ROOT / "docs/TESTING_0.9.md",
         ROOT / ".github/workflows/unity-ci.yml",
         ROOT / "Packages/manifest.json",
         ROOT / "ProjectSettings/ProjectSettings.asset",
@@ -100,6 +106,29 @@ def main() -> int:
     missing = [str(path.relative_to(ROOT)) for path in required if not path.is_file()]
     if missing:
         fail("missing required files: " + ", ".join(missing))
+
+    expected_audio = [
+        "Music/RavenboundTheme", "Music/FrostboundExpedition", "Music/JotunnOmen",
+        "Music/RewardVerse", "Music/SagaResult",
+    ] + [f"SFX/{cue}" for cue in (
+        "Navigate", "Confirm", "Back", "AxeThrow", "ProjectileTrail", "Impact",
+        "EnemyDefeated", "ExperiencePickup", "RavenGuard", "Ultimate", "LevelUp",
+        "PlayerDowned", "PlayerRevived", "Victory", "Defeat",
+    )]
+    missing_audio = [name for name in expected_audio
+                     if not (ROOT / "Assets/Resources/Audio" / f"{name}.wav").is_file()
+                     or not (ROOT / "Assets/Resources/Audio" / f"{name}.wav.meta").is_file()]
+    if missing_audio:
+        fail("missing imported presentation audio: " + ", ".join(missing_audio))
+    audio_metas = [ROOT / "Assets/Resources/Audio.meta", *
+                   sorted((ROOT / "Assets/Resources/Audio").rglob("*.meta"))]
+    malformed_audio_metas = []
+    for meta in audio_metas:
+        source = meta.read_text(encoding="utf-8")
+        if "\\n" in source or not re.search(r"^guid: [a-f0-9]{32}$", source, re.MULTILINE):
+            malformed_audio_metas.append(str(meta.relative_to(ROOT)))
+    if malformed_audio_metas:
+        fail("malformed presentation audio metadata: " + ", ".join(malformed_audio_metas))
 
     manifest = json.loads((ROOT / "Packages/manifest.json").read_text(encoding="utf-8"))
     if "dependencies" not in manifest:
@@ -131,8 +160,15 @@ def main() -> int:
     project_settings = (ROOT / "ProjectSettings/ProjectSettings.asset").read_text(encoding="utf-8")
     if "activeInputHandler: 1" not in project_settings and "activeInputHandler: 2" not in project_settings:
         fail("Project Settings must enable the Unity Input System")
-    if "m_BuildTarget: Standalone" not in project_settings or "m_DynamicBatching: 0" not in project_settings:
-        fail("Dynamic Batching is deprecated in Unity 6000.5 and must be disabled for Standalone")
+    for build_target in ("Standalone", "WebGL"):
+        batching_pattern = (
+            rf"- m_BuildTarget: {build_target}\s*\n\s+m_StaticBatching: \d+\s*\n\s+m_DynamicBatching: 0"
+        )
+        if not re.search(batching_pattern, project_settings):
+            fail(
+                "Dynamic Batching is deprecated in Unity 6000.5 and must be disabled for "
+                f"{build_target}"
+            )
     if "webGLDecompressionFallback: 1" not in project_settings:
         fail("Web decompression fallback is required for static GitHub Pages hosting")
 
@@ -167,9 +203,9 @@ def main() -> int:
     edit_assembly = json.loads((ROOT / "Assets/Tests/EditMode/ProjectExpedition.EditModeTests.asmdef").read_text(encoding="utf-8"))
     edit_references = set(edit_assembly.get("references", []))
     if "Editor" not in edit_assembly.get("includePlatforms", []) or not {
-        "ProjectExpedition.Runtime", "ProjectExpedition.TestSupport"
+        "ProjectExpedition.Runtime", "ProjectExpedition.TestSupport", "Unity.InputSystem"
     }.issubset(edit_references):
-        fail("EditMode test assembly must be Editor-only and reference runtime plus player-compatible test support")
+        fail("EditMode test assembly must be Editor-only and reference runtime, Input System and player-compatible test support")
 
     support_assembly = json.loads((ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef").read_text(encoding="utf-8"))
     if support_assembly.get("includePlatforms") or "ProjectExpedition.Runtime" not in support_assembly.get("references", []):
@@ -211,7 +247,14 @@ def main() -> int:
                               "AxeVolley_ProducesSharedProjectileEffectsAndDirections",
                               "RavenGuard_ProducesSharedAreaEffectAndBoundedHealing",
                               "EffectPipeline_AppliesPlayerWeaponAndEvolutionState",
-                              "UltimateAndEvolutionExplosion_UseSharedAreaRequests")
+                              "UltimateAndEvolutionExplosion_UseSharedAreaRequests",
+                              "Preferences_RoundTripAccessibilityAudioAndBindings",
+                              "Preferences_ClampUnsafePresentationValues",
+                              "Layout_PreservesReferenceAspectInsideDesktopAndSteamDeckSafeAreas",
+                              "Glyphs_ExposeKeyboardAndControllerSpecificPrompts",
+                              "AudioMix_UsesMasterBusAndProtectsImportantVoices",
+                              "MusicRouting_FollowsMenuRunBossRewardAndResultStates",
+                              "PresentationAudioAssets_AreImportedForEveryMusicStateAndCue")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -221,7 +264,9 @@ def main() -> int:
                               "RunOutcome_TransitionsOnceWithoutTouchingDisk",
                               "PlayerController_ProjectsSharedPlayerStateAndUpgrades",
                               "EnemyAdapter_ProjectsSharedEnemyStateAndDamage", "RunSimulationPhase.Reward",
-                              "RunSimulationPhase.Completed")
+                              "RunSimulationPhase.Completed",
+                              "PresentationFoundation_InitializesAndFollowsRunState",
+                              "PresentationVfx_ReusesPoolAndSettingsReturnToTheirOwnerState")
     if any(requirement not in play_tests for requirement in play_test_requirements):
         fail("PlayMode expedition flow coverage is incomplete")
 
@@ -288,8 +333,8 @@ def main() -> int:
     online_runtime = ROOT / "Assets/Scripts/Runtime/OnlineCoopSpike.cs"
     if online_runtime.exists() or "OnlineSpike" in game_types_source or "ONLINE CO-OP" in hud_source:
         fail("Online Co-op is deferred; its duplicate runtime, state and menu entry must remain outside the active product")
-    if "Wrap(_mainSelection + direction, 2)" not in hud_source:
-        fail("the active main menu must expose exactly Solo and Local Co-op")
+    if "Wrap(_mainSelection + direction, 3)" not in hud_source or '"SETTINGS"' not in hud_source:
+        fail("the active main menu must expose Solo, Local Co-op and presentation settings")
 
     workflow_source = (ROOT / ".github/workflows/unity-ci.yml").read_text(encoding="utf-8")
     workflow_requirements = (
@@ -323,7 +368,7 @@ def main() -> int:
         "targeted co-op rewards": "TargetPlayerIndex" in build_source and "Shared" in build_source,
         "behavioral evolutions": "JotunnCleaver" in build_source and "StormAegis" in build_source,
         "build HUD": "DrawBuildTray" in hud_source and "DrawBuildDetails" in hud_source,
-        "proportional UI canvas": "Mathf.Min(Screen.width / 1920f" in hud_source and "DrawLetterbox" in hud_source,
+        "proportional UI canvas": "PresentationLayout.Calculate" in hud_source and "DrawLetterbox" in hud_source,
         "stable label hover": "SetAllTextColors" in hud_source and "style.hover.textColor = color" in hud_source,
         "opaque modal hierarchy": "case RunState.LevelUp: DrawLevelUp();" in hud_source and "case RunState.BuildDetails: DrawBuildDetails();" in hud_source,
         "readable item grid": "visibleIndex % 3" in hud_source and "row * 78" in hud_source,
@@ -335,7 +380,7 @@ def main() -> int:
         "fully clickable rewards": "GUI.Button(rect, GUIContent.none, GUIStyle.none)" in hud_source,
         "separated character controls": "var ultimateRect" in hud_source and "rect.y + 592" in hud_source,
         "responsive map titles": "_mapTitle" in hud_source and "rect.y + 190, rect.width - 80, 78" in hud_source,
-        "compact combat hint": "ULTIMATE  SPACE / RT" in hud_source and "PAUSE  ESC / START" in hud_source,
+        "compact combat hint": "Prompt(BindingAction.Ultimate)" in hud_source and "Prompt(BindingAction.Pause)" in hud_source,
         "aligned local statistics": "DrawStatColumn" in hud_source and "_statValue" in hud_source,
         "safe result summary": "var summary = new Rect" in hud_source and "_director.SelectedMap.Name.ToUpperInvariant()" in hud_source,
         "component pooling": "class ComponentPool" in (ROOT / "Assets/Scripts/Runtime/ProductionFoundation.cs").read_text(encoding="utf-8") and "ReleasePooledSimulation" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
@@ -351,6 +396,13 @@ def main() -> int:
         "visible replay confirmation": "REPLAYING SEED" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "runtime foundation checks": "ProductionFoundationChecks.Run" in (ROOT / "Assets/Scripts/Runtime/GameDirector.cs").read_text(encoding="utf-8"),
         "performance metrics": "DrawPerformancePanel" in hud_source and "MetricsPressed" in input_source,
+        "presentation preferences": "PresentationPreferences.Data" in hud_source and "PresentationPreferences.Save" in input_source,
+        "keyboard rebinding": "PollRebind" in input_source and "RebindableActions" in hud_source,
+        "active device glyphs": "InputGlyphs.Prompt" in hud_source and "CurrentPromptDevice" in input_source,
+        "imported audio buses and priorities": "class PresentationAudioMixer" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "PresentationMix.Priority" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "Resources.Load<AudioClip>" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "AudioClip.Create" not in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
+        "pooled presentation effects": "class PresentationVfxPool" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "ComponentPool<PresentationBurst>" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
+        "hero presentation": "class HeroPresentation" in (ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs").read_text(encoding="utf-8") and "BuildHaldorSilhouette" in (ROOT / "Assets/Scripts/Runtime/HeroPresentation.cs").read_text(encoding="utf-8"),
+        "deterministic ambience": "class FrostboundAmbience" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8") and "Hash01" in (ROOT / "Assets/Scripts/Runtime/PresentationServices.cs").read_text(encoding="utf-8"),
     }
     incomplete = [name for name, passed in production_requirements.items() if not passed]
     if incomplete:

@@ -28,6 +28,7 @@ namespace ProjectExpedition
         private SpriteRenderer _body;
         private readonly SharedPlayerModel _model = new SharedPlayerModel();
         private Color _heroColor;
+        private HeroPresentation _presentation;
 
         public void Initialize(GameDirector director, int playerIndex)
         {
@@ -78,6 +79,9 @@ namespace ProjectExpedition
             markerRenderer.color = playerIndex == 0 ? new Color(0.35f, 0.92f, 1f) : new Color(1f, 0.63f, 0.24f);
             markerRenderer.sortingOrder = 13;
 
+            _presentation = gameObject.AddComponent<HeroPresentation>();
+            _presentation.Initialize(_body, runeRenderer, _heroColor, Definition, PlayerIndex);
+
             Weapons = new WeaponSystem(director, this);
             if (Definition.Id == "ravenbound.haldor") Weapons.ApplyMastery(SaveService.Data.HaldorMastery);
         }
@@ -91,11 +95,11 @@ namespace ProjectExpedition
                 return;
             }
             _model.Advance(Time.deltaTime);
-            _body.color = _model.InvulnerabilityRemaining > 0f ? Color.white : _heroColor;
 
             var move = LocalInputRouter.ReadMovement(PlayerIndex, _director.Players.Count);
             var nextPosition = _model.CalculateRequestedPosition((Vector2)transform.position, move, Time.deltaTime);
             transform.position = _director.ConstrainToCoopRange(this, nextPosition);
+            _presentation.Tick(move, _model.InvulnerabilityRemaining > 0f, false, Time.deltaTime);
 
             if (LocalInputRouter.UltimatePressed(PlayerIndex, _director.Players.Count)) ActivateUltimate();
             Weapons.Tick(Time.deltaTime);
@@ -104,6 +108,7 @@ namespace ProjectExpedition
         private void ActivateUltimate()
         {
             if (Definition == null || !_model.TryActivateUltimate()) return;
+            _presentation.ShowUltimate();
             var effect = SharedEffectPipeline.CreateUltimate(_model);
             _director.ResolveAreaEffect(transform.position, effect);
             _director.ShowUltimate(transform.position, PlayerIndex, effect.Radius);
@@ -112,6 +117,7 @@ namespace ProjectExpedition
 
         private void UpdateRevival()
         {
+            _presentation.Tick(Vector2.zero, false, true, Time.deltaTime);
             var rescuerNearby = false;
             for (var i = 0; i < _director.Players.Count; i++)
             {
@@ -125,18 +131,23 @@ namespace ProjectExpedition
             }
             if (_model.AdvanceRevival(rescuerNearby, Time.deltaTime))
             {
-                _body.color = Color.white;
+                _presentation.ShowHit();
                 _director.OnPlayerRevived(this);
                 return;
             }
-            _body.color = Color.Lerp(new Color(0.12f, 0.15f, 0.17f), _heroColor, ReviveProgress * 0.65f);
         }
 
         public void TakeDamage(float rawDamage)
         {
-            if (_model.TakeDamage(rawDamage) == PlayerDamageResult.Downed)
+            var result = _model.TakeDamage(rawDamage);
+            if (result == PlayerDamageResult.Ignored) return;
+            _presentation.ShowHit();
+            _director.Present(PresentationCue.Impact, transform.position, _heroColor, 0.55f);
+            if (result == PlayerDamageResult.Downed)
                 _director.OnPlayerDowned(this);
         }
+
+        public void PresentAttack(Vector2 direction) => _presentation?.ShowAttack(direction);
 
         public void Heal(float amount) => _model.Heal(amount);
         public void AddMoveSpeed(float amount) => _model.AddMoveSpeed(amount);

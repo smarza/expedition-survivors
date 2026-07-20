@@ -41,6 +41,8 @@ namespace ProjectExpedition
             if (delta.sqrMagnitude < 0.24f)
             {
                 _director.AddExperience(_value);
+                _director.Present(PresentationCue.ExperiencePickup, transform.position, _renderer.color,
+                    _value >= 10 ? 0.7f : 0.25f);
                 _director.ReleaseExperienceGem(this);
             }
             else if (_age > 40f) _director.ReleaseExperienceGem(this);

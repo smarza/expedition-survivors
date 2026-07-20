@@ -33,6 +33,14 @@ namespace ProjectExpedition
         private int _levelSelection;
         private int _pauseSelection;
         private int _resultSelection;
+        private int _settingsSelection;
+        private int _styleRevision = -1;
+        private static readonly BindingAction[] RebindableActions =
+        {
+            BindingAction.MoveUp, BindingAction.MoveDown, BindingAction.MoveLeft,
+            BindingAction.MoveRight, BindingAction.Ultimate, BindingAction.Submit,
+            BindingAction.Back, BindingAction.Pause, BindingAction.BuildDetails
+        };
 
         public void Initialize(GameDirector director) => _director = director;
 
@@ -53,6 +61,7 @@ namespace ProjectExpedition
                 case RunState.MapSelect: UpdateMapSelect(); break;
                 case RunState.LevelUp: UpdateLevelUp(); break;
                 case RunState.Paused: UpdatePause(); break;
+                case RunState.Settings: UpdateSettings(); break;
                 case RunState.GameOver:
                 case RunState.Victory: UpdateResults(); break;
             }
@@ -61,14 +70,15 @@ namespace ProjectExpedition
         private void UpdateMainMenu()
         {
             var direction = LocalInputRouter.AnyMenuHorizontalPressed();
-            if (direction != 0) _mainSelection = Wrap(_mainSelection + direction, 2);
+            if (direction != 0) { _mainSelection = Wrap(_mainSelection + direction, 3); NavigateCue(); }
             if (LocalInputRouter.AnyMenuSubmitPressed()) ActivateMainSelection();
         }
 
         private void ActivateMainSelection()
         {
             if (_mainSelection == 0) PrepareCharacterSelection(1);
-            else PrepareCharacterSelection(2);
+            else if (_mainSelection == 1) PrepareCharacterSelection(2);
+            else _director.OpenSettings();
         }
 
         private void PrepareCharacterSelection(int playerCount)
@@ -136,10 +146,55 @@ namespace ProjectExpedition
         private void UpdatePause()
         {
             var direction = LocalInputRouter.AnyMenuVerticalPressed();
-            if (direction != 0) _pauseSelection = Wrap(_pauseSelection + direction, 2);
+            if (direction != 0) { _pauseSelection = Wrap(_pauseSelection + direction, 3); NavigateCue(); }
             if (!LocalInputRouter.AnyMenuSubmitPressed()) return;
             if (_pauseSelection == 0) _director.TogglePause();
+            else if (_pauseSelection == 1) _director.OpenSettings();
             else _director.ReturnToMenu();
+        }
+
+        private void UpdateSettings()
+        {
+            if (LocalInputRouter.IsRebinding)
+            {
+                if (LocalInputRouter.PollRebind()) ConfirmCue();
+                return;
+            }
+            if (LocalInputRouter.MenuBackPressed())
+            {
+                _director.CloseSettings();
+                return;
+            }
+            const int itemCount = 18;
+            var vertical = LocalInputRouter.AnyMenuVerticalPressed();
+            if (vertical != 0) { _settingsSelection = Wrap(_settingsSelection + vertical, itemCount); NavigateCue(); }
+            var horizontal = LocalInputRouter.AnyMenuHorizontalPressed();
+            if (horizontal != 0 && _settingsSelection < 7) AdjustSetting(_settingsSelection, horizontal);
+            if (!LocalInputRouter.AnyMenuSubmitPressed()) return;
+            if (_settingsSelection >= 7 && _settingsSelection < 16)
+                LocalInputRouter.BeginRebind(RebindableActions[_settingsSelection - 7]);
+            else if (_settingsSelection == 16)
+            {
+                PresentationPreferences.ResetToDefaults();
+                ConfirmCue();
+            }
+            else if (_settingsSelection == 17) _director.CloseSettings();
+        }
+
+        private static void AdjustSetting(int index, int direction)
+        {
+            var data = PresentationPreferences.Data;
+            switch (index)
+            {
+                case 0: data.UiScale = Mathf.Clamp(data.UiScale + direction * 0.05f, 0.9f, 1.2f); break;
+                case 1: data.HighContrast = !data.HighContrast; break;
+                case 2: data.ReducedFlashes = !data.ReducedFlashes; break;
+                case 3: data.ScreenShake = Mathf.Clamp01(data.ScreenShake + direction * 0.1f); break;
+                case 4: data.MasterVolume = Mathf.Clamp01(data.MasterVolume + direction * 0.1f); break;
+                case 5: data.MusicVolume = Mathf.Clamp01(data.MusicVolume + direction * 0.1f); break;
+                case 6: data.SfxVolume = Mathf.Clamp01(data.SfxVolume + direction * 0.1f); break;
+            }
+            PresentationPreferences.Save();
         }
 
         private void UpdateResults()
@@ -156,13 +211,10 @@ namespace ProjectExpedition
             if (_director == null) return;
             EnsureStyles();
             var oldMatrix = GUI.matrix;
-            var canvasScale = Mathf.Min(Screen.width / 1920f, Screen.height / 1080f);
-            var canvasOffset = new Vector3(
-                (Screen.width - 1920f * canvasScale) * 0.5f,
-                (Screen.height - 1080f * canvasScale) * 0.5f,
-                0f);
-            DrawLetterbox(canvasOffset, canvasScale);
-            GUI.matrix = Matrix4x4.TRS(canvasOffset, Quaternion.identity, new Vector3(canvasScale, canvasScale, 1f));
+            var viewport = PresentationLayout.Calculate(Screen.width, Screen.height, Screen.safeArea);
+            DrawLetterbox(viewport.Offset, viewport.Scale);
+            GUI.matrix = Matrix4x4.TRS(viewport.Offset, Quaternion.identity,
+                new Vector3(viewport.Scale, viewport.Scale, 1f));
 
             switch (_director.State)
             {
@@ -173,6 +225,7 @@ namespace ProjectExpedition
                 case RunState.LevelUp: DrawLevelUp(); break;
                 case RunState.BuildDetails: DrawBuildDetails(); break;
                 case RunState.Paused: DrawPause(); break;
+                case RunState.Settings: DrawSettings(); break;
                 case RunState.GameOver: DrawResults(false); break;
                 case RunState.Victory: DrawResults(true); break;
             }
@@ -191,7 +244,7 @@ namespace ProjectExpedition
         {
             DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.025f, 0.06f, 0.09f, 1f));
             GUI.Label(new Rect(110, 70, 1220, 90), "PROJECT EXPEDITION", _title);
-            GUI.Label(new Rect(115, 156, 1000, 45), "THE FROSTBOUND SHORE — PRODUCTION CORE", _small);
+            GUI.Label(new Rect(115, 156, 1000, 45), "THE FROSTBOUND SHORE — PRESENTATION FOUNDATION", _small);
 
             DrawPanel(new Rect(110, 235, 520, 600), new Color(0.07f, 0.13f, 0.17f, 1f));
             GUI.DrawTexture(new Rect(140, 265, 460, 460), RuntimeAssets.Portrait, ScaleMode.ScaleToFit);
@@ -208,9 +261,11 @@ namespace ProjectExpedition
             GUI.Label(new Rect(735, 712, 950, 35),
                 $"Mastery {SaveService.Data.HaldorMastery}   •   Renown {SaveService.Data.TotalRenown}   •   Best {SaveService.Data.BestKills} kills", _small);
 
-            DrawSelectableButton(new Rect(720, 865, 500, 90), "SOLO", 0, ref _mainSelection, PrepareSolo);
-            DrawSelectableButton(new Rect(1260, 865, 500, 90), "LOCAL CO-OP", 1, ref _mainSelection, PrepareLocal);
-            GUI.Label(new Rect(680, 965, 1120, 55), "KEYBOARD OR GAMEPAD   •   D-PAD/STICK NAVIGATES   •   A CONFIRMS   •   B RETURNS", _small);
+            DrawSelectableButton(new Rect(680, 865, 330, 90), "SOLO", 0, ref _mainSelection, PrepareSolo);
+            DrawSelectableButton(new Rect(1045, 865, 330, 90), "LOCAL CO-OP", 1, ref _mainSelection, PrepareLocal);
+            DrawSelectableButton(new Rect(1410, 865, 330, 90), "SETTINGS", 2, ref _mainSelection, _director.OpenSettings);
+            GUI.Label(new Rect(680, 965, 1120, 55),
+                $"{Prompt(BindingAction.MoveLeft)} {Prompt(BindingAction.MoveRight)} NAVIGATE   •   {Prompt(BindingAction.Submit)} CONFIRM", _small);
         }
 
         private void PrepareSolo() => PrepareCharacterSelection(1);
@@ -250,11 +305,11 @@ namespace ProjectExpedition
                     $"ULTIMATE — {definition.UltimateName}: {definition.UltimateDescription}", _body);
                 GUI.Label(new Rect(rect.x + 35, rect.y + 592, rect.width - 70, 42), _characterReady[player]
                     ? $"P{player + 1} READY"
-                    : $"P{player + 1}  •  ◀ ▶ CHOOSE  •  A / SPACE CONFIRM  •  {LocalInputRouter.AssignmentLabel(player, count)}", _micro);
+                    : $"P{player + 1}  •  ◀ ▶ CHOOSE  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(player, count)}", _micro);
                 if (!_characterReady[player] && GUI.Button(new Rect(rect.x + 220, rect.y + 646, 320, 58), "READY", _button))
                     _characterReady[player] = true;
             }
-            GUI.Label(new Rect(610, 955, 700, 40), "B / ESC — BACK", _small);
+            GUI.Label(new Rect(610, 955, 700, 40), $"{Prompt(BindingAction.Back)} — BACK", _small);
         }
 
         private void DrawMapSelect()
@@ -279,8 +334,8 @@ namespace ProjectExpedition
                     else _mapSelection = i;
                 }
             }
-            GUI.Label(new Rect(590, 860, 740, 55), "P1 / HOST: ◀ ▶ SELECT   •   A / SPACE CONFIRM", _center);
-            GUI.Label(new Rect(610, 930, 700, 40), "B / ESC — BACK", _small);
+            GUI.Label(new Rect(590, 860, 740, 55), $"P1: ◀ ▶ SELECT   •   {Prompt(BindingAction.Submit)} CONFIRM", _center);
+            GUI.Label(new Rect(610, 930, 700, 40), $"{Prompt(BindingAction.Back)} — BACK", _small);
         }
 
         private void DrawRunHud()
@@ -318,7 +373,8 @@ namespace ProjectExpedition
 
             DrawPanel(new Rect(1245, 26, 645, 100), new Color(0.025f, 0.055f, 0.075f, 0.9f));
             GUI.Label(new Rect(1270, 42, 590, 32), $"KILLS  {_director.Kills}     RENOWN  {_director.RunRenown}     ENEMIES  {_director.Enemies.Count}", _body);
-            GUI.Label(new Rect(1270, 79, 590, 28), "ULTIMATE  SPACE / RT   •   PAUSE  ESC / START", _micro);
+            GUI.Label(new Rect(1270, 79, 590, 28),
+                $"ULTIMATE {Prompt(BindingAction.Ultimate)}   •   PAUSE {Prompt(BindingAction.Pause)}", _micro);
             DrawBuildTray();
             if (_director.ShowPerformanceMetrics) DrawPerformancePanel();
         }
@@ -356,7 +412,8 @@ namespace ProjectExpedition
                     _director.ChooseReward(i);
                 if (GUI.Button(rect, GUIContent.none, GUIStyle.none)) _director.ChooseReward(i);
             }
-            GUI.Label(new Rect(420, 790, 1080, 55), "CLICK A CARD   •   D-PAD / STICK TO CHOOSE   •   A TO CONFIRM   •   1–4 OR X/Y/B/RB", _small);
+            GUI.Label(new Rect(420, 790, 1080, 55),
+                $"CLICK A CARD   •   {Prompt(BindingAction.MoveLeft)} CHOOSE   •   {Prompt(BindingAction.Submit)} CONFIRM   •   1–4 / FACE BUTTONS", _small);
         }
 
         private void DrawBuildTray()
@@ -389,7 +446,8 @@ namespace ProjectExpedition
                 GUI.Label(new Rect(145, y + 54, 485, 24),
                     $"WEAPONS {player.Build.CountCategory(ItemCategory.Weapon)}/{player.Build.WeaponSlots}   •   GEAR {player.Build.CountCategory(ItemCategory.Gear)}/{player.Build.GearSlots}", _small);
             }
-            GUI.Label(new Rect(45, panelY + height - 29, 595, 24), "TAB / GAMEPAD VIEW — BUILD DETAILS", _micro);
+            GUI.Label(new Rect(45, panelY + height - 29, 595, 24),
+                $"{Prompt(BindingAction.BuildDetails)} — BUILD DETAILS", _micro);
         }
 
         private void DrawBuildDetails()
@@ -449,7 +507,8 @@ namespace ProjectExpedition
                     visibleIndex++;
                 }
             }
-            GUI.Label(new Rect(560, 990, 800, 42), "TAB / GAMEPAD VIEW — RETURN TO EXPEDITION", _center);
+            GUI.Label(new Rect(560, 990, 800, 42),
+                $"{Prompt(BindingAction.BuildDetails)} — RETURN TO EXPEDITION", _center);
         }
 
         private string RewardTargetLabel(RewardOption option)
@@ -526,12 +585,87 @@ namespace ProjectExpedition
         private void DrawPause()
         {
             DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.01f, 0.025f, 0.04f, 0.78f));
-            DrawPanel(new Rect(630, 315, 660, 430), new Color(0.055f, 0.105f, 0.14f, 1f));
-            GUI.Label(new Rect(700, 365, 520, 70), "EXPEDITION PAUSED", _heading);
-            DrawSelection(new Rect(710, 475, 500, 95), _pauseSelection == 0);
-            if (GUI.Button(new Rect(720, 485, 480, 75), "CONTINUE", _button)) _director.TogglePause();
-            DrawSelection(new Rect(710, 580, 500, 95), _pauseSelection == 1);
-            if (GUI.Button(new Rect(720, 590, 480, 75), "RETURN TO CAMP", _button)) _director.ReturnToMenu();
+            DrawPanel(new Rect(630, 265, 660, 560), new Color(0.055f, 0.105f, 0.14f, 1f));
+            GUI.Label(new Rect(700, 310, 520, 70), "EXPEDITION PAUSED", _heading);
+            DrawSelection(new Rect(710, 420, 500, 95), _pauseSelection == 0);
+            if (GUI.Button(new Rect(720, 430, 480, 75), "CONTINUE", _button)) _director.TogglePause();
+            DrawSelection(new Rect(710, 525, 500, 95), _pauseSelection == 1);
+            if (GUI.Button(new Rect(720, 535, 480, 75), "SETTINGS", _button)) _director.OpenSettings();
+            DrawSelection(new Rect(710, 630, 500, 95), _pauseSelection == 2);
+            if (GUI.Button(new Rect(720, 640, 480, 75), "RETURN TO CAMP", _button)) _director.ReturnToMenu();
+        }
+
+        private void DrawSettings()
+        {
+            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.008f, 0.022f, 0.032f, 1f));
+            GUI.Label(new Rect(460, 35, 1000, 75), "PRESENTATION & CONTROLS", _title);
+            GUI.Label(new Rect(410, 105, 1100, 40),
+                "ACCESSIBILITY, AUDIO AND P1 KEYBOARD BINDINGS — GAMEPAD GLYPHS FOLLOW THE ACTIVE DEVICE", _small);
+
+            var data = PresentationPreferences.Data;
+            DrawPanel(new Rect(120, 175, 790, 710), new Color(0.035f, 0.08f, 0.108f, 1f));
+            DrawPanel(new Rect(1010, 175, 790, 710), new Color(0.035f, 0.08f, 0.108f, 1f));
+            GUI.Label(new Rect(160, 195, 710, 45), "ACCESSIBILITY & AUDIO", _heading);
+            GUI.Label(new Rect(1050, 195, 710, 45), "KEYBOARD — PLAYER 1", _heading);
+
+            var labels = new[] { "UI SCALE", "HIGH CONTRAST", "REDUCED FLASHES", "SCREEN SHAKE", "MASTER", "MUSIC", "SFX" };
+            var values = new[]
+            {
+                $"{data.UiScale * 100f:0}%", data.HighContrast ? "ON" : "OFF",
+                data.ReducedFlashes ? "ON" : "OFF", $"{data.ScreenShake * 100f:0}%",
+                $"{data.MasterVolume * 100f:0}%", $"{data.MusicVolume * 100f:0}%",
+                $"{data.SfxVolume * 100f:0}%"
+            };
+            for (var i = 0; i < labels.Length; i++)
+            {
+                var rect = new Rect(155, 270 + i * 78, 720, 62);
+                DrawSelection(new Rect(rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10), _settingsSelection == i);
+                DrawPanel(rect, new Color(0.018f, 0.05f, 0.07f, 1f));
+                GUI.Label(new Rect(rect.x + 18, rect.y, 300, rect.height), labels[i], _cardTitle);
+                if (GUI.Button(new Rect(rect.x + 355, rect.y + 8, 54, 46), "−", _button)) { _settingsSelection = i; AdjustSetting(i, -1); }
+                GUI.Label(new Rect(rect.x + 420, rect.y, 210, rect.height), values[i], _center);
+                if (GUI.Button(new Rect(rect.x + 645, rect.y + 8, 54, 46), "+", _button)) { _settingsSelection = i; AdjustSetting(i, 1); }
+            }
+
+            for (var i = 0; i < RebindableActions.Length; i++)
+            {
+                var selection = i + 7;
+                var rect = new Rect(1045, 255 + i * 62, 720, 48);
+                DrawSelection(new Rect(rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10), _settingsSelection == selection);
+                DrawPanel(rect, new Color(0.018f, 0.05f, 0.07f, 1f));
+                GUI.Label(new Rect(rect.x + 15, rect.y, 315, rect.height), BindingLabel(RebindableActions[i]), _small);
+                var capture = LocalInputRouter.IsRebinding && LocalInputRouter.PendingBinding == RebindableActions[i];
+                var value = capture ? "PRESS ANY KEY…" : InputBindingProfile.Display(data.Keyboard.Get(RebindableActions[i]));
+                if (GUI.Button(new Rect(rect.x + 350, rect.y + 4, 350, 40), value, _button))
+                {
+                    _settingsSelection = selection;
+                    LocalInputRouter.BeginRebind(RebindableActions[i]);
+                }
+            }
+
+            DrawSelection(new Rect(580, 925, 350, 85), _settingsSelection == 16);
+            if (GUI.Button(new Rect(590, 935, 330, 65), "RESTORE DEFAULTS", _button))
+            {
+                _settingsSelection = 16;
+                PresentationPreferences.ResetToDefaults();
+            }
+            DrawSelection(new Rect(990, 925, 350, 85), _settingsSelection == 17);
+            if (GUI.Button(new Rect(1000, 935, 330, 65), "BACK", _button)) _director.CloseSettings();
+            GUI.Label(new Rect(520, 1010, 880, 35),
+                $"{Prompt(BindingAction.MoveUp)} {Prompt(BindingAction.MoveDown)} NAVIGATE   •   LEFT/RIGHT ADJUST   •   {Prompt(BindingAction.Back)} BACK", _micro);
+        }
+
+        private static string BindingLabel(BindingAction action)
+        {
+            switch (action)
+            {
+                case BindingAction.MoveUp: return "MOVE UP / MENU UP";
+                case BindingAction.MoveDown: return "MOVE DOWN / MENU DOWN";
+                case BindingAction.MoveLeft: return "MOVE LEFT / MENU LEFT";
+                case BindingAction.MoveRight: return "MOVE RIGHT / MENU RIGHT";
+                case BindingAction.BuildDetails: return "EXPEDITION BUILD";
+                default: return action.ToString().ToUpperInvariant();
+            }
         }
 
         private void DrawResults(bool victory)
@@ -586,6 +720,7 @@ namespace ProjectExpedition
                 $"FPS  {_director.Metrics.FramesPerSecond:0}   •   FRAME  {_director.Metrics.FrameMilliseconds:0.0} ms   •   WORST  {_director.Metrics.WorstFrameMilliseconds:0.0} ms\n" +
                 $"ACTIVE  ENEMY {_director.Enemies.Count}   AXE {_director.ActiveProjectiles}   XP {_director.ActiveGems}\n" +
                 $"POOL  ENEMY {_director.PooledEnemyCount}   AXE {_director.PooledProjectileCount}   XP {_director.PooledGemCount}\n" +
+                $"PRESENT  VFX {_director.Presentation.ActiveVfx}   SFX {_director.Presentation.ActiveSfxVoices}   MUSIC {_director.Presentation.MusicState}\n" +
                 $"CREATED {_director.CreatedPooledObjects}   •   REUSED {_director.ReusedPooledObjects}\n" +
                 $"GRID {_director.SpatialCellCount} CELLS   •   QUERIES {_director.Metrics.SpatialQueries}\n" +
                 $"SEED {_director.RunSeed}   •   {ProductionContentRuntime.SourceLabel}", _microLeft);
@@ -597,9 +732,17 @@ namespace ProjectExpedition
             if (GUI.Button(rect, label, _button))
             {
                 selected = index;
+                ConfirmCue();
                 action();
             }
         }
+
+        private static string Prompt(BindingAction action) =>
+            InputGlyphs.Prompt(action, LocalInputRouter.CurrentPromptDevice);
+
+        private void NavigateCue() => _director.Present(PresentationCue.Navigate, Vector2.zero, PresentationTheme.Accent);
+
+        private void ConfirmCue() => _director.Present(PresentationCue.Confirm, Vector2.zero, PresentationTheme.Accent);
 
         private static int Wrap(int value, int count)
         {
@@ -624,7 +767,7 @@ namespace ProjectExpedition
 
         private static void DrawSelection(Rect rect, bool selected)
         {
-            if (selected) DrawBorder(rect, new Color(0.93f, 0.7f, 0.24f, 0.95f), 6f);
+            if (selected) DrawBorder(rect, PresentationTheme.Accent, 6f);
         }
 
         private static void DrawBorder(Rect rect, Color color, float thickness)
@@ -662,45 +805,46 @@ namespace ProjectExpedition
 
         private void EnsureStyles()
         {
-            if (_title != null) return;
-            _title = MakeStyle(48, FontStyle.Bold, new Color(0.78f, 0.91f, 0.96f), TextAnchor.MiddleCenter);
-            _heading = MakeStyle(31, FontStyle.Bold, new Color(0.72f, 0.88f, 0.94f), TextAnchor.MiddleCenter);
-            _cardTitle = MakeStyle(24, FontStyle.Bold, new Color(0.93f, 0.76f, 0.32f), TextAnchor.MiddleLeft);
-            _itemTitle = MakeStyle(13, FontStyle.Bold, new Color(0.96f, 0.78f, 0.34f), TextAnchor.UpperLeft);
+            if (_title != null && _styleRevision == PresentationPreferences.Revision) return;
+            _styleRevision = PresentationPreferences.Revision;
+            _title = MakeStyle(48, FontStyle.Bold, PresentationTheme.TextPrimary, TextAnchor.MiddleCenter);
+            _heading = MakeStyle(31, FontStyle.Bold, PresentationTheme.TextPrimary, TextAnchor.MiddleCenter);
+            _cardTitle = MakeStyle(24, FontStyle.Bold, PresentationTheme.Accent, TextAnchor.MiddleLeft);
+            _itemTitle = MakeStyle(13, FontStyle.Bold, PresentationTheme.Accent, TextAnchor.UpperLeft);
             _itemTitle.wordWrap = true;
-            _body = MakeStyle(22, FontStyle.Normal, new Color(0.85f, 0.89f, 0.9f), TextAnchor.UpperLeft);
+            _body = MakeStyle(22, FontStyle.Normal, PresentationTheme.TextPrimary, TextAnchor.UpperLeft);
             _body.wordWrap = true;
-            _small = MakeStyle(17, FontStyle.Bold, new Color(0.62f, 0.72f, 0.76f), TextAnchor.MiddleCenter);
-            _micro = MakeStyle(13, FontStyle.Bold, new Color(0.72f, 0.82f, 0.86f), TextAnchor.MiddleCenter);
+            _small = MakeStyle(17, FontStyle.Bold, PresentationTheme.TextSecondary, TextAnchor.MiddleCenter);
+            _micro = MakeStyle(13, FontStyle.Bold, PresentationTheme.TextSecondary, TextAnchor.MiddleCenter);
             _micro.wordWrap = true;
-            _microLeft = MakeStyle(12, FontStyle.Bold, new Color(0.72f, 0.82f, 0.86f), TextAnchor.MiddleLeft);
+            _microLeft = MakeStyle(12, FontStyle.Bold, PresentationTheme.TextSecondary, TextAnchor.MiddleLeft);
             _badge = MakeStyle(14, FontStyle.Bold, new Color(0.025f, 0.065f, 0.085f), TextAnchor.MiddleCenter);
-            _mapTitle = MakeStyle(25, FontStyle.Bold, new Color(0.72f, 0.88f, 0.94f), TextAnchor.MiddleCenter);
+            _mapTitle = MakeStyle(25, FontStyle.Bold, PresentationTheme.TextPrimary, TextAnchor.MiddleCenter);
             _mapTitle.wordWrap = true;
-            _resultTitle = MakeStyle(39, FontStyle.Bold, new Color(0.78f, 0.91f, 0.96f), TextAnchor.MiddleCenter);
+            _resultTitle = MakeStyle(39, FontStyle.Bold, PresentationTheme.TextPrimary, TextAnchor.MiddleCenter);
             _resultTitle.wordWrap = true;
-            _statSection = MakeStyle(14, FontStyle.Bold, new Color(0.93f, 0.76f, 0.32f), TextAnchor.MiddleLeft);
-            _statLabel = MakeStyle(14, FontStyle.Bold, new Color(0.62f, 0.72f, 0.76f), TextAnchor.MiddleLeft);
-            _statValue = MakeStyle(16, FontStyle.Bold, new Color(0.86f, 0.92f, 0.94f), TextAnchor.MiddleRight);
-            _rewardEffect = MakeStyle(16, FontStyle.Bold, new Color(0.96f, 0.76f, 0.3f), TextAnchor.UpperLeft);
+            _statSection = MakeStyle(14, FontStyle.Bold, PresentationTheme.Accent, TextAnchor.MiddleLeft);
+            _statLabel = MakeStyle(14, FontStyle.Bold, PresentationTheme.TextSecondary, TextAnchor.MiddleLeft);
+            _statValue = MakeStyle(16, FontStyle.Bold, PresentationTheme.TextPrimary, TextAnchor.MiddleRight);
+            _rewardEffect = MakeStyle(16, FontStyle.Bold, PresentationTheme.Accent, TextAnchor.UpperLeft);
             _rewardEffect.wordWrap = true;
-            _rewardDescription = MakeStyle(18, FontStyle.Normal, new Color(0.85f, 0.89f, 0.9f), TextAnchor.UpperLeft);
+            _rewardDescription = MakeStyle(18, FontStyle.Normal, PresentationTheme.TextPrimary, TextAnchor.UpperLeft);
             _rewardDescription.wordWrap = true;
-            _itemProgress = MakeStyle(11, FontStyle.Bold, new Color(0.72f, 0.82f, 0.86f), TextAnchor.UpperLeft);
+            _itemProgress = MakeStyle(11, FontStyle.Bold, PresentationTheme.TextSecondary, TextAnchor.UpperLeft);
             _itemProgress.wordWrap = true;
-            _center = MakeStyle(22, FontStyle.Bold, new Color(0.82f, 0.9f, 0.93f), TextAnchor.MiddleCenter);
+            _center = MakeStyle(22, FontStyle.Bold, PresentationTheme.TextPrimary, TextAnchor.MiddleCenter);
             _center.wordWrap = true;
             var buttonText = new Color(0.025f, 0.065f, 0.085f);
             _button = new GUIStyle(GUI.skin.button)
             {
-                fontSize = 23,
+                fontSize = PresentationTheme.FontSize(23),
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
                 padding = new RectOffset(10, 10, 6, 6)
             };
             SetAllTextColors(_button, buttonText);
-            _button.normal.background = MakeButtonTexture(new Color(0.88f, 0.66f, 0.2f));
-            _button.hover.background = MakeButtonTexture(new Color(1f, 0.78f, 0.28f));
+            _button.normal.background = MakeButtonTexture(PresentationTheme.Accent);
+            _button.hover.background = MakeButtonTexture(new Color(1f, 0.86f, 0.34f));
             _button.active.background = MakeButtonTexture(new Color(0.7f, 0.5f, 0.12f));
             _button.focused.background = _button.hover.background;
             _button.onNormal.background = _button.normal.background;
@@ -713,7 +857,7 @@ namespace ProjectExpedition
         {
             var style = new GUIStyle(GUI.skin.label)
             {
-                fontSize = size,
+                fontSize = PresentationTheme.FontSize(size),
                 fontStyle = fontStyle,
                 alignment = anchor,
                 padding = new RectOffset(8, 8, 4, 4)

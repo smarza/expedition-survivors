@@ -2,9 +2,9 @@
 
 > **Document status:** living source of truth for product, engineering and release planning.  
 > **Last updated:** 2026-07-19
-> **Stable baseline:** `main` — `0.7.1-foundation-runtime-fixes`  
-> **Active development:** `agent/0.8.0-shared-simulation`  
-> **Active pull request:** [PR #1 — Start 0.8.0 shared simulation foundation](https://github.com/smarza/expedition-survivors/pull/1)
+> **Stable baseline:** `main` — `v0.8.0`
+> **Active development:** `agent/0.9.0-presentation-foundation`
+> **Active pull request:** [PR #2 — Release 0.9.0 presentation foundation](https://github.com/smarza/expedition-survivors/pull/2)
 
 ## 1. How to use this document in a new chat
 
@@ -30,7 +30,7 @@ It must preserve unrelated changes, work from the active milestone branch, valid
 
 ### Suggested prompt for the next chat
 
-> Continue development of Expedition Survivors from `https://github.com/smarza/expedition-survivors`. Read `docs/PROJECT_MASTER_PLAN.md`, `README.md`, `RELEASE_NOTES.md`, `SECURITY.md` and PR #1 before proposing or implementing work. The active milestone is 0.8.0 Shared Simulation. Use branches and commits instead of ZIP handoffs. Preserve all non-negotiable decisions, especially Haldor Stormborn, gamepad ownership, readable UI, per-player co-op rewards and manual high-cooldown Ultimates.
+> Continue development of Expedition Survivors from `https://github.com/smarza/expedition-survivors`. Read `docs/PROJECT_MASTER_PLAN.md`, `README.md`, `RELEASE_NOTES.md`, `SECURITY.md` and the active PR before proposing or implementing work. The active milestone is 0.9.0 Presentation Foundation. Use branches and commits instead of ZIP handoffs. Preserve all non-negotiable decisions, especially Haldor Stormborn, gamepad ownership, readable UI, per-player co-op rewards and manual high-cooldown Ultimates.
 
 ## 2. Executive summary
 
@@ -409,7 +409,7 @@ Implemented and manually accepted:
 - static validation and runtime foundation self-checks;
 - UI readability corrections made through 0.7.1.
 
-### 12.2 Active milestone: 0.8.0
+### 12.2 Accepted milestone: 0.8.0
 
 Release candidate implemented:
 
@@ -435,10 +435,34 @@ Release candidate implemented:
 - reward cards and Expedition Build expose exact level effects and complete live weapon statistics;
 - `BUILD_AND_CONTENT_REFERENCE.md` documents all current characters, powers, items, formulas, rewards and the acceptance template for future content.
 
-Final closeout pending:
+Final closeout completed on 2026-07-19:
 
-- green release-candidate CI, including the patched Windows milestone build;
-- final owner gameplay acceptance, PR merge and `v0.8.0` tag.
+- release-candidate and post-merge CI were green, including the patched Windows milestone build;
+- owner gameplay acceptance, PR #1 merge and the `v0.8.0` tag were completed.
+
+### 12.3 Active milestone: 0.9.0
+
+Release candidate implemented on `agent/0.9.0-presentation-foundation`:
+
+- persistent presentation preferences independent from campaign progress;
+- UI scale, high contrast, reduced flashes and adjustable screen shake;
+- P1 keyboard rebinding with semantic keyboard/controller prompts;
+- Xbox, PlayStation, Switch, Steam Deck and generic-gamepad glyph families;
+- master/music/SFX buses, five music states and ten prioritized SFX voices;
+- browser-autoplay-safe audio startup;
+- prewarmed presentation VFX pool and explicit presentation-event vocabulary;
+- Frost Axe trails/impacts and feedback for kills, XP, Raven Guard, Ultimates, down/revive and outcomes;
+- Haldor/Eira compositional silhouettes and shared idle/movement/attack/hit/Ultimate animation;
+- deterministic Frostbound ambient snow that cannot perturb gameplay RNG;
+- safe-area/reference layout contracts for 1920×1080 and 1280×800;
+- 48 EditMode and 9 PlayMode tests in the release-candidate inventory;
+- detailed architecture and acceptance guides in `PRESENTATION_FOUNDATION_0.9.md` and `TESTING_0.9.md`.
+
+Closeout gate:
+
+- static validation, all Unity tests, Web/Pages and Windows milestone compilation green;
+- final owner validation on desktop WebGL and the native Windows/device matrix;
+- merge and `v0.9.0` tag only after explicit owner acceptance.
 
 ## 13. Current technical architecture
 
@@ -462,7 +486,10 @@ Final closeout pending:
 | `ProductionContentDatabase` | ScriptableObject root for editable production content. |
 | `ProductionFoundation` | Pools, spatial hash, deterministic RNG, metrics and startup checks. |
 | `LocalInputRouter` | Keyboard/gamepad assignment, ownership and menu actions. |
-| `GameHUD` | Current local IMGUI menus, HUD, rewards, build and results. |
+| `PresentationPreferences`, `PresentationLayout`, `PresentationTheme` | Persistent accessibility/input settings and safe renderer-independent layout/theme contracts. |
+| `PresentationDirector`, `PresentationAudioMixer` | State-driven audio, prioritized voices, VFX routing and camera feedback. |
+| `PresentationVfxPool`, `HeroPresentation`, `FrostboundAmbience` | Pooled feedback, character animation/silhouette and deterministic biome ambience. |
+| `GameHUD` | Code-driven menus/HUD using the presentation layout, theme, settings and glyph contracts. |
 | `SaveService` | Versioned local JSON persistence with atomic replacement. |
 | `SaveMigration` | Legacy payload migration and current versioned save-envelope serialization. |
 | `RuntimeAssets` | Dependency-free prototype sprites and fallback art. |
@@ -476,12 +503,12 @@ Solo and Local Co-op share `GameDirector`, `PlayerController`, `Enemy` and `Weap
 
 Other significant debt:
 
-- IMGUI is not the final UI system;
-- current runtime-generated visuals are placeholders;
+- the code-driven GameHUD renderer should eventually move to authored UI documents without replacing its presentation contracts;
+- current imported audio and runtime-generated visuals are original production placeholders, not the final authored asset library;
 - shared simulation coverage is automated; broader content, UI and performance coverage remains future milestone work;
 - no production cloud-save integration;
 - save migration now covers legacy payload to envelope v2, but needs a durable migration chain and failure recovery before public progression begins;
-- no final audio architecture or asset pipeline;
+- the audio architecture now exists, but final authored music/SFX assets and import policy remain future content work;
 - no final performance target-hardware capture.
 
 ## 14. Target architecture for 0.8.0
@@ -596,7 +623,7 @@ Exit gate: Solo and Local Co-op resolve the same weapon/build/reward rules from 
 
 ### Phase F — Regression and milestone close
 
-Status: final clarity pass pending automated validation. Manual owner acceptance, merge and tag follow only after static validation, 41 EditMode tests, 7 PlayMode tests, Web/Pages and Windows milestone compilation are green.
+Status: accepted, merged and tagged as `v0.8.0` on 2026-07-19 after static validation, 41 EditMode tests, 7 PlayMode tests, Web/Pages and Windows milestone compilation passed.
 
 1. Run the manual mode matrix with keyboard, one gamepad and two gamepads.
 2. Validate reward ownership and device focus.
@@ -604,6 +631,64 @@ Status: final clarity pass pending automated validation. Manual owner acceptance
 4. Capture high-density performance data.
 5. Update this plan, README and release notes.
 6. Merge the draft PR only after user acceptance.
+
+## 15A. Detailed 0.9.0 execution plan
+
+#### Phase A — Presentation boundary and settings
+
+Status: implemented, automated validation pending.
+
+1. Keep presentation outside every shared gameplay model.
+2. Add versioned local presentation preferences independent from campaign saves.
+3. Add UI scale, contrast, reduced flashes, shake and audio controls.
+4. Make Settings return correctly to main menu or Pause.
+
+Exit gate: presentation preferences persist and cannot change simulation outcomes.
+
+#### Phase B — Rebinding, ownership and glyphs
+
+Status: implemented, automated validation pending.
+
+1. Rebind every P1 keyboard gameplay/menu action through semantic actions.
+2. Preserve P2 keyboard and independent Local Co-op gamepad ownership.
+3. Detect the active device family and render semantic prompts.
+4. Cover keyboard, Xbox, PlayStation, Switch, Steam Deck and generic gamepads.
+
+Exit gate: affected menus/gameplay remain navigable after rebinding and prompts match the active family.
+
+#### Phase C — Audio foundation
+
+Status: implemented, automated validation pending.
+
+1. Add master/music/SFX buses.
+2. Route Menu, Expedition, Boss, Reward and Result music states.
+3. Bound SFX concurrency and preserve important cues through priorities.
+4. Respect WebGL autoplay restrictions.
+
+Exit gate: audio state follows presentation state, sliders work independently and dense combat cannot create unbounded voices.
+
+#### Phase D — VFX, animation and Frostbound polish
+
+Status: implemented, automated validation pending.
+
+1. Add a prewarmed presentation VFX pool.
+2. Route weapons, hits, kills, pickups, powers, rescue and outcomes through presentation cues.
+3. Give Haldor a recognizable compositional silhouette and animation response.
+4. Apply the same animation component to Eira.
+5. Add deterministic biome ambience and centralized accessible camera trauma.
+
+Exit gate: the Haldor/Frostbound run is visually coherent without adding gameplay RNG calls or steady-state effect allocation.
+
+#### Phase E — Regression and milestone close
+
+Status: release-candidate documentation and 48 EditMode + 9 PlayMode tests prepared; CI/manual gates pending.
+
+1. Pass static validation and all Unity tests.
+2. Pass WebGL compilation, Pages deployment and Windows milestone compilation.
+3. Validate 1920×1080 and 1280×800 presentation.
+4. Validate keyboard rebinding, one/two gamepads and reward ownership.
+5. Validate settings, audio states, VFX readability and bounded diagnostics.
+6. Merge and tag only after explicit owner acceptance.
 
 ## 16. Roadmap to 1.0
 
@@ -742,11 +827,11 @@ Expedition Survivors is not launch-ready merely because a run can be completed. 
 
 The next developer/agent should do the following, in order:
 
-1. Work on `agent/0.8.0-shared-simulation` and PR #1.
-2. Verify the release-candidate workflow: static validation, 41 EditMode tests, 7 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
-3. Run the final Solo and Local Co-op matrix from `docs/TESTING_0.8.md` through the Pages preview, then use the Windows artifact for the native packaging/device check.
-4. Record any failure with its seed, mode, devices, reproduction steps and Console/log output.
-5. After explicit owner acceptance, merge PR #1 into `main` and tag `v0.8.0`.
-6. Begin 0.9.0 Presentation Foundation from the updated `main` on a new milestone branch and PR.
+1. Work on `agent/0.9.0-presentation-foundation` and its milestone PR.
+2. Verify the release-candidate workflow: static validation, 48 EditMode tests, 9 PlayMode tests, Web compilation/Pages deployment and patched Windows milestone compilation.
+3. Run the matrix in `docs/TESTING_0.9.md` through the Pages preview, then use the Windows artifact for native audio/device validation.
+4. Record any failure with its seed, target, resolution, settings, devices, reproduction steps and screenshot/video or Console/log output.
+5. After explicit owner acceptance, merge into `main` and tag `v0.9.0`.
+6. Begin 0.10.0 Demonstration Content only from the updated accepted `main`.
 
-Do not begin bulk content creation before the shared simulation and test boundary is credible. Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.
+Do not begin bulk demonstration content before the presentation gate is accepted. Do not replace Haldor's flagship role, per-player gamepad ownership, co-op reward targeting, readable UI or strategic Ultimate philosophy without explicit owner approval.

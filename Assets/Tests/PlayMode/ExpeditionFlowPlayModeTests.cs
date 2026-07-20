@@ -33,6 +33,48 @@ namespace ProjectExpedition.Tests
         }
 
         [UnityTest]
+        public IEnumerator PresentationFoundation_InitializesAndFollowsRunState()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+
+            Assert.That(director.Presentation, Is.Not.Null);
+            Assert.That(director.Presentation.MusicState, Is.EqualTo(PresentationMusicState.Menu));
+
+            director.BeginRunSetup(1);
+            director.ConfirmCharacters(0, 1);
+            director.SelectMapAndStart(0);
+            yield return null;
+
+            Assert.That(director.Presentation.MusicState, Is.EqualTo(PresentationMusicState.Expedition));
+            Assert.That(director.Player.GetComponent<HeroPresentation>(), Is.Not.Null);
+            Assert.That(director.RunRoot.GetComponentInChildren<FrostboundAmbience>(), Is.Not.Null);
+
+            yield return DestroyDirector(director);
+        }
+
+        [UnityTest]
+        public IEnumerator PresentationVfx_ReusesPoolAndSettingsReturnToTheirOwnerState()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+
+            director.OpenSettings();
+            Assert.That(director.State, Is.EqualTo(RunState.Settings));
+            Assert.That(Time.timeScale, Is.Zero);
+            director.CloseSettings();
+            Assert.That(director.State, Is.EqualTo(RunState.MainMenu));
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+
+            director.Present(PresentationCue.Impact, Vector2.zero, Color.cyan);
+            Assert.That(director.Presentation.ActiveVfx, Is.EqualTo(1));
+            yield return new WaitForSecondsRealtime(0.35f);
+            Assert.That(director.Presentation.ActiveVfx, Is.Zero);
+
+            yield return DestroyDirector(director);
+        }
+
+        [UnityTest]
         public IEnumerator SoloRun_LevelUpOffersFourRewardsAndResumes()
         {
             yield return ClearDirectors();

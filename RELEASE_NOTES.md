@@ -1,4 +1,21 @@
-# Milestone 0.8.0 — Shared simulation (release candidate)
+# Milestone 0.9.0 — Presentation foundation (release candidate)
+
+- Added persistent accessibility settings for UI scale, high contrast, reduced flashes and screen shake.
+- Added independent master, music and SFX buses with browser-compatible imported clips and startup after interaction.
+- Replaced unsupported runtime PCM generation after owner validation found silent music and SFX in the Web build.
+- Added bounded, prioritised SFX voices and Menu/Expedition/Boss/Reward/Result music states.
+- Added real P1 keyboard rebinding for movement, Ultimate, Submit, Back, Pause and Expedition Build.
+- Added semantic prompts for keyboard, Xbox, PlayStation, Switch, Steam Deck and generic gamepads.
+- Added a Settings screen reachable from both the main menu and Pause, returning to the correct owner state.
+- Added safe-area layout math and a 1280×800 Steam Deck presentation contract.
+- Added pooled projectile trails, impacts, enemy deaths, pickups, Raven Guard, Ultimate, down/revive and result feedback.
+- Added reduced-flash-aware VFX and adjustable centralized camera trauma.
+- Added Haldor/Eira compositional silhouettes, idle/movement/attack/hit/Ultimate animation and deterministic Frostbound snow.
+- Extended F3 diagnostics with VFX, SFX voice and music-state telemetry.
+- Added 7 EditMode and 2 PlayMode presentation regressions, bringing the gate to 48 EditMode + 9 PlayMode tests.
+- Added `docs/PRESENTATION_FOUNDATION_0.9.md` and `docs/TESTING_0.9.md` as the architecture and acceptance contracts.
+
+# Milestone 0.8.0 — Shared simulation
 
 - Pinned development to Unity `6000.5.4f1`, a supported release newer than the first patched Unity 6.0 LTS version for CVE-2025-59489.
 - Updated the Unity 6000.5 package matrix to Input System `1.19.0`, Rider Editor `3.0.40` and Visual Studio Editor `2.0.27`.
