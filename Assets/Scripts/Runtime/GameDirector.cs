@@ -15,6 +15,7 @@ namespace ProjectExpedition
         public int ExperienceToNext => _runModel.ExperienceToNext;
         public int Kills { get; private set; }
         public int RunRenown { get; private set; }
+        public int LastRunRenownEarned { get; private set; }
         public float Elapsed => _runModel.Elapsed;
         public bool BossSpawned => _routeModel.BossSpawned;
         public SharedExpeditionRouteModel Route => _routeModel;
@@ -195,6 +196,11 @@ namespace ProjectExpedition
         public void SelectMapAndStart(int mapIndex)
         {
             SelectedMap = ContentCatalog.Map(mapIndex);
+            if (!SaveService.IsMapUnlocked(mapIndex))
+            {
+                return;
+            }
+
             StartRun(PendingPlayerCount);
         }
 
@@ -251,6 +257,7 @@ namespace ProjectExpedition
             SaveService.RecordLastRunCharacters(
                 SelectedCharacters[0].Id,
                 playerCount > 1 ? SelectedCharacters[1].Id : null);
+            DiscoverRunStartCodex(playerCount);
             _hud.SetAnnouncement(replayingSeed
                 ? $"REPLAYING SEED {RunSeed} — {expeditionLabel}"
                 : expeditionLabel, 3f);
@@ -640,9 +647,34 @@ namespace ProjectExpedition
             var builds = new PlayerBuild[Mathf.Max(1, Players.Count)];
             for (var i = 0; i < builds.Length; i++) builds[i] = Players[i].Build;
             _currentRewards.AddRange(RewardFactory.Generate(builds, RewardTurnPlayerIndex, Players.Count, Rng));
+            DiscoverLevelUpOffers(_currentRewards);
             State = RunState.LevelUp;
             Time.timeScale = 0f;
             Present(PresentationCue.LevelUp, GroupCenter, PresentationTheme.Accent);
+        }
+
+        private static void DiscoverLevelUpOffers(IReadOnlyList<RewardOption> rewards)
+        {
+            for (var i = 0; i < rewards.Count; i++)
+            {
+                var item = rewards[i].Item;
+                if (item == null)
+                {
+                    continue;
+                }
+
+                DiscoverRewardItemCodex(item);
+            }
+        }
+
+        private static void DiscoverRewardItemCodex(ItemDefinition item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            SaveService.DiscoverCodex(item.Id);
         }
 
         public void ChooseReward(int index)
@@ -664,6 +696,7 @@ namespace ProjectExpedition
             }
             var chooser = Players[Mathf.Clamp(RewardTurnPlayerIndex, 0, Players.Count - 1)].HeroName;
             var destination = option.Shared ? "THE TEAM" : (appliedNames.Count > 0 ? appliedNames[0].ToUpperInvariant() : "NO TARGET");
+            DiscoverAppliedReward(option);
             _hud.SetAnnouncement($"{chooser.ToUpperInvariant()} CHOSE {option.Item.Name.ToUpperInvariant()} FOR {destination}", 3.2f);
             Present(PresentationCue.Confirm, GroupCenter, option.Item.Color);
             _runModel.CompleteReward();
@@ -680,7 +713,14 @@ namespace ProjectExpedition
                 victory ? PresentationTheme.Accent : new Color(0.65f, 0.2f, 0.22f), 2f);
             if (!_runRecorded)
             {
-                SaveService.RecordRun(Kills, RunRenown, Elapsed, victory);
+                var characterIds = new string[Mathf.Max(1, Players.Count)];
+                for (var i = 0; i < characterIds.Length; i++)
+                {
+                    characterIds[i] = SelectedCharacters[Mathf.Clamp(i, 0, SelectedCharacters.Length - 1)].Id;
+                }
+
+                LastRunRenownEarned = RunRenown + Mathf.Max(1, Kills / 10) + (victory ? 50 : 0);
+                SaveService.RecordRun(Kills, RunRenown, Elapsed, victory, characterIds);
                 if (victory)
                 {
                     var relicId = _routeModel.ResolveVictoryRelicId();
@@ -689,6 +729,37 @@ namespace ProjectExpedition
                 }
 
                 _runRecorded = true;
+            }
+        }
+
+        private void DiscoverRunStartCodex(int playerCount)
+        {
+            SaveService.DiscoverCodex(SelectedMap.Id);
+
+            for (var i = 0; i < playerCount; i++)
+            {
+                var character = SelectedCharacters[Mathf.Clamp(i, 0, SelectedCharacters.Length - 1)];
+                SaveService.DiscoverCodex(character.Id);
+
+                for (var w = 0; w < character.StarterWeaponIds.Length; w++)
+                {
+                    SaveService.DiscoverCodex(character.StarterWeaponIds[w]);
+                }
+            }
+        }
+
+        private static void DiscoverAppliedReward(RewardOption option)
+        {
+            if (option?.Item == null)
+            {
+                return;
+            }
+
+            DiscoverRewardItemCodex(option.Item);
+
+            if (option.Item.IsEvolution)
+            {
+                SaveService.DiscoverCodex(option.Item.Id);
             }
         }
 

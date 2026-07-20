@@ -13,14 +13,16 @@ namespace ProjectExpedition
 
     public static class SaveMigration
     {
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         public static MetaProgress Deserialize(string json, out int sourceVersion)
         {
             if (string.IsNullOrWhiteSpace(json))
             {
                 sourceVersion = CurrentVersion;
-                return new MetaProgress();
+                var fresh = new MetaProgress();
+                SharedMetaProgressionModel.EnsureStarterUnlocks(fresh);
+                return fresh;
             }
 
             var envelope = JsonUtility.FromJson<SaveEnvelope>(json);
@@ -44,14 +46,34 @@ namespace ProjectExpedition
             if (sourceVersion < 3 && progress.RelicsCollected == null)
                 progress.RelicsCollected = new string[0];
 
+            if (sourceVersion < 4)
+            {
+                if (progress.UnlockedContentIds == null)
+                    progress.UnlockedContentIds = new string[0];
+
+                if (progress.DiscoveredCodexIds == null)
+                    progress.DiscoveredCodexIds = new string[0];
+
+                SharedMetaProgressionModel.MigrateToVersionFour(progress);
+            }
+            else
+            {
+                SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+            }
+
             return progress;
         }
 
-        public static string Serialize(MetaProgress progress) => JsonUtility.ToJson(new SaveEnvelope
+        public static string Serialize(MetaProgress progress)
         {
-            Version = CurrentVersion,
-            Progress = progress ?? new MetaProgress()
-        }, true);
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+
+            return JsonUtility.ToJson(new SaveEnvelope
+            {
+                Version = CurrentVersion,
+                Progress = progress ?? new MetaProgress()
+            }, true);
+        }
     }
 
     public static class SaveService
@@ -63,7 +85,9 @@ namespace ProjectExpedition
         internal static void AssignDataForTests(MetaProgress progress)
         {
             Data = progress ?? new MetaProgress();
+            SharedMetaProgressionModel.EnsureStarterUnlocks(Data);
         }
+
         private static string PathName => Path.Combine(Application.persistentDataPath, FileName);
 
         public static void Load()
@@ -71,28 +95,82 @@ namespace ProjectExpedition
             if (!PersistenceEnabled)
             {
                 Data = new MetaProgress();
+                SharedMetaProgressionModel.EnsureStarterUnlocks(Data);
                 return;
             }
+
             try
             {
                 Data = File.Exists(PathName)
                     ? SaveMigration.Deserialize(File.ReadAllText(PathName), out _)
                     : new MetaProgress();
+                SharedMetaProgressionModel.EnsureStarterUnlocks(Data);
             }
             catch (Exception exception)
             {
                 Debug.LogWarning($"Save could not be loaded: {exception.Message}");
                 Data = new MetaProgress();
+                SharedMetaProgressionModel.EnsureStarterUnlocks(Data);
             }
         }
 
-        public static void RecordRun(int kills, int recoveredRenown, float time, bool victory)
+        public static int AvailableRenown() => SharedMetaProgressionModel.AvailableRenown(Data);
+
+        public static bool IsUnlocked(string contentId) => SharedMetaProgressionModel.IsUnlocked(Data, contentId);
+
+        public static bool IsCharacterUnlocked(int characterIndex) =>
+            SharedMetaProgressionModel.IsCharacterUnlocked(Data, characterIndex);
+
+        public static bool IsMapUnlocked(int mapIndex) => SharedMetaProgressionModel.IsMapUnlocked(Data, mapIndex);
+
+        public static bool CanPurchaseUnlock(string contentId) => SharedMetaProgressionModel.CanPurchase(Data, contentId);
+
+        public static PurchaseResult TryPurchaseUnlock(string contentId)
+        {
+            var result = SharedMetaProgressionModel.TryPurchaseUnlock(Data, contentId);
+            if (result.Success)
+            {
+                Save();
+            }
+
+            return result;
+        }
+
+        public static bool DiscoverCodex(string contentId)
+        {
+            if (!SharedMetaProgressionModel.DiscoverCodex(Data, contentId))
+            {
+                return false;
+            }
+
+            Save();
+            return true;
+        }
+
+        public static void RecordRun(int kills, int recoveredRenown, float time, bool victory, params string[] characterIds)
         {
             Data.RunsCompleted++;
             Data.BestKills = Mathf.Max(Data.BestKills, kills);
             Data.BestTime = Mathf.Max(Data.BestTime, time);
             Data.TotalRenown += recoveredRenown + Mathf.Max(1, kills / 10) + (victory ? 50 : 0);
-            Data.HaldorMastery += Mathf.Max(1, kills / 25) + (victory ? 3 : 0);
+
+            if (characterIds != null)
+            {
+                for (var i = 0; i < characterIds.Length; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(characterIds[i]))
+                    {
+                        continue;
+                    }
+
+                    SharedMetaProgressionModel.ApplyMasteryToProgress(Data, characterIds[i], kills, victory);
+                }
+            }
+            else
+            {
+                Data.HaldorMastery += SharedMetaProgressionModel.CalculateMasteryGain(kills, victory);
+            }
+
             Save();
         }
 
@@ -114,6 +192,7 @@ namespace ProjectExpedition
 
             updated[relics.Length] = relicId;
             Data.RelicsCollected = updated;
+            DiscoverCodex(relicId);
             Save();
         }
 
@@ -172,32 +251,47 @@ namespace ProjectExpedition
             Save();
         }
 
+        public static void CompleteCampOnboarding()
+        {
+            Data.CampOnboardingComplete = true;
+            Save();
+        }
+
         public static int ResolveLastCharacterSelectionIndex(int playerSlot)
         {
             var characterId = playerSlot == 0 ? Data.LastCampLeaderId : Data.LastCoopPartnerId;
             var index = ContentCatalog.CharacterIndex(characterId);
-            if (index >= 0)
+            if (index >= 0 && SharedMetaProgressionModel.IsCharacterUnlocked(Data, index))
             {
                 return index;
             }
 
             if (playerSlot == 0)
             {
-                return 0;
+                return SharedMetaProgressionModel.FirstUnlockedCharacterIndex(Data);
             }
 
-            return ContentCatalog.Characters.Length > 1 ? 1 : 0;
+            var firstUnlocked = SharedMetaProgressionModel.FirstUnlockedCharacterIndex(Data);
+            for (var i = 0; i < ContentCatalog.Characters.Length; i++)
+            {
+                if (SharedMetaProgressionModel.IsCharacterUnlocked(Data, i) && i != firstUnlocked)
+                {
+                    return i;
+                }
+            }
+
+            return firstUnlocked;
         }
 
         public static CharacterDefinition ResolveCampLeader()
         {
             var leader = ContentCatalog.FindCharacter(Data.LastCampLeaderId);
-            if (leader != null)
+            if (leader != null && IsUnlocked(leader.Id))
             {
                 return leader;
             }
 
-            return ContentCatalog.Characters[0];
+            return ContentCatalog.FindCharacter(SharedMetaProgressionModel.HaldorId) ?? ContentCatalog.Characters[0];
         }
 
         public static void Save()
@@ -216,6 +310,10 @@ namespace ProjectExpedition
             }
         }
 
-        internal static void ResetForTests() => Data = new MetaProgress();
+        internal static void ResetForTests()
+        {
+            Data = new MetaProgress();
+            SharedMetaProgressionModel.EnsureStarterUnlocks(Data);
+        }
     }
 }

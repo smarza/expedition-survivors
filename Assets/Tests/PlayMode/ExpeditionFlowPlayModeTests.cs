@@ -291,6 +291,65 @@ namespace ProjectExpedition.Tests
             yield return DestroyDirector(director);
         }
 
+        [UnityTest]
+        public IEnumerator MetaProgression_FreshSaveStartsWithHaldorAndScoutOnly()
+        {
+            yield return ClearDirectors();
+            CreateDirector();
+
+            Assert.That(SaveService.IsUnlocked(SharedMetaProgressionModel.HaldorId), Is.True);
+            Assert.That(SaveService.IsUnlocked(SharedMetaProgressionModel.ScoutMapId), Is.True);
+            Assert.That(SaveService.IsUnlocked(SharedMetaProgressionModel.SylvaId), Is.False);
+            Assert.That(SaveService.IsUnlocked(SharedMetaProgressionModel.SagaMapId), Is.False);
+            Assert.That(SaveService.IsCharacterUnlocked(0), Is.True);
+            Assert.That(SaveService.IsCharacterUnlocked(2), Is.False);
+            Assert.That(SaveService.IsMapUnlocked(0), Is.True);
+            Assert.That(SaveService.IsMapUnlocked(1), Is.False);
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator MetaProgression_RunCompletionIncreasesRenownAndMastery()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+            director.BeginRunSetup(1);
+            director.ConfirmCharacters(0, 1);
+            director.SelectMapAndStart(0);
+
+            var renownBefore = SaveService.Data.TotalRenown;
+            var masteryBefore = SaveService.Data.HaldorMastery;
+
+            director.EndRun(true);
+
+            Assert.That(SaveService.Data.TotalRenown, Is.GreaterThan(renownBefore));
+            Assert.That(SaveService.Data.HaldorMastery, Is.GreaterThan(masteryBefore));
+            Assert.That(SaveService.AvailableRenown(), Is.GreaterThan(0));
+
+            yield return DestroyDirector(director);
+        }
+
+        [UnityTest]
+        public IEnumerator MetaProgression_PurchaseUnlockSpendsAvailableRenown()
+        {
+            yield return ClearDirectors();
+            CreateDirector();
+            SaveService.AssignDataForTests(new MetaProgress
+            {
+                TotalRenown = 80,
+                UnlockedContentIds = new[] { SharedMetaProgressionModel.HaldorId, SharedMetaProgressionModel.ScoutMapId }
+            });
+
+            var result = SaveService.TryPurchaseUnlock(SharedMetaProgressionModel.SylvaId);
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(SaveService.IsUnlocked(SharedMetaProgressionModel.SylvaId), Is.True);
+            Assert.That(SaveService.AvailableRenown(), Is.EqualTo(30));
+
+            yield return null;
+        }
+
         private static GameDirector CreateDirector()
         {
             Time.timeScale = 1f;

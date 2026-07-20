@@ -64,12 +64,19 @@ namespace ProjectExpedition
     public sealed class MetaProgress
     {
         public int TotalRenown;
+        public int SpentRenown;
         public int RunsCompleted;
         public int BestKills;
         public float BestTime;
         public int HaldorMastery;
+        public int SylvaMastery;
+        public int MaraMastery;
+        public int EiraMastery;
         public string LastCampLeaderId;
         public string LastCoopPartnerId;
         public string[] RelicsCollected = new string[0];
+        public string[] UnlockedContentIds = new string[0];
+        public string[] DiscoveredCodexIds = new string[0];
+        public bool CampOnboardingComplete;
     }
 }

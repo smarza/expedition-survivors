@@ -85,7 +85,8 @@ namespace ProjectExpedition
 
             Weapons = new WeaponSystem(director, this);
             Weapons.SyncFromBuild(Build);
-            if (Definition.Id == "ravenbound.haldor") Weapons.ApplyMastery(SaveService.Data.HaldorMastery);
+            var mastery = SharedMetaProgressionModel.ResolveMastery(SaveService.Data, Definition.Id);
+            Weapons.ApplyHeroMastery(Definition.Id, mastery);
         }
 
         private void Update()
