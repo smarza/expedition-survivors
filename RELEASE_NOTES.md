@@ -1,4 +1,4 @@
-# Milestone 0.10.0 — Demonstration content (release candidate)
+# Milestone 0.10.0 — Demonstration content
 
 - Added authored Frostbound landmarks: driftwood wreck, rune circle, boss-approach markers and a north extraction beacon placeholder with phase-tinted RuntimeAssets sprites.
 - Added `FrostboundLandmarkTint` so landmarks brighten as the Scout route advances through shoreline, driftwood, warlord approach, boss and extraction phases.
