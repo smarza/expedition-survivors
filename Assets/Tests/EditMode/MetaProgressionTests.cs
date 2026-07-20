@@ -193,5 +193,38 @@ namespace ProjectExpedition.Tests
 
             Assert.That(unlockId, Is.EqualTo(SharedMetaProgressionModel.SylvaId));
         }
+
+        [Test]
+        public void VersionFourSave_MigratesToVersionFiveWithCanopyAndRelayUnlocks()
+        {
+            const string versionFour =
+                "{\"Version\":4,\"Progress\":{\"TotalRenown\":130,\"RunsCompleted\":2,\"BestKills\":160,\"BestTime\":280,\"HaldorMastery\":6,\"SylvaMastery\":2,\"MaraMastery\":1,\"EiraMastery\":3,\"RelicsCollected\":[\"relic.jotunn_echo\"],\"UnlockedContentIds\":[\"ravenbound.haldor\",\"frostbound.scout\",\"oathbound.sylva\",\"ravenbound.eira\",\"ironway.mara\",\"frostbound.saga\"]}}";
+
+            var progress = SaveMigration.Deserialize(versionFour, out var sourceVersion);
+
+            Assert.That(sourceVersion, Is.EqualTo(4));
+            Assert.That(SaveMigration.CurrentVersion, Is.EqualTo(5));
+            Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.CanopyScoutMapId), Is.True);
+            Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.RelayScoutMapId), Is.True);
+            Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.BrenId), Is.True);
+            Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.RexId), Is.True);
+            Assert.That(SharedMetaProgressionModel.IsVeteranUnlocked(progress), Is.True);
+        }
+
+        [Test]
+        public void PurchaseUnlock_BrenAndRexMatchUnlockCatalogCosts()
+        {
+            var progress = new MetaProgress { TotalRenown = 400 };
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+
+            var bren = SharedMetaProgressionModel.TryPurchaseUnlock(progress, SharedMetaProgressionModel.BrenId);
+            var rex = SharedMetaProgressionModel.TryPurchaseUnlock(progress, SharedMetaProgressionModel.RexId);
+
+            Assert.That(bren.Success, Is.True);
+            Assert.That(rex.Success, Is.True);
+            Assert.That(progress.SpentRenown, Is.EqualTo(175 + 210));
+            Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.BrenId), Is.True);
+            Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.RexId), Is.True);
+        }
     }
 }

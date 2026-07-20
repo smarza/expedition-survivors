@@ -71,6 +71,8 @@ def main() -> int:
         ROOT / "Assets/Scripts/Runtime/SharedWeaponRegistry.cs",
         ROOT / "Assets/Scripts/Runtime/SharedExpeditionRouteModel.cs",
         ROOT / "Assets/Scripts/Runtime/SharedMetaProgressionModel.cs",
+        ROOT / "Assets/Scripts/Runtime/SharedChallengeProfileModel.cs",
+        ROOT / "Assets/Scripts/Runtime/BiomeCatalog.cs",
         ROOT / "Assets/Scripts/Runtime/RuneShardPickup.cs",
         ROOT / "Assets/Scripts/Runtime/ProjectExpedition.Runtime.asmdef",
         ROOT / "Assets/Scripts/Runtime/LocalInputRouter.cs",
@@ -90,6 +92,10 @@ def main() -> int:
         ROOT / "Assets/Tests/EditMode/SharedWeaponRegistryTests.cs",
         ROOT / "Assets/Tests/EditMode/PresentationFoundationTests.cs",
         ROOT / "Assets/Tests/EditMode/MetaProgressionTests.cs",
+        ROOT / "Assets/Tests/EditMode/SharedChallengeProfileModelTests.cs",
+        ROOT / "Assets/Tests/EditMode/ContentAuthoringTests.cs",
+        ROOT / "Assets/Editor/ProductionContentValidator.cs",
+        ROOT / "Assets/Editor/ProjectExpedition.Editor.asmdef",
         ROOT / "Assets/Tests/Shared/ProjectExpedition.TestSupport.asmdef",
         ROOT / "Assets/Tests/Shared/PoolProbe.cs",
         ROOT / "Assets/Tests/PlayMode/ProjectExpedition.PlayModeTests.asmdef",
@@ -107,6 +113,8 @@ def main() -> int:
         ROOT / "docs/TESTING_0.9.md",
         ROOT / "docs/CAMP_AND_PROGRESSION_0.11.md",
         ROOT / "docs/TESTING_0.11.md",
+        ROOT / "docs/MVP_CONTENT_0.12.md",
+        ROOT / "docs/TESTING_0.12.md",
         ROOT / ".github/workflows/unity-ci.yml",
         ROOT / "Packages/manifest.json",
         ROOT / "ProjectSettings/ProjectSettings.asset",
@@ -272,7 +280,26 @@ def main() -> int:
                               "PresentationAudioAssets_AreImportedForEveryMusicStateAndCue",
                               "FreshSave_StartsWithHaldorAndScoutOnly",
                               "PurchaseUnlock_DeductsRenownAndUnlocksContent",
-                              "VersionThreeSave_MigratesToVersionFourWithRetroactiveSylva")
+                              "VersionThreeSave_MigratesToVersionFourWithRetroactiveSylva",
+                              "ResolveRenownMultiplier_StandardTierReturnsOne",
+                              "ResolveRenownMultiplier_VeteranTierIncreasesBase",
+                              "ApplyEnemyHealthMultiplier_VeteranIncreasesHealth",
+                              "ApplySpawnInterval_VeteranReducesInterval",
+                              "ApplyGroupSize_SwarmSurgeAddsOneAndClamps",
+                              "ApplyPlayerDamageTakenMultiplier_GlassCannonIncreasesDamage",
+                              "ApplyWeaponDamageMultiplier_GlassCannonIncreasesDamage",
+                              "AllowsHealingRewards_IronResolveBlocksHealing",
+                              "ProductionContentRuntime_ValidatePassesAfterLoad",
+                              "ContentCatalog_ContainsSixHeroesAndSixMaps",
+                              "ItemCatalog_ContainsTwelveEvolutionsAndThirtySlotItems",
+                              "EnemyCatalog_ContainsNineBiomeEnemies",
+                              "EvolutionRecipes_ReferenceExistingBaseAndCatalyst",
+                              "Begin_InitializesCanopyScoutObjectivesAndAnnouncements",
+                              "Begin_InitializesRelayScoutObjectivesAndAnnouncements",
+                              "CanopyScoutKills_UnlockBossWithHeartwoodAnnouncement",
+                              "ResolveVictoryRelicId_GrantsHeartwoodWardenWhenSapCollected",
+                              "VersionFourSave_MigratesToVersionFiveWithCanopyAndRelayUnlocks",
+                              "PurchaseUnlock_BrenAndRexMatchUnlockCatalogCosts")
     if any(requirement not in edit_tests for requirement in edit_test_requirements):
         fail("EditMode deterministic foundation coverage is incomplete")
 
@@ -287,7 +314,8 @@ def main() -> int:
                               "PresentationVfx_ReusesPoolAndSettingsReturnToTheirOwnerState",
                               "MetaProgression_FreshSaveStartsWithHaldorAndScoutOnly",
                               "MetaProgression_RunCompletionIncreasesRenownAndMastery",
-                              "MetaProgression_PurchaseUnlockSpendsAvailableRenown")
+                              "MetaProgression_PurchaseUnlockSpendsAvailableRenown",
+                              "CanopyScoutRoute_ExtractionVictoryFlow_CompletesAfterBossAndBeacon")
     if any(requirement not in play_tests for requirement in play_test_requirements):
         fail("PlayMode expedition flow coverage is incomplete")
 
@@ -457,6 +485,7 @@ def main() -> int:
         "weapon.supply_pulse": [0, 15, 15, 9, 15, 15, 15, 15],
         "weapon.iron_beacon": [0, 10, 10, 15, 10, 7, 15, 10],
         "weapon.tide_caller": [0, 1, 3, 2, 1, 3, 2, 1],
+        "weapon.root_lance": [0, 1, 4, 3, 1, 4, 3, 1],
     }
     for item_id, expected_effects in weapon_level_tables.items():
         record = re.search(
@@ -471,21 +500,51 @@ def main() -> int:
         fail("new serialized UpgradeId values must be appended without renumbering existing content")
     content_ids = re.findall(r"^\s+- id:\s*([^\s]+)\s*$", content_asset, flags=re.MULTILINE)
     required_content_ids = {
-        "ravenbound.haldor", "ravenbound.eira", "oathbound.sylva", "ironway.mara",
-        "frostbound.scout", "frostbound.saga",
+        "ravenbound.haldor", "ravenbound.eira", "oathbound.sylva", "oathbound.bren",
+        "ironway.mara", "ironway.rex",
+        "frostbound.scout", "frostbound.saga", "oathbound.scout", "oathbound.saga",
+        "ironway.scout", "ironway.saga",
         "weapon.frost_axe", "weapon.raven_guard", "weapon.north_wind_spear", "weapon.rune_bolt",
         "weapon.oath_ring", "weapon.grove_thorn_lash", "weapon.canopy_vortex", "weapon.driftwood_staff",
         "weapon.signal_flare", "weapon.supply_pulse", "weapon.iron_beacon", "weapon.tide_caller",
-        "gear.grove_seed", "gear.flare_core", "gear.oath_band",
+        "weapon.root_lance",
+        "gear.grove_seed", "gear.flare_core", "gear.oath_band", "gear.sap_vial", "gear.siege_plating",
         "evolution.jotunn_cleaver", "evolution.storm_aegis", "evolution.grove_crown",
         "evolution.signal_storm", "evolution.oath_maelstrom", "evolution.iron_sanctuary",
-        "boon.field_rations", "enemy.draugr_raider", "enemy.frost_wraith_captain",
-        "enemy.jotunn_warlord",
+        "evolution.canopy_eye", "evolution.root_cathedral", "evolution.north_gale",
+        "evolution.supply_chain", "evolution.root_lance_bloom", "evolution.breach_beacon",
+        "boon.field_rations",
+        "enemy.draugr_raider", "enemy.frost_wraith_captain", "enemy.jotunn_warlord",
+        "enemy.bramble_stalker", "enemy.canopy_warden", "enemy.heartwood_colossus",
+        "enemy.scrap_drone", "enemy.signal_raider", "enemy.siege_automaton",
     }
     if len(content_ids) != len(set(content_ids)):
         fail("ProductionContent.asset contains duplicate stable IDs")
     if not required_content_ids.issubset(content_ids):
         fail("ProductionContent.asset is missing required production content IDs")
+    character_ids = [content_id for content_id in content_ids
+                     if content_id.startswith(("ravenbound.", "oathbound.", "ironway."))
+                     and ".scout" not in content_id and ".saga" not in content_id
+                     and not content_id.startswith("challenge.")]
+    map_ids = [content_id for content_id in content_ids if content_id.endswith((".scout", ".saga"))]
+    evolution_ids = [content_id for content_id in content_ids if content_id.startswith("evolution.")]
+    enemy_ids = [content_id for content_id in content_ids if content_id.startswith("enemy.")]
+    slot_item_count = len(re.findall(r"^\s+- id: (?:weapon|gear)\.", content_asset, flags=re.MULTILINE))
+    if len(character_ids) < 6:
+        fail(f"ProductionContent.asset must define at least six heroes (found {len(character_ids)})")
+    if len(map_ids) < 6:
+        fail(f"ProductionContent.asset must define at least six maps (found {len(map_ids)})")
+    if slot_item_count < 30:
+        fail(f"ProductionContent.asset must define at least thirty weapon/gear slot items (found {slot_item_count})")
+    if len(evolution_ids) < 12:
+        fail(f"ProductionContent.asset must define at least twelve evolutions (found {len(evolution_ids)})")
+    if len(enemy_ids) < 9:
+        fail(f"ProductionContent.asset must define at least nine enemies (found {len(enemy_ids)})")
+    for map_id in map_ids:
+        map_record = re.search(rf"- id: {re.escape(map_id)}\n.*?landmarkProfileId:\s*(\S+)",
+                               content_asset, flags=re.DOTALL)
+        if not map_record:
+            fail(f"{map_id} is missing required biome or landmark fields")
     scout_route = re.search(
         r"- id: frostbound\.scout\n.*?requiredKillObjective:\s*(\d+).*?"
         r"optionalShardObjective:\s*(\d+).*?extractionDuration:\s*([\d.]+).*?"

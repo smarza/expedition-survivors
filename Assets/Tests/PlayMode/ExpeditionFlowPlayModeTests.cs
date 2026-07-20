@@ -351,6 +351,50 @@ namespace ProjectExpedition.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator CanopyScoutRoute_ExtractionVictoryFlow_CompletesAfterBossAndBeacon()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+            SaveService.AssignDataForTests(new MetaProgress
+            {
+                UnlockedContentIds = new[]
+                {
+                    SharedMetaProgressionModel.HaldorId,
+                    SharedMetaProgressionModel.ScoutMapId,
+                    SharedMetaProgressionModel.CanopyScoutMapId
+                }
+            });
+
+            director.BeginRunSetup(1);
+            director.ConfirmCharacters(0, 1);
+            director.SelectMapAndStart(2);
+
+            Assert.That(director.SelectedMap.Id, Is.EqualTo("oathbound.scout"));
+            Assert.That(director.Route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Shoreline));
+            Assert.That(director.Route.ConsumeAnnouncement(), Is.EqualTo("THE CANOPY STIRS"));
+
+            var bossObject = new GameObject("Mock Heartwood Colossus");
+            bossObject.transform.SetParent(director.RunRoot, false);
+            var boss = bossObject.AddComponent<Enemy>();
+            director.OnEnemyKilled(boss, 60, true, false);
+
+            Assert.That(director.Route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Extraction));
+
+            director.Player.transform.position = new Vector3(
+                director.SelectedMap.ExtractionBeaconX,
+                director.SelectedMap.ExtractionBeaconY,
+                0f);
+
+            yield return null;
+
+            Assert.That(director.Route.IsExtractionComplete(), Is.True);
+            Assert.That(director.State, Is.EqualTo(RunState.Victory));
+            Assert.That(director.Outcome, Is.EqualTo(RunOutcome.Victory));
+
+            yield return DestroyDirector(director);
+        }
+
         private static GameDirector CreateDirector()
         {
             Time.timeScale = 1f;

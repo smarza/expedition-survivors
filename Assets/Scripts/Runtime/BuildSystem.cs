@@ -134,6 +134,7 @@ namespace ProjectExpedition
                     return radialLabel != null
                         ? $"+1 projectile per {radialLabel} burst"
                         : "+1 projectile per radial burst";
+                case UpgradeId.SapRegen: return "+18 maximum and current health and +0.4 health regen per second";
                 default: return "Base item level; no additional modifier";
             }
         }
@@ -150,6 +151,8 @@ namespace ProjectExpedition
                     return "+1 Canopy Vortex burst projectile";
                 case "gear.oath_band":
                     return "+1 Oath Ring blade";
+                case "gear.siege_plating":
+                    return "+1 Iron Beacon knockback";
                 default:
                     return null;
             }
@@ -169,6 +172,7 @@ namespace ProjectExpedition
                 case "weapon.rune_bolt": return "Rune Bolt";
                 case "weapon.signal_flare": return "Signal Flare";
                 case "weapon.tide_caller": return "Tide Caller";
+                case "weapon.root_lance": return "Root Lance";
                 default: return null;
             }
         }
@@ -439,6 +443,12 @@ namespace ProjectExpedition
                 UpgradeId.None, UpgradeId.AxeDamage, UpgradeId.ExtraAxe, UpgradeId.AxeSpeed,
                 UpgradeId.AxeDamage, UpgradeId.ExtraAxe, UpgradeId.AxeSpeed, UpgradeId.AxeDamage));
 
+        public static ItemDefinition RootLance { get; private set; } = new ItemDefinition(
+            "weapon.root_lance", "Root Lance", "LANCE", "Directed root lance volley. Each level grants the listed damage, interval or pierce modifier.",
+            ItemCategory.Weapon, 8, new Color(0.48f, 0.72f, 0.38f), Effects(
+                UpgradeId.None, UpgradeId.AxeDamage, UpgradeId.AxePierce, UpgradeId.AxeSpeed,
+                UpgradeId.AxeDamage, UpgradeId.AxePierce, UpgradeId.AxeSpeed, UpgradeId.AxeDamage));
+
         public static ItemDefinition LongshipBoots { get; private set; } = Gear(
             "gear.longship_boots", "Longship Boots", "BOOTS", "Increases movement speed.", 5,
             new Color(0.4f, 0.84f, 0.62f), UpgradeId.MoveSpeed);
@@ -483,6 +493,14 @@ namespace ProjectExpedition
             "gear.field_manual", "Field Manual", "MANUAL", "Ultimate recharges 10% faster per level.", 5,
             new Color(0.72f, 0.65f, 0.48f), UpgradeId.UltimateCooldown);
 
+        public static ItemDefinition SapVial { get; private set; } = Gear(
+            "gear.sap_vial", "Sap Vial", "SAP", "Increases maximum health and sap regeneration.", 5,
+            new Color(0.62f, 0.82f, 0.42f), UpgradeId.SapRegen);
+
+        public static ItemDefinition SiegePlating { get; private set; } = Gear(
+            "gear.siege_plating", "Siege Plating", "PLATE", "Reduces every contact hit. A rare catalyst that prepares Iron Beacon for evolution.", 5,
+            new Color(0.58f, 0.62f, 0.68f), UpgradeId.Armor);
+
         public static ItemDefinition JotunnRune { get; private set; } = new ItemDefinition(
             "gear.jotunn_rune", "Jotunn Rune", "RUNE", "A rare catalyst that prepares Frost Axe for evolution.",
             ItemCategory.Gear, 1, new Color(0.75f, 0.35f, 0.85f), Effects(UpgradeId.AxePierce));
@@ -523,6 +541,30 @@ namespace ProjectExpedition
             "evolution.iron_sanctuary", "Iron Sanctuary", "SANCT", "Iron Beacon persists as a moving shield zone after each pulse.",
             ItemCategory.Evolution, 1, new Color(0.52f, 0.58f, 0.72f), Effects(UpgradeId.None), IronBeacon.Id, FieldManual.Id);
 
+        public static ItemDefinition CanopyEye { get; private set; } = new ItemDefinition(
+            "evolution.canopy_eye", "Canopy Eye", "EYE", "Canopy Vortex leaves a residual damaging whirlwind where it bursts.",
+            ItemCategory.Evolution, 1, new Color(0.42f, 0.92f, 0.62f), Effects(UpgradeId.None), CanopyVortex.Id, WindsweptCloak.Id);
+
+        public static ItemDefinition RootCathedral { get; private set; } = new ItemDefinition(
+            "evolution.root_cathedral", "Root Cathedral", "CATH", "Driftwood Staff releases three staggered radial bursts.",
+            ItemCategory.Evolution, 1, new Color(0.52f, 0.68f, 0.38f), Effects(UpgradeId.None), DriftwoodStaff.Id, HollowGourds.Id);
+
+        public static ItemDefinition NorthGale { get; private set; } = new ItemDefinition(
+            "evolution.north_gale", "North Gale", "GALE", "North Wind Spear returns in an arc and critical hits explode.",
+            ItemCategory.Evolution, 1, new Color(0.72f, 0.88f, 0.98f), Effects(UpgradeId.None), NorthWindSpear.Id, SagaCarver.Id);
+
+        public static ItemDefinition SupplyChain { get; private set; } = new ItemDefinition(
+            "evolution.supply_chain", "Supply Chain", "CHAIN", "Supply Pulse heals downed allies nearby and boosts pickup radius.",
+            ItemCategory.Evolution, 1, new Color(0.55f, 0.88f, 0.62f), Effects(UpgradeId.None), SupplyPulse.Id, SignalMagnet.Id);
+
+        public static ItemDefinition RootLanceBloom { get; private set; } = new ItemDefinition(
+            "evolution.root_lance_bloom", "Root Lance Bloom", "BLOOM", "Root Lance leaves a brief curative trail for its owner.",
+            ItemCategory.Evolution, 1, new Color(0.58f, 0.82f, 0.48f), Effects(UpgradeId.None), RootLance.Id, SapVial.Id);
+
+        public static ItemDefinition BreachBeacon { get; private set; } = new ItemDefinition(
+            "evolution.breach_beacon", "Breach Beacon", "BREACH", "Iron Beacon pulses with heavy knockback and a brief armor aura.",
+            ItemCategory.Evolution, 1, new Color(0.68f, 0.58f, 0.48f), Effects(UpgradeId.None), IronBeacon.Id, SiegePlating.Id);
+
         public static ItemDefinition FieldRations { get; private set; } = new ItemDefinition(
             "boon.field_rations", "Field Rations", "HEAL", "Immediately restores health. Does not occupy a build slot.",
             ItemCategory.Boon, 99, new Color(0.45f, 0.85f, 0.48f), Effects(UpgradeId.Heal));
@@ -530,11 +572,12 @@ namespace ProjectExpedition
         public static ItemDefinition[] All { get; private set; } = new[]
         {
             FrostAxe, RavenGuard, NorthWindSpear, RuneBolt, OathRing, GroveThornLash, CanopyVortex,
-            DriftwoodStaff, SignalFlare, SupplyPulse, IronBeacon, TideCaller,
+            DriftwoodStaff, SignalFlare, SupplyPulse, IronBeacon, TideCaller, RootLance,
             LongshipBoots, BearBlooded, RavenArmor, SagaCarver, RavenHourglass, FinalVerse,
-            WindsweptCloak, HollowGourds, OathFeather, SignalMagnet, FieldManual,
+            WindsweptCloak, HollowGourds, OathFeather, SignalMagnet, FieldManual, SapVial, SiegePlating,
             JotunnRune, GroveSeed, FlareCore, OathBand,
             JotunnCleaver, StormAegis, GroveCrown, SignalStorm, OathMaelstrom, IronSanctuary,
+            CanopyEye, RootCathedral, NorthGale, SupplyChain, RootLanceBloom, BreachBeacon,
             FieldRations
         };
 
@@ -596,6 +639,12 @@ namespace ProjectExpedition
             SignalStorm = Find(definitions, "evolution.signal_storm") ?? SignalStorm;
             OathMaelstrom = Find(definitions, "evolution.oath_maelstrom") ?? OathMaelstrom;
             IronSanctuary = Find(definitions, "evolution.iron_sanctuary") ?? IronSanctuary;
+            CanopyEye = Find(definitions, "evolution.canopy_eye") ?? CanopyEye;
+            RootCathedral = Find(definitions, "evolution.root_cathedral") ?? RootCathedral;
+            NorthGale = Find(definitions, "evolution.north_gale") ?? NorthGale;
+            SupplyChain = Find(definitions, "evolution.supply_chain") ?? SupplyChain;
+            RootLanceBloom = Find(definitions, "evolution.root_lance_bloom") ?? RootLanceBloom;
+            BreachBeacon = Find(definitions, "evolution.breach_beacon") ?? BreachBeacon;
             NorthWindSpear = Find(definitions, "weapon.north_wind_spear") ?? NorthWindSpear;
             RuneBolt = Find(definitions, "weapon.rune_bolt") ?? RuneBolt;
             OathRing = Find(definitions, "weapon.oath_ring") ?? OathRing;
@@ -606,11 +655,14 @@ namespace ProjectExpedition
             SupplyPulse = Find(definitions, "weapon.supply_pulse") ?? SupplyPulse;
             IronBeacon = Find(definitions, "weapon.iron_beacon") ?? IronBeacon;
             TideCaller = Find(definitions, "weapon.tide_caller") ?? TideCaller;
+            RootLance = Find(definitions, "weapon.root_lance") ?? RootLance;
             WindsweptCloak = Find(definitions, "gear.windswept_cloak") ?? WindsweptCloak;
             HollowGourds = Find(definitions, "gear.hollow_gourds") ?? HollowGourds;
             OathFeather = Find(definitions, "gear.oath_feather") ?? OathFeather;
             SignalMagnet = Find(definitions, "gear.signal_magnet") ?? SignalMagnet;
             FieldManual = Find(definitions, "gear.field_manual") ?? FieldManual;
+            SapVial = Find(definitions, "gear.sap_vial") ?? SapVial;
+            SiegePlating = Find(definitions, "gear.siege_plating") ?? SiegePlating;
         }
 
         private static ItemDefinition Find(List<ItemDefinition> definitions, string id)
@@ -622,39 +674,56 @@ namespace ProjectExpedition
 
     public static class RewardFactory
     {
-        public static List<RewardOption> Generate(PlayerBuild[] builds, int owner, int playerCount, RunRandom random = null)
+        public static List<RewardOption> Generate(PlayerBuild[] builds, int owner, int playerCount,
+            RunRandom random = null, bool allowHealingRewards = true)
         {
             var options = new List<RewardOption>(4);
             var used = new HashSet<string>();
-            AddForTargetOrRations(options, used, builds, owner, random);
-            AddForTargetOrRations(options, used, builds, owner, random);
+            AddForTargetOrRations(options, used, builds, owner, random, allowHealingRewards);
+            AddForTargetOrRations(options, used, builds, owner, random, allowHealingRewards);
 
             if (playerCount > 1 && Chance(random, 0.6f))
-                AddForTargetOrRations(options, used, builds, 1 - owner, random);
+                AddForTargetOrRations(options, used, builds, 1 - owner, random, allowHealingRewards);
             else
-                AddForTargetOrRations(options, used, builds, owner, random);
+                AddForTargetOrRations(options, used, builds, owner, random, allowHealingRewards);
 
             if (playerCount > 1 && Chance(random, 0.35f))
-                AddShared(options, used, builds, playerCount, owner, random);
+                AddShared(options, used, builds, playerCount, owner, random, allowHealingRewards);
             else
-                AddForTargetOrRations(options, used, builds, owner, random);
+                AddForTargetOrRations(options, used, builds, owner, random, allowHealingRewards);
 
             while (options.Count < 4)
-                options.Add(new RewardOption { Item = ItemCatalog.FieldRations, TargetPlayerIndex = owner });
+            {
+                options.Add(new RewardOption
+                {
+                    Item = ItemCatalog.FieldRations,
+                    TargetPlayerIndex = owner
+                });
+            }
+
             return options;
         }
 
         private static void AddForTargetOrRations(
-            List<RewardOption> options, HashSet<string> used, PlayerBuild[] builds, int target, RunRandom random)
+            List<RewardOption> options, HashSet<string> used, PlayerBuild[] builds, int target,
+            RunRandom random, bool allowHealingRewards)
         {
-            if (!AddForTarget(options, used, builds, target, random))
+            if (AddForTarget(options, used, builds, target, random, allowHealingRewards))
+            {
+                return;
+            }
+
+            if (allowHealingRewards || !HasNonHealingReward(builds, target))
+            {
                 options.Add(new RewardOption { Item = ItemCatalog.FieldRations, TargetPlayerIndex = target });
+            }
         }
 
         private static bool AddForTarget(
-            List<RewardOption> options, HashSet<string> used, PlayerBuild[] builds, int target, RunRandom random)
+            List<RewardOption> options, HashSet<string> used, PlayerBuild[] builds, int target,
+            RunRandom random, bool allowHealingRewards)
         {
-            var candidates = Eligible(builds[target]);
+            var candidates = Eligible(builds[target], allowHealingRewards);
             for (var i = candidates.Count - 1; i >= 0; i--)
             {
                 if (used.Contains($"{target}:{candidates[i].Id}")) candidates.RemoveAt(i);
@@ -667,9 +736,10 @@ namespace ProjectExpedition
         }
 
         private static void AddShared(
-            List<RewardOption> options, HashSet<string> used, PlayerBuild[] builds, int playerCount, int fallbackTarget, RunRandom random)
+            List<RewardOption> options, HashSet<string> used, PlayerBuild[] builds, int playerCount, int fallbackTarget,
+            RunRandom random, bool allowHealingRewards)
         {
-            var candidates = Eligible(builds[0]);
+            var candidates = Eligible(builds[0], allowHealingRewards);
             for (var i = candidates.Count - 1; i >= 0; i--)
             {
                 var item = candidates[i];
@@ -684,7 +754,7 @@ namespace ProjectExpedition
             }
             if (candidates.Count == 0)
             {
-                AddForTargetOrRations(options, used, builds, fallbackTarget, random);
+                AddForTargetOrRations(options, used, builds, fallbackTarget, random, allowHealingRewards);
                 return;
             }
             var selected = candidates[PickIndex(random, candidates.Count)];
@@ -692,21 +762,69 @@ namespace ProjectExpedition
             options.Add(new RewardOption { Item = selected, TargetPlayerIndex = 0, Shared = true });
         }
 
-        private static List<ItemDefinition> Eligible(PlayerBuild build)
+        private static List<ItemDefinition> Eligible(PlayerBuild build, bool allowHealingRewards)
         {
             var result = new List<ItemDefinition>();
             for (var i = 0; i < ItemCatalog.All.Length; i++)
             {
                 var item = ItemCatalog.All[i];
-                if (item == ItemCatalog.FieldRations) continue;
-                if (build.CanAcquire(item)) result.Add(item);
+                if (item == ItemCatalog.FieldRations)
+                {
+                    continue;
+                }
+
+                if (build.CanAcquire(item))
+                {
+                    result.Add(item);
+                }
             }
+
             // Completed recipes should be noticeably more likely than another numeric level.
             var originalCount = result.Count;
             for (var i = 0; i < originalCount; i++)
-                if (result[i].IsEvolution) { result.Add(result[i]); result.Add(result[i]); }
-            if (result.Count == 0) result.Add(ItemCatalog.FieldRations);
+            {
+                if (result[i].IsEvolution)
+                {
+                    result.Add(result[i]);
+                    result.Add(result[i]);
+                }
+            }
+
+            if (result.Count == 0 && (allowHealingRewards || !HasNonHealingReward(build)))
+            {
+                result.Add(ItemCatalog.FieldRations);
+            }
+
             return result;
+        }
+
+        private static bool HasNonHealingReward(PlayerBuild build)
+        {
+            for (var i = 0; i < ItemCatalog.All.Length; i++)
+            {
+                var item = ItemCatalog.All[i];
+                if (item == ItemCatalog.FieldRations)
+                {
+                    continue;
+                }
+
+                if (build.CanAcquire(item))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasNonHealingReward(PlayerBuild[] builds, int target)
+        {
+            if (builds == null || target < 0 || target >= builds.Length || builds[target] == null)
+            {
+                return false;
+            }
+
+            return HasNonHealingReward(builds[target]);
         }
 
         private static bool Chance(RunRandom random, float probability) =>

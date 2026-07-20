@@ -26,6 +26,10 @@ namespace ProjectExpedition
                 BuildSylvaSilhouette();
             else if (definition != null && definition.Id == "ironway.mara")
                 BuildMaraSilhouette();
+            else if (definition != null && definition.Id == "oathbound.bren")
+                BuildBrenSilhouette();
+            else if (definition != null && definition.Id == "ironway.rex")
+                BuildRexSilhouette();
             else
                 BuildEiraSilhouette();
         }
@@ -99,6 +103,32 @@ namespace ProjectExpedition
             var launcher = AddPart("Flare Launcher", RuntimeAssets.Diamond, new Color(0.92f, 0.48f, 0.18f),
                 new Vector3(0.58f, 0.06f, 0f), new Vector3(0.2f, 0.34f, 1f), 11);
             launcher.transform.rotation = Quaternion.Euler(0f, 0f, -18f);
+        }
+
+        private void BuildBrenSilhouette()
+        {
+            AddPart("Bark Mantle", RuntimeAssets.Circle, new Color(0.22f, 0.34f, 0.24f),
+                new Vector3(0f, 0.18f, 0f), new Vector3(1.08f, 0.78f, 1f), 9);
+            AddPart("Root Wrap", RuntimeAssets.Diamond, new Color(0.34f, 0.24f, 0.16f),
+                new Vector3(-0.06f, -0.12f, 0f), new Vector3(0.72f, 0.42f, 1f), 10);
+            AddPart("Acorn Brooch", RuntimeAssets.Diamond, new Color(0.72f, 0.52f, 0.24f),
+                new Vector3(0.04f, 0.12f, 0f), Vector3.one * 0.14f, 13);
+            var staff = AddPart("Driftwood Staff", RuntimeAssets.Diamond, new Color(0.48f, 0.38f, 0.28f),
+                new Vector3(0.5f, -0.02f, 0f), new Vector3(0.16f, 0.78f, 1f), 11);
+            staff.transform.rotation = Quaternion.Euler(0f, 0f, 10f);
+        }
+
+        private void BuildRexSilhouette()
+        {
+            AddPart("Breacher Rig", RuntimeAssets.Circle, new Color(0.28f, 0.24f, 0.22f),
+                new Vector3(-0.12f, 0.14f, 0f), new Vector3(0.78f, 0.88f, 1f), 9);
+            AddPart("Blast Plate", RuntimeAssets.Diamond, new Color(0.46f, 0.36f, 0.28f),
+                new Vector3(0.06f, 0.1f, 0f), new Vector3(0.8f, 1.02f, 1f), 10);
+            AddPart("Charge Band", RuntimeAssets.Diamond, new Color(0.92f, 0.58f, 0.22f),
+                new Vector3(0.08f, 0.32f, 0f), new Vector3(0.5f, 0.14f, 1f), 12);
+            var beacon = AddPart("Iron Beacon", RuntimeAssets.Diamond, new Color(0.68f, 0.62f, 0.52f),
+                new Vector3(0.56f, 0.04f, 0f), new Vector3(0.24f, 0.38f, 1f), 11);
+            beacon.transform.rotation = Quaternion.Euler(0f, 0f, -22f);
         }
 
         private void BuildEiraSilhouette()

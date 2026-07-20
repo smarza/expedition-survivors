@@ -56,6 +56,11 @@ namespace ProjectExpedition
         private readonly bool[] _characterSelected = new bool[2];
         private readonly bool[] _characterReady = new bool[2];
         private int _mapSelection;
+        private ChallengeTier _challengeTier = ChallengeTier.Standard;
+        private ChallengeMutator _mutatorA = ChallengeMutator.None;
+        private ChallengeMutator _mutatorB = ChallengeMutator.None;
+        private bool _mapChallengeEditing;
+        private int _challengeFocus;
         private int _levelSelection;
         private int _pauseSelection;
         private int _resultSelection;
@@ -65,6 +70,7 @@ namespace ProjectExpedition
         private int _dismissedFirstRunHints;
         private CampView _campView;
         private int _unlockSelection;
+        private float _unlockScrollOffset;
         private int _codexCategorySelection;
         private int _codexEntrySelection;
         private int _onboardingStep;
@@ -299,7 +305,35 @@ namespace ProjectExpedition
         private void AdvanceToMapSelect()
         {
             _mapSelection = SharedMetaProgressionModel.FirstUnlockedMapIndex(SaveService.Data);
+            LoadChallengePreferences();
             _director.ConfirmCharacters(_characterSelections[0], _characterSelections[1]);
+        }
+
+        private void LoadChallengePreferences()
+        {
+            var preferences = PresentationPreferences.Data;
+            _challengeTier = preferences.ChallengeTier == 1
+                ? ChallengeTier.Veteran
+                : ChallengeTier.Standard;
+            _mutatorA = (ChallengeMutator)Mathf.Clamp(preferences.ChallengeMutatorA, 0, 4);
+            _mutatorB = (ChallengeMutator)Mathf.Clamp(preferences.ChallengeMutatorB, 0, 4);
+            _mapChallengeEditing = false;
+            _challengeFocus = 0;
+            SanitizeChallengeMutators();
+        }
+
+        private void SaveChallengePreferences()
+        {
+            var preferences = PresentationPreferences.Data;
+            preferences.ChallengeTier = _challengeTier == ChallengeTier.Veteran ? 1 : 0;
+            preferences.ChallengeMutatorA = (int)_mutatorA;
+            preferences.ChallengeMutatorB = (int)_mutatorB;
+            PresentationPreferences.Save();
+        }
+
+        private ChallengeProfile BuildSelectedChallengeProfile()
+        {
+            return new ChallengeProfile(_challengeTier, _mutatorA, _mutatorB);
         }
 
         private static bool IsLastPlayedCharacter(int playerIndex, int selectedIndex)
@@ -369,11 +403,54 @@ namespace ProjectExpedition
             }
 
             var playerCount = _director.PendingPlayerCount;
+
+            if (LocalInputRouter.DetailsPressed())
+            {
+                _mapChallengeEditing = !_mapChallengeEditing;
+                _challengeFocus = 0;
+                NavigateCue();
+            }
+
             var horizontal = LocalInputRouter.MenuHorizontalPressed(0, playerCount);
             var vertical = LocalInputRouter.MenuVerticalPressed(0, playerCount);
-            if (horizontal != 0 || vertical != 0)
+
+            if (_mapChallengeEditing)
             {
+                if (vertical != 0)
+                {
+                    _challengeFocus = Mathf.Clamp(_challengeFocus + vertical, 0, 2);
+                    NavigateCue();
+                }
+
+                if (horizontal != 0)
+                {
+                    if (_challengeFocus == 0)
+                    {
+                        _challengeTier = horizontal > 0 ? ChallengeTier.Veteran : ChallengeTier.Standard;
+                    }
+                    else if (_challengeFocus == 1)
+                    {
+                        _mutatorA = CycleMutator(_mutatorA, horizontal, _mutatorB);
+                    }
+                    else
+                    {
+                        _mutatorB = CycleMutator(_mutatorB, horizontal, _mutatorA);
+                    }
+
+                    SanitizeChallengeMutators();
+                    NavigateCue();
+                }
+            }
+            else if (horizontal != 0 || vertical != 0)
+            {
+                var previousMap = _mapSelection;
                 _mapSelection = SharedMetaProgressionModel.NextMapIndex(_mapSelection, horizontal, vertical);
+
+                if (_mapSelection != previousMap)
+                {
+                    SuggestBiomeMutator(ContentCatalog.Map(_mapSelection));
+                }
+
                 NavigateCue();
             }
 
@@ -390,6 +467,8 @@ namespace ProjectExpedition
                 return;
             }
 
+            _director.SetSelectedChallenge(BuildSelectedChallengeProfile());
+            SaveChallengePreferences();
             _director.SelectMapAndStart(_mapSelection);
             ConfirmCue();
         }
@@ -506,7 +585,20 @@ namespace ProjectExpedition
             GUI.color = Color.white;
         }
 
-        private static readonly string[] KnownRelicIds = { "relic.jotunn_echo", "relic.jotunn_echo_warden" };
+        private static readonly string[] KnownRelicIds =
+        {
+            "relic.jotunn_echo", "relic.jotunn_echo_warden",
+            "relic.heartwood_echo", "relic.heartwood_echo_warden",
+            "relic.siege_echo", "relic.siege_echo_warden"
+        };
+
+        private struct CampUnlockDisplayEntry
+        {
+            public bool IsHeader;
+            public string SectionLabel;
+            public UnlockDefinition Unlock;
+            public int PurchasableIndex;
+        }
 
         private void DrawMainMenu()
         {
@@ -538,16 +630,15 @@ namespace ProjectExpedition
             DrawPanel(new Rect(campPanel.x, campPanel.y, campPanel.width, 6), new Color(0.92f, 0.58f, 0.18f, 0.85f));
 
             DrawCampLeaderSpotlight(new Rect(campPanel.x + 30, campPanel.y + 34, 520, 530), campLeader);
-            DrawCampBriefing(new Rect(campPanel.x + 580, campPanel.y + 34, 1150, 218), campLeader);
-            DrawCampUnlockBoard(new Rect(campPanel.x + 580, campPanel.y + 266, 1150, 278));
-            DrawCampRelicVault(new Rect(campPanel.x + 580, campPanel.y + 550, 1150, 48));
+            DrawCampBriefing(new Rect(campPanel.x + 580, campPanel.y + 34, 1150, 164), campLeader);
+            DrawCampUnlockBoard(new Rect(campPanel.x + 580, campPanel.y + 210, 1150, 354));
 
             DrawSelectableButton(new Rect(430, 862, 280, 88), "SOLO", 0, ref _mainSelection, PrepareSolo);
             DrawSelectableButton(new Rect(735, 862, 280, 88), "LOCAL CO-OP", 1, ref _mainSelection, PrepareLocal);
             DrawSelectableButton(new Rect(1040, 862, 280, 88), "CODEX", 2, ref _mainSelection, OpenCodexFromButton);
             DrawSelectableButton(new Rect(1345, 862, 280, 88), "SETTINGS", 3, ref _mainSelection, _director.OpenSettings);
             GUI.Label(new Rect(430, 962, 1195, 55),
-                $"↑↓ SELECT UNLOCK ON THE BOARD   •   {Prompt(BindingAction.Submit)} PURCHASE   •   ←→ CAMP MENU", _small);
+                $"↑↓ SCROLL UNLOCK LIST   •   {Prompt(BindingAction.Submit)} PURCHASE   •   ←→ CAMP MENU", _small);
 
             if (_campView == CampView.Onboarding)
             {
@@ -565,7 +656,7 @@ namespace ProjectExpedition
         private static readonly string[] CampOnboardingMessages =
         {
             "YOUR SPENDABLE RENOWN appears in the ledger at the top — this is the currency you use at camp.",
-            "OPEN THE UNLOCK BOARD below the briefing. Select a survivor or route with ↑↓, press Confirm, or click UNLOCK.",
+            "OPEN THE UNLOCK BOARD below the briefing. Scroll the list with ↑↓ or the mouse wheel, then confirm to unlock.",
             "THE RELIC VAULT stores trophies earned from Scout victories and optional objectives.",
             "THE CODEX records weapons, gear, evolutions and relics discovered during your runs."
         };
@@ -666,83 +757,337 @@ namespace ProjectExpedition
                 $"{available} RENOWN", _cardTitle);
 
             var ledgerText =
-                $"Lifetime earned {progress.TotalRenown}     •     Mastery H{progress.HaldorMastery} S{progress.SylvaMastery} M{progress.MaraMastery} E{progress.EiraMastery}     •     Expeditions {progress.RunsCompleted}     •     Relics {SaveService.RelicCollectionCount()} / {KnownRelicIds.Length}";
+                $"Lifetime earned {progress.TotalRenown}     •     Mastery H{progress.HaldorMastery} S{progress.SylvaMastery} B{progress.BrenMastery} M{progress.MaraMastery} E{progress.EiraMastery} R{progress.RexMastery}     •     Expeditions {progress.RunsCompleted}     •     Relics {SaveService.RelicCollectionCount()} / {KnownRelicIds.Length}";
             GUI.Label(new Rect(rect.x + 520, rect.y + 12, rect.width - 544, 40), ledgerText, _campLedger);
         }
 
         private void DrawCampUnlockBoard(Rect rect)
         {
+            const float boardHeaderHeight = 58f;
+            const float boardFooterHeight = 56f;
+            const float rowHeight = 40f;
+            const float headerRowHeight = 28f;
+            const float rowGap = 4f;
+            const float scrollEdgeFadeHeight = 22f;
+            const float listHorizontalPad = 14f;
+            const float contentEdgePad = 6f;
+
             DrawPanel(rect, new Color(0.018f, 0.048f, 0.068f, 1f));
             DrawPanel(new Rect(rect.x, rect.y, rect.width, 4), new Color(0.32f, 0.68f, 0.78f, 0.85f));
-            GUI.Label(new Rect(rect.x + 22, rect.y + 10, rect.width - 44, 24), "UNLOCK BOARD — SPEND RENOWN HERE", _campEyebrow);
-            GUI.Label(new Rect(rect.x + 22, rect.y + 34, rect.width - 44, 22),
-                "↑↓ SELECT A ROW   •   CONFIRM OR CLICK THE BADGE TO UNLOCK", _microLeft);
+            GUI.Label(new Rect(rect.x + 22, rect.y + 10, rect.width - 44, 24),
+                "UNLOCK BOARD — SPEND RENOWN HERE", _campEyebrow);
 
+            var displayEntries = BuildCampUnlockDisplayEntries();
             var affordableHighlight = SharedMetaProgressionModel.FindCheapestAffordableUnlockId(SaveService.Data);
-            var purchasableIndex = 0;
-            const float rowHeight = 42f;
-            const float rowGap = 4f;
-            const float rowTop = 62f;
-            const float actionWidth = 172f;
+            var purchasableCount = CountPurchasableUnlockRows();
 
-            for (var i = 0; i < SharedMetaProgressionModel.Unlocks.Count; i++)
+            var listTop = rect.y + boardHeaderHeight;
+            var listOuterHeight = rect.height - boardHeaderHeight - boardFooterHeight;
+            var listOuterRect = new Rect(rect.x + listHorizontalPad, listTop, rect.width - listHorizontalPad * 2f, listOuterHeight);
+
+            var totalListHeight = MeasureCampUnlockListHeight(displayEntries, rowHeight, headerRowHeight, rowGap);
+            var needsScroll = totalListHeight > listOuterHeight + 0.5f;
+            var contentTopInset = needsScroll ? scrollEdgeFadeHeight : contentEdgePad;
+            var contentBottomInset = needsScroll ? scrollEdgeFadeHeight : contentEdgePad;
+            var contentHeight = listOuterHeight - contentTopInset - contentBottomInset;
+            var contentViewport = new Rect(
+                listOuterRect.x,
+                listOuterRect.y + contentTopInset,
+                listOuterRect.width,
+                contentHeight);
+            var maxScrollOffset = Mathf.Max(0f, totalListHeight - contentHeight);
+            var hasScroll = maxScrollOffset > 0.5f;
+            _unlockScrollOffset = Mathf.Clamp(_unlockScrollOffset, 0f, maxScrollOffset);
+
+            var showTopFade = hasScroll && _unlockScrollOffset > 1f;
+            var showBottomFade = hasScroll && _unlockScrollOffset < maxScrollOffset - 1f;
+
+            EnsureUnlockSelectionVisible(displayEntries, contentHeight, rowHeight, headerRowHeight, rowGap);
+
+            if (hasScroll)
             {
-                var unlock = SharedMetaProgressionModel.Unlocks[i];
-                if (unlock.RenownCost <= 0)
-                {
-                    continue;
-                }
-
-                var rowY = rect.y + rowTop + purchasableIndex * (rowHeight + rowGap);
-                var rowRect = new Rect(rect.x + 18, rowY, rect.width - 36, rowHeight);
-                var unlocked = SaveService.IsUnlocked(unlock.ContentId);
-                var canAfford = SaveService.CanPurchaseUnlock(unlock.ContentId);
-                var selected = purchasableIndex == _unlockSelection;
-                var highlightGoal = unlock.ContentId == affordableHighlight && canAfford;
-
-                if (selected || highlightGoal)
-                {
-                    DrawBorder(rowRect, highlightGoal ? PresentationTheme.Accent : new Color(0.93f, 0.7f, 0.24f), 3f);
-                }
-
-                DrawPanel(rowRect, unlocked
-                    ? new Color(0.06f, 0.1f, 0.08f, 1f)
-                    : canAfford
-                        ? new Color(0.05f, 0.09f, 0.12f, 1f)
-                        : new Color(0.03f, 0.05f, 0.07f, 1f));
-
-                var nameWidth = rowRect.width - actionWidth - 28f;
-                GUI.Label(new Rect(rowRect.x + 14, rowRect.y + 8, nameWidth, 28),
-                    unlock.DisplayName.ToUpperInvariant(), unlocked ? _itemTitle : _campLocked);
-
-                DrawCampUnlockRowAction(rowRect, actionWidth, unlocked, canAfford, selected, unlock);
-
-                purchasableIndex++;
+                GUI.Label(new Rect(rect.x + 22, rect.y + 34, rect.width - 44, 18),
+                    "↑↓ SCROLL THE LIST   •   MOUSE WHEEL SUPPORTED", _microLeft);
+            }
+            else
+            {
+                GUI.Label(new Rect(rect.x + 22, rect.y + 34, rect.width - 44, 18),
+                    "↑↓ SELECT A ROW   •   CONFIRM OR CLICK THE BADGE TO UNLOCK", _microLeft);
             }
 
-            var footerY = rect.yMax - 28f;
+            DrawPanel(listOuterRect, new Color(0.015f, 0.038f, 0.055f, 1f));
+            DrawBorder(listOuterRect, new Color(0.22f, 0.48f, 0.58f, 0.35f), 2f);
+
+            HandleCampUnlockScrollWheel(listOuterRect, maxScrollOffset);
+
+            GUI.BeginGroup(contentViewport);
+            var localViewport = new Rect(0f, 0f, contentViewport.width, contentViewport.height);
+            var cursorY = -_unlockScrollOffset;
+            const float actionWidth = 172f;
+
+            for (var i = 0; i < displayEntries.Count; i++)
+            {
+                var entry = displayEntries[i];
+                var entryHeight = entry.IsHeader ? headerRowHeight : rowHeight;
+                var rowRect = new Rect(4f, cursorY, localViewport.width - 8f, entryHeight);
+                var rowVisible = rowRect.yMax >= 0f && rowRect.y <= localViewport.height;
+
+                if (rowVisible)
+                {
+                    if (entry.IsHeader)
+                    {
+                        DrawPanel(rowRect, new Color(0.03f, 0.07f, 0.09f, 0.95f));
+                        DrawPanel(new Rect(rowRect.x, rowRect.yMax - 2f, rowRect.width, 2f),
+                            new Color(0.32f, 0.68f, 0.78f, 0.45f));
+                        GUI.Label(new Rect(rowRect.x + 10f, rowRect.y + 4f, rowRect.width - 20f, 20f),
+                            entry.SectionLabel, _campEyebrow);
+                    }
+                    else
+                    {
+                        var unlock = entry.Unlock;
+                        var unlocked = SaveService.IsUnlocked(unlock.ContentId);
+                        var canAfford = SaveService.CanPurchaseUnlock(unlock.ContentId);
+                        var selected = entry.PurchasableIndex == _unlockSelection;
+                        var highlightGoal = unlock.ContentId == affordableHighlight && canAfford;
+
+                        if (selected || highlightGoal)
+                        {
+                            DrawBorder(rowRect, highlightGoal ? PresentationTheme.Accent : new Color(0.93f, 0.7f, 0.24f), 3f);
+                        }
+
+                        DrawPanel(rowRect, unlocked
+                            ? new Color(0.06f, 0.1f, 0.08f, 1f)
+                            : canAfford
+                                ? new Color(0.05f, 0.09f, 0.12f, 1f)
+                                : new Color(0.03f, 0.05f, 0.07f, 1f));
+
+                        var nameWidth = rowRect.width - actionWidth - 28f;
+                        GUI.Label(new Rect(rowRect.x + 14f, rowRect.y + 6f, nameWidth, 28f),
+                            unlock.DisplayName.ToUpperInvariant(), unlocked ? _itemTitle : _campLocked);
+
+                        DrawCampUnlockRowAction(rowRect, actionWidth, unlocked, canAfford, selected, unlock);
+                    }
+                }
+
+                cursorY += entryHeight + rowGap;
+            }
+
+            GUI.EndGroup();
+
+            if (showTopFade)
+            {
+                var topFadeRect = new Rect(listOuterRect.x + 2f, listOuterRect.y + 2f, listOuterRect.width - 4f, scrollEdgeFadeHeight);
+                DrawPanel(topFadeRect, new Color(0.015f, 0.038f, 0.055f, 0.94f));
+                GUI.Label(new Rect(topFadeRect.x + 8f, topFadeRect.y + 4f, topFadeRect.width - 16f, 16f),
+                    "▲ MORE UNLOCKS ABOVE", _microLeft);
+            }
+
+            if (showBottomFade)
+            {
+                var bottomFadeRect = new Rect(
+                    listOuterRect.x + 2f,
+                    listOuterRect.yMax - scrollEdgeFadeHeight - 2f,
+                    listOuterRect.width - 4f,
+                    scrollEdgeFadeHeight);
+                DrawPanel(bottomFadeRect, new Color(0.015f, 0.038f, 0.055f, 0.94f));
+                GUI.Label(new Rect(bottomFadeRect.x + 8f, bottomFadeRect.y + 4f, bottomFadeRect.width - 16f, 16f),
+                    "▼ MORE UNLOCKS BELOW", _microLeft);
+            }
+
+            var separatorRect = new Rect(rect.x + 8f, listOuterRect.yMax + 2f, rect.width - 16f, 6f);
+            DrawPanel(separatorRect, new Color(0.012f, 0.03f, 0.045f, 1f));
+
+            var footerRect = new Rect(rect.x + listHorizontalPad, rect.yMax - boardFooterHeight + 4f,
+                rect.width - listHorizontalPad * 2f, boardFooterHeight - 8f);
+            DrawPanel(footerRect, new Color(0.025f, 0.055f, 0.075f, 1f));
+            DrawPanel(new Rect(footerRect.x, footerRect.y, footerRect.width, 2f), PresentationTheme.Accent * 0.75f);
+
+            var collectedCount = SaveService.RelicCollectionCount();
+            var relicSummary = collectedCount == 0
+                ? "Relic vault empty — clear Scout expeditions and reach extraction."
+                : $"Relic vault — {collectedCount} of {KnownRelicIds.Length} secured.";
+            GUI.Label(new Rect(footerRect.x + 12f, footerRect.y + 8f, footerRect.width * 0.42f, 18f),
+                relicSummary, _microLeft);
+
+            if (purchasableCount > 0)
+            {
+                var selectedDisplay = _unlockSelection >= 0 ? _unlockSelection + 1 : 0;
+                GUI.Label(new Rect(footerRect.x + footerRect.width * 0.44f, footerRect.y + 8f,
+                        footerRect.width * 0.22f, 18f),
+                    selectedDisplay > 0 ? $"ROW {selectedDisplay} / {purchasableCount}" : string.Empty, _microLeft);
+            }
+
+            var messageRect = new Rect(footerRect.x + footerRect.width * 0.66f, footerRect.y + 6f,
+                footerRect.width * 0.34f - 12f, 36f);
+
             if (_campPurchaseMessageTimer > 0f)
             {
-                GUI.Label(new Rect(rect.x + 22, footerY, rect.width - 44, 24), _campPurchaseMessage, _microLeft);
+                GUI.Label(messageRect, _campPurchaseMessage, _microLeft);
             }
             else if (!string.IsNullOrEmpty(affordableHighlight))
             {
                 var unlock = SharedMetaProgressionModel.FindUnlock(affordableHighlight);
                 var label = unlock.HasValue
-                    ? $"READY — {unlock.Value.RenownCost} RENOWN · {CompactUnlockName(unlock.Value.DisplayName)}"
-                    : "SELECT A HIGHLIGHTED ROW TO SPEND RENOWN";
-                GUI.Label(new Rect(rect.x + 22, footerY, rect.width - 44, 24), label, _microLeft);
+                    ? $"READY — {unlock.Value.RenownCost} RENOWN"
+                    : "SELECT A HIGHLIGHTED ROW";
+                GUI.Label(messageRect, label, _microLeft);
             }
             else if (SaveService.AvailableRenown() > 0)
             {
-                GUI.Label(new Rect(rect.x + 22, footerY, rect.width - 44, 24),
-                    "SAVE RENOWN — THE NEXT UNLOCK COSTS MORE THAN YOUR BALANCE.", _microLeft);
+                GUI.Label(messageRect, "SAVE RENOWN — NEXT UNLOCK COSTS MORE.", _microLeft);
             }
             else
             {
-                GUI.Label(new Rect(rect.x + 22, footerY, rect.width - 44, 24),
-                    "FINISH EXPEDITIONS TO EARN RENOWN, THEN RETURN HERE TO UNLOCK.", _microLeft);
+                GUI.Label(messageRect, "EARN RENOWN ON EXPEDITIONS.", _microLeft);
             }
+        }
+
+        private static List<CampUnlockDisplayEntry> BuildCampUnlockDisplayEntries()
+        {
+            var entries = new List<CampUnlockDisplayEntry>(16);
+            var purchasableIndex = 0;
+            AppendUnlockSection(entries, "HEROES", UnlockCategory.Hero, ref purchasableIndex);
+            AppendUnlockSection(entries, "EXPEDITION ROUTES", UnlockCategory.Expedition, ref purchasableIndex);
+            return entries;
+        }
+
+        private static void AppendUnlockSection(
+            List<CampUnlockDisplayEntry> entries,
+            string sectionLabel,
+            UnlockCategory category,
+            ref int purchasableIndex)
+        {
+            var sectionStarted = false;
+
+            for (var i = 0; i < SharedMetaProgressionModel.Unlocks.Count; i++)
+            {
+                var unlock = SharedMetaProgressionModel.Unlocks[i];
+
+                if (unlock.RenownCost <= 0 || unlock.Category != category)
+                {
+                    continue;
+                }
+
+                if (!sectionStarted)
+                {
+                    entries.Add(new CampUnlockDisplayEntry
+                    {
+                        IsHeader = true,
+                        SectionLabel = sectionLabel
+                    });
+                    sectionStarted = true;
+                }
+
+                entries.Add(new CampUnlockDisplayEntry
+                {
+                    IsHeader = false,
+                    Unlock = unlock,
+                    PurchasableIndex = purchasableIndex
+                });
+                purchasableIndex++;
+            }
+        }
+
+        private static float MeasureCampUnlockListHeight(
+            List<CampUnlockDisplayEntry> entries,
+            float rowHeight,
+            float headerRowHeight,
+            float rowGap)
+        {
+            if (entries.Count == 0)
+            {
+                return 0f;
+            }
+
+            var height = 0f;
+
+            for (var i = 0; i < entries.Count; i++)
+            {
+                height += entries[i].IsHeader ? headerRowHeight : rowHeight;
+
+                if (i < entries.Count - 1)
+                {
+                    height += rowGap;
+                }
+            }
+
+            return height;
+        }
+
+        private void EnsureUnlockSelectionVisible(
+            List<CampUnlockDisplayEntry> entries,
+            float viewportHeight,
+            float rowHeight,
+            float headerRowHeight,
+            float rowGap)
+        {
+            if (_unlockSelection < 0)
+            {
+                return;
+            }
+
+            var selectedTop = 0f;
+            var selectedBottom = 0f;
+            var cursorY = 0f;
+            var found = false;
+
+            for (var i = 0; i < entries.Count; i++)
+            {
+                var entry = entries[i];
+                var entryHeight = entry.IsHeader ? headerRowHeight : rowHeight;
+
+                if (!entry.IsHeader && entry.PurchasableIndex == _unlockSelection)
+                {
+                    selectedTop = cursorY;
+                    selectedBottom = cursorY + entryHeight;
+                    found = true;
+                    break;
+                }
+
+                cursorY += entryHeight + rowGap;
+            }
+
+            if (!found)
+            {
+                return;
+            }
+
+            if (selectedTop < _unlockScrollOffset)
+            {
+                _unlockScrollOffset = selectedTop;
+            }
+            else if (selectedBottom > _unlockScrollOffset + viewportHeight)
+            {
+                _unlockScrollOffset = selectedBottom - viewportHeight;
+            }
+        }
+
+        private void HandleCampUnlockScrollWheel(Rect viewport, float maxScrollOffset)
+        {
+            var currentEvent = Event.current;
+
+            if (currentEvent.type != EventType.ScrollWheel)
+            {
+                return;
+            }
+
+            if (!viewport.Contains(currentEvent.mousePosition))
+            {
+                return;
+            }
+
+            var scrollStep = 52f;
+
+            if (currentEvent.delta.y > 0f)
+            {
+                _unlockScrollOffset = Mathf.Min(maxScrollOffset, _unlockScrollOffset + scrollStep);
+            }
+            else if (currentEvent.delta.y < 0f)
+            {
+                _unlockScrollOffset = Mathf.Max(0f, _unlockScrollOffset - scrollStep);
+            }
+
+            currentEvent.Use();
         }
 
         private void DrawCampUnlockRowAction(
@@ -832,8 +1177,12 @@ namespace ProjectExpedition
                     return "THE STORM SCOUT";
                 case "oathbound.sylva":
                     return "THE CANOPY WARDEN";
+                case "oathbound.bren":
+                    return "THE ROOT BINDER";
                 case "ironway.mara":
                     return "THE FIELD CAPTAIN";
+                case "ironway.rex":
+                    return "THE BREACHER";
                 default:
                     return leader.Role.ToUpperInvariant();
             }
@@ -1443,7 +1792,7 @@ namespace ProjectExpedition
             else
             {
                 GUI.Label(hintRect,
-                    $"P1  •  ARROWS CHOOSE  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(0, 1)}",
+                    $"P1  •  ARROWS CHOOSE  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(0, 1)}",
                     _micro);
             }
 
@@ -1574,7 +1923,162 @@ namespace ProjectExpedition
                 $"WEAPON SLOTS {map.WeaponSlots}   GEAR SLOTS {map.GearSlots}", _small);
             textY += 34f;
             GUI.Label(new Rect(textX, textY, textWidth, 28f),
-                $"KILLS {map.RequiredKillObjective}   SHARDS {map.OptionalShardObjective}", _small);
+                $"{map.KillObjectiveLabel} {map.RequiredKillObjective}   {map.OptionalPickupLabel} {map.OptionalShardObjective}",
+                _small);
+            textY += 34f;
+            DrawMapChallengeOptions(new Rect(textX, textY, textWidth, 148f));
+        }
+
+        private void DrawMapChallengeOptions(Rect rect)
+        {
+            DrawPanel(rect, new Color(0.025f, 0.065f, 0.087f, 1f));
+            DrawPanel(new Rect(rect.x, rect.y, 5f, rect.height), PresentationTheme.Accent);
+
+            var labelX = rect.x + 18f;
+            var valueX = rect.x + 190f;
+            var valueWidth = rect.width - 208f;
+            var rowY = rect.y + 12f;
+            var profile = BuildSelectedChallengeProfile();
+            var renownMultiplier = SharedChallengeProfileModel.ResolveRenownMultiplier(profile);
+
+            GUI.Label(new Rect(labelX, rowY, 160f, 24f), "CHALLENGE", _statSection);
+            rowY += 30f;
+
+            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "TIER",
+                _challengeTier == ChallengeTier.Veteran ? "VETERAN" : "STANDARD",
+                _mapChallengeEditing && _challengeFocus == 0);
+            rowY += 30f;
+            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "MUTATOR A",
+                FormatMutatorLabel(_mutatorA),
+                _mapChallengeEditing && _challengeFocus == 1);
+            rowY += 30f;
+            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "MUTATOR B",
+                FormatMutatorLabel(_mutatorB),
+                _mapChallengeEditing && _challengeFocus == 2);
+            rowY += 30f;
+            GUI.Label(new Rect(labelX, rowY, valueWidth + valueX - labelX, 24f),
+                $"RENOWN MULTIPLIER  x{renownMultiplier:0.00}", _small);
+        }
+
+        private void DrawChallengeOptionRow(float labelX, float valueX, float valueWidth, float rowY,
+            string label, string value, bool selected)
+        {
+            var rowRect = new Rect(labelX - 6f, rowY - 4f, valueX + valueWidth - labelX + 12f, 28f);
+            if (selected)
+            {
+                DrawPanel(rowRect, new Color(0.09f, 0.18f, 0.22f, 0.95f));
+                DrawBorder(rowRect, PresentationTheme.Accent, 2f);
+            }
+
+            GUI.Label(new Rect(labelX, rowY, 150f, 24f), label, _micro);
+            GUI.Label(new Rect(valueX, rowY, valueWidth, 24f), value, selected ? _badge : _small);
+        }
+
+        private static readonly ChallengeMutator[] MutatorCycleOrder =
+        {
+            ChallengeMutator.None,
+            ChallengeMutator.SwarmSurge,
+            ChallengeMutator.IronResolve,
+            ChallengeMutator.GlassCannon,
+            ChallengeMutator.RelentlessClock
+        };
+
+        private static bool IsMutatorUnlocked(ChallengeMutator mutator)
+        {
+            if (mutator == ChallengeMutator.None)
+            {
+                return true;
+            }
+
+            var unlockId = SharedChallengeProfileModel.MutatorUnlockId(mutator);
+            return !string.IsNullOrEmpty(unlockId) && SaveService.IsUnlocked(unlockId);
+        }
+
+        private ChallengeMutator CycleMutator(ChallengeMutator current, int direction, ChallengeMutator otherSlot)
+        {
+            var index = 0;
+            for (var i = 0; i < MutatorCycleOrder.Length; i++)
+            {
+                if (MutatorCycleOrder[i] == current)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            for (var step = 0; step < MutatorCycleOrder.Length; step++)
+            {
+                index = (index + direction + MutatorCycleOrder.Length) % MutatorCycleOrder.Length;
+                var candidate = MutatorCycleOrder[index];
+                if (!IsMutatorUnlocked(candidate))
+                {
+                    continue;
+                }
+
+                if (candidate != ChallengeMutator.None && candidate == otherSlot)
+                {
+                    continue;
+                }
+
+                return candidate;
+            }
+
+            return ChallengeMutator.None;
+        }
+
+        private void SanitizeChallengeMutators()
+        {
+            if (!IsMutatorUnlocked(_mutatorA))
+            {
+                _mutatorA = ChallengeMutator.None;
+            }
+
+            if (!IsMutatorUnlocked(_mutatorB))
+            {
+                _mutatorB = ChallengeMutator.None;
+            }
+
+            if (_mutatorA != ChallengeMutator.None && _mutatorA == _mutatorB)
+            {
+                _mutatorB = ChallengeMutator.None;
+            }
+        }
+
+        private void SuggestBiomeMutator(MapDefinition map)
+        {
+            if (map == null)
+            {
+                return;
+            }
+
+            var biomeMutator = SharedChallengeProfileModel.MutatorForBiome(map.BiomeId);
+            if (!IsMutatorUnlocked(biomeMutator))
+            {
+                return;
+            }
+
+            _mutatorA = biomeMutator;
+            if (_mutatorB == biomeMutator)
+            {
+                _mutatorB = ChallengeMutator.None;
+            }
+        }
+
+        private static string FormatMutatorLabel(ChallengeMutator mutator)
+        {
+            switch (mutator)
+            {
+                case ChallengeMutator.SwarmSurge:
+                    return "SWARM SURGE";
+                case ChallengeMutator.IronResolve:
+                    return "IRON RESOLVE";
+                case ChallengeMutator.GlassCannon:
+                    return "GLASS CANNON";
+                case ChallengeMutator.RelentlessClock:
+                    return "RELENTLESS CLOCK";
+                default:
+                    return "NONE";
+            }
         }
 
         private static string ShortMapName(MapDefinition map)
@@ -1625,7 +2129,7 @@ namespace ProjectExpedition
                 new Color(0.22f, 0.72f, 0.9f), $"XP {_director.Experience} / {_director.ExperienceToNext}", _micro);
 
             DrawPanel(new Rect(735, 26, 450, 88), new Color(0.025f, 0.055f, 0.075f, 0.9f));
-            var remainingBoss = Mathf.Max(0f, _director.SelectedMap.BossSpawnTime - _director.Elapsed);
+            var remainingBoss = Mathf.Max(0f, _director.Route.BossSpawnTime - _director.Elapsed);
             var timerText = _director.BossSpawned ? "DEFEAT THE JOTUNN" : $"JOTUNN IN {FormatTime(remainingBoss)}";
             GUI.Label(new Rect(750, 39, 420, 34), $"{FormatTime(_director.Elapsed)} / {FormatTime(_director.SelectedMap.Duration)}", _center);
             GUI.Label(new Rect(750, 78, 420, 24), timerText, _small);
@@ -1656,9 +2160,10 @@ namespace ProjectExpedition
             DrawPanel(new Rect(panelX, panelY, panelWidth, 4), new Color(0.32f, 0.68f, 0.78f, 0.85f));
             GUI.Label(new Rect(panelX + 18, panelY + 10, panelWidth - 36, 26), "EXPEDITION OBJECTIVES", _statSection);
 
-            var killLine = $"DRAUGR  {route.DraugrKills} / {route.RequiredKillObjective}";
+            var map = _director.SelectedMap;
+            var killLine = $"{map.KillObjectiveLabel}  {route.DraugrKills} / {route.RequiredKillObjective}";
             var shardLine = route.OptionalShardObjective > 0
-                ? $"SHARDS  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
+                ? $"{map.OptionalPickupLabel}  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
                 : string.Empty;
             var objectiveBody = killLine;
             if (shardLine.Length > 0)
@@ -2677,7 +3182,8 @@ namespace ProjectExpedition
                 "WEAPONS",
                 "GEAR",
                 "EVOLUTIONS",
-                "RELICS"
+                "RELICS",
+                "CHALLENGES"
             };
         }
 
@@ -2692,7 +3198,8 @@ namespace ProjectExpedition
                 case 2: return CodexCategory.Weapon;
                 case 3: return CodexCategory.Gear;
                 case 4: return CodexCategory.Evolution;
-                default: return CodexCategory.Relic;
+                case 5: return CodexCategory.Relic;
+                default: return CodexCategory.Challenge;
             }
         }
 
@@ -2748,6 +3255,7 @@ namespace ProjectExpedition
             if (count <= 0)
             {
                 _unlockSelection = -1;
+                _unlockScrollOffset = 0f;
                 return;
             }
 
@@ -2766,6 +3274,11 @@ namespace ProjectExpedition
         private void FocusAffordableUnlockIfAny()
         {
             _unlockSelection = FindAffordableUnlockRowIndex();
+
+            if (_unlockSelection < 0)
+            {
+                _unlockScrollOffset = 0f;
+            }
         }
 
         private static int FindAffordableUnlockRowIndex()

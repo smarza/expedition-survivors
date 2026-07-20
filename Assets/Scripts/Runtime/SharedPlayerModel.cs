@@ -31,6 +31,11 @@ namespace ProjectExpedition
         private float _baseUltimateRadius;
         private int _ultimateCooldownUpgrades;
         private float _ultimateDamageMultiplier = 1f;
+        private float _healthRegenPerSecond;
+        private float _temporaryMagnetBonus;
+        private float _temporaryMagnetRemaining;
+        private float _temporaryArmorBonus;
+        private float _temporaryArmorRemaining;
 
         public float MaxHealth { get; private set; }
         public float Health { get; private set; }
@@ -47,6 +52,8 @@ namespace ProjectExpedition
         public float UltimateDamage => _baseUltimateDamage * _ultimateDamageMultiplier;
         public float UltimateRadius => _baseUltimateRadius *
             (1f + (_ultimateDamageMultiplier - 1f) * 0.35f);
+        public float EffectiveArmor => Armor + _temporaryArmorBonus;
+        public float EffectiveMagnetRadius => MagnetRadius + _temporaryMagnetBonus;
 
         public void Begin(float maxHealth, float moveSpeed, float armor,
             float ultimateCooldown, float ultimateDamage, float ultimateRadius,
@@ -64,6 +71,11 @@ namespace ProjectExpedition
             _baseUltimateRadius = Mathf.Max(0f, ultimateRadius);
             _ultimateCooldownUpgrades = 0;
             _ultimateDamageMultiplier = 1f;
+            _healthRegenPerSecond = 0f;
+            _temporaryMagnetBonus = 0f;
+            _temporaryMagnetRemaining = 0f;
+            _temporaryArmorBonus = 0f;
+            _temporaryArmorRemaining = 0f;
             UltimateCooldown = _baseUltimateCooldown;
             UltimateRemaining = UltimateCooldown * InitialUltimateCharge;
             InvulnerabilityRemaining = 0f;
@@ -73,9 +85,41 @@ namespace ProjectExpedition
 
         public void Advance(float deltaTime)
         {
-            if (IsDowned || deltaTime <= 0f) return;
+            if (deltaTime <= 0f)
+            {
+                return;
+            }
+
+            if (_temporaryMagnetRemaining > 0f)
+            {
+                _temporaryMagnetRemaining = Mathf.Max(0f, _temporaryMagnetRemaining - deltaTime);
+                if (_temporaryMagnetRemaining <= 0f)
+                {
+                    _temporaryMagnetBonus = 0f;
+                }
+            }
+
+            if (_temporaryArmorRemaining > 0f)
+            {
+                _temporaryArmorRemaining = Mathf.Max(0f, _temporaryArmorRemaining - deltaTime);
+                if (_temporaryArmorRemaining <= 0f)
+                {
+                    _temporaryArmorBonus = 0f;
+                }
+            }
+
+            if (IsDowned)
+            {
+                return;
+            }
+
             InvulnerabilityRemaining = Mathf.Max(0f, InvulnerabilityRemaining - deltaTime);
             UltimateRemaining = Mathf.Max(0f, UltimateRemaining - deltaTime);
+
+            if (_healthRegenPerSecond > 0f)
+            {
+                Heal(_healthRegenPerSecond * deltaTime);
+            }
         }
 
         public Vector2 CalculateRequestedPosition(Vector2 currentPosition, Vector2 movement,
@@ -96,7 +140,7 @@ namespace ProjectExpedition
         public PlayerDamageResult TakeDamage(float rawDamage)
         {
             if (!IsAlive || InvulnerabilityRemaining > 0f) return PlayerDamageResult.Ignored;
-            Health -= Mathf.Max(1f, rawDamage - Armor);
+            Health -= Mathf.Max(1f, rawDamage - EffectiveArmor);
             InvulnerabilityRemaining = DamageImmunityDuration;
             if (Health > 0f) return PlayerDamageResult.Damaged;
 
@@ -132,6 +176,23 @@ namespace ProjectExpedition
         {
             MaxHealth += amount;
             Health += amount;
+        }
+
+        public void AddHealthRegen(float amountPerSecond, float maximumPerSecond)
+        {
+            _healthRegenPerSecond = Mathf.Min(maximumPerSecond, _healthRegenPerSecond + amountPerSecond);
+        }
+
+        public void ApplyTemporaryMagnetBoost(float amount, float durationSeconds)
+        {
+            _temporaryMagnetBonus = amount;
+            _temporaryMagnetRemaining = Mathf.Max(_temporaryMagnetRemaining, durationSeconds);
+        }
+
+        public void ApplyTemporaryArmorAura(float amount, float durationSeconds)
+        {
+            _temporaryArmorBonus = amount;
+            _temporaryArmorRemaining = Mathf.Max(_temporaryArmorRemaining, durationSeconds);
         }
 
         public void ImproveUltimateCooldown()

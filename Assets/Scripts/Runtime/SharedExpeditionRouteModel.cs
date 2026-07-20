@@ -25,8 +25,8 @@ namespace ProjectExpedition
 
         public ExpeditionPhase CurrentPhase { get; private set; } = ExpeditionPhase.Shoreline;
         public string MapId { get; private set; } = string.Empty;
-        public int DraugrKills { get; private set; }
-        public int RuneShardsCollected { get; private set; }
+        public int PrimaryKillCount { get; private set; }
+        public int OptionalPickupsCollected { get; private set; }
         public int RequiredKillObjective { get; private set; }
         public int OptionalShardObjective { get; private set; }
         public float ExtractionDuration { get; private set; }
@@ -38,20 +38,32 @@ namespace ProjectExpedition
         public bool BossKilled { get; private set; }
         public string PendingAnnouncement { get; private set; }
 
+        public int DraugrKills => PrimaryKillCount;
+
+        public int RuneShardsCollected => OptionalPickupsCollected;
+
+        private MapDefinition _activeMap;
         private float _elapsed;
 
         public void Begin(string mapId)
         {
-            var map = ResolveMap(mapId);
-            MapId = map.Id;
-            RequiredKillObjective = Mathf.Max(1, map.RequiredKillObjective);
-            OptionalShardObjective = Mathf.Max(0, map.OptionalShardObjective);
-            ExtractionDuration = Mathf.Max(1f, map.ExtractionDuration);
-            ExtractionBeaconX = map.ExtractionBeaconX;
-            ExtractionBeaconY = map.ExtractionBeaconY;
-            BossSpawnTime = Mathf.Max(1f, map.BossSpawnTime);
-            DraugrKills = 0;
-            RuneShardsCollected = 0;
+            Begin(mapId, new ChallengeProfile(ChallengeTier.Standard, ChallengeMutator.None, ChallengeMutator.None));
+        }
+
+        public void Begin(string mapId, ChallengeProfile challenge)
+        {
+            _activeMap = ResolveMap(mapId);
+            MapId = _activeMap.Id;
+            RequiredKillObjective = SharedChallengeProfileModel.ApplyRequiredKillObjective(
+                Mathf.Max(1, _activeMap.RequiredKillObjective), challenge);
+            OptionalShardObjective = Mathf.Max(0, _activeMap.OptionalShardObjective);
+            ExtractionDuration = Mathf.Max(1f, _activeMap.ExtractionDuration);
+            ExtractionBeaconX = _activeMap.ExtractionBeaconX;
+            ExtractionBeaconY = _activeMap.ExtractionBeaconY;
+            BossSpawnTime = SharedChallengeProfileModel.ApplyBossSpawnTime(
+                Mathf.Max(1f, _activeMap.BossSpawnTime), challenge);
+            PrimaryKillCount = 0;
+            OptionalPickupsCollected = 0;
             ExtractionElapsed = 0f;
             BossSpawned = false;
             BossKilled = false;
@@ -63,7 +75,9 @@ namespace ProjectExpedition
         public void Advance(float elapsed, Vector2 partyCenter)
         {
             if (CurrentPhase == ExpeditionPhase.Completed)
+            {
                 return;
+            }
 
             var deltaTime = Mathf.Max(0f, elapsed - _elapsed);
             _elapsed = Mathf.Max(0f, elapsed);
@@ -83,16 +97,22 @@ namespace ProjectExpedition
 
                 var atBeacon = Vector2.Distance(partyCenter,
                     new Vector2(ExtractionBeaconX, ExtractionBeaconY)) <= ExtractionBeaconRadius;
+
                 if (atBeacon || ExtractionElapsed >= ExtractionDuration)
+                {
                     CurrentPhase = ExpeditionPhase.Completed;
+                }
 
                 return;
             }
 
             var previousPhase = CurrentPhase;
             CurrentPhase = ResolveTimedPhase(_elapsed);
+
             if (CurrentPhase != previousPhase)
+            {
                 QueueAnnouncement(PhaseAnnouncement(CurrentPhase));
+            }
         }
 
         public void OnEnemyKilled(bool isBoss, bool isElite)
@@ -107,7 +127,9 @@ namespace ProjectExpedition
             }
 
             if (!isElite)
-                DraugrKills++;
+            {
+                PrimaryKillCount++;
+            }
 
             if (!BossSpawned && CanSpawnBoss())
             {
@@ -118,10 +140,17 @@ namespace ProjectExpedition
 
         public void OnShardCollected()
         {
-            if (OptionalShardObjective <= 0)
-                return;
+            OnOptionalPickupCollected();
+        }
 
-            RuneShardsCollected = Mathf.Min(OptionalShardObjective, RuneShardsCollected + 1);
+        public void OnOptionalPickupCollected()
+        {
+            if (OptionalShardObjective <= 0)
+            {
+                return;
+            }
+
+            OptionalPickupsCollected = Mathf.Min(OptionalShardObjective, OptionalPickupsCollected + 1);
         }
 
         public void MarkBossSpawned()
@@ -133,9 +162,11 @@ namespace ProjectExpedition
         public bool CanSpawnBoss()
         {
             if (BossSpawned || BossKilled)
+            {
                 return false;
+            }
 
-            return DraugrKills >= RequiredKillObjective || _elapsed >= BossSpawnTime;
+            return PrimaryKillCount >= RequiredKillObjective || _elapsed >= BossSpawnTime;
         }
 
         public bool IsExtractionComplete() => CurrentPhase == ExpeditionPhase.Completed;
@@ -149,28 +180,40 @@ namespace ProjectExpedition
 
         public string ResolveVictoryRelicId()
         {
-            if (MapId != "frostbound.scout" && !MapId.StartsWith("frostbound.", StringComparison.Ordinal))
+            if (_activeMap == null || string.IsNullOrWhiteSpace(_activeMap.VictoryRelicStandardId))
+            {
                 return string.Empty;
+            }
 
-            if (OptionalShardObjective > 0 && RuneShardsCollected >= OptionalShardObjective)
-                return "relic.jotunn_echo_warden";
+            if (OptionalShardObjective > 0 &&
+                OptionalPickupsCollected >= OptionalShardObjective &&
+                !string.IsNullOrWhiteSpace(_activeMap.VictoryRelicBonusId))
+            {
+                return _activeMap.VictoryRelicBonusId;
+            }
 
-            return "relic.jotunn_echo";
+            return _activeMap.VictoryRelicStandardId;
         }
 
         public float ObjectiveProgress =>
-            RequiredKillObjective > 0 ? DraugrKills / (float)RequiredKillObjective : 0f;
+            RequiredKillObjective > 0 ? PrimaryKillCount / (float)RequiredKillObjective : 0f;
 
         private ExpeditionPhase ResolveTimedPhase(float elapsed)
         {
             if (CanSpawnBoss())
+            {
                 return ExpeditionPhase.Boss;
+            }
 
             if (elapsed >= BossSpawnTime - DriftwoodSecondsBeforeBoss)
+            {
                 return ExpeditionPhase.WarlordApproach;
+            }
 
             if (elapsed >= BossSpawnTime - ShorelineSecondsBeforeBoss)
+            {
                 return ExpeditionPhase.Driftwood;
+            }
 
             return ExpeditionPhase.Shoreline;
         }
@@ -182,27 +225,40 @@ namespace ProjectExpedition
                 for (var i = 0; i < ContentCatalog.Maps.Length; i++)
                 {
                     if (ContentCatalog.Maps[i].Id == mapId)
+                    {
                         return ContentCatalog.Maps[i];
+                    }
                 }
             }
 
             return ContentCatalog.Maps[0];
         }
 
-        private static string PhaseAnnouncement(ExpeditionPhase phase)
+        private string PhaseAnnouncement(ExpeditionPhase phase)
         {
+            if (_activeMap == null)
+            {
+                return string.Empty;
+            }
+
+            var announcements = _activeMap.PhaseAnnouncements;
+            if (announcements == null || announcements.Length == 0)
+            {
+                return string.Empty;
+            }
+
             switch (phase)
             {
                 case ExpeditionPhase.Shoreline:
-                    return "THE SHORE AWAKENS";
+                    return announcements[0];
                 case ExpeditionPhase.Driftwood:
-                    return "DRIFTWOOD RUN";
+                    return announcements.Length > 1 ? announcements[1] : announcements[0];
                 case ExpeditionPhase.WarlordApproach:
-                    return "THE COAST TIGHTENS";
+                    return announcements.Length > 2 ? announcements[2] : announcements[0];
                 case ExpeditionPhase.Boss:
-                    return "THE JOTUNN HAS FOUND YOU";
+                    return announcements.Length > 3 ? announcements[3] : announcements[0];
                 case ExpeditionPhase.Extraction:
-                    return "REACH THE BEACON";
+                    return announcements.Length > 4 ? announcements[4] : announcements[0];
                 default:
                     return string.Empty;
             }
@@ -211,7 +267,9 @@ namespace ProjectExpedition
         private void QueueAnnouncement(string message)
         {
             if (string.IsNullOrWhiteSpace(message))
+            {
                 return;
+            }
 
             PendingAnnouncement = message;
         }

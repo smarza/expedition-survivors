@@ -1,9 +1,9 @@
 # Expedition Survivors — build, reward and character reference
 
-> **Applies to:** 0.10.0 Demonstration Content
+> **Applies to:** 0.12.0 MVP Content
 > **Purpose:** player-facing rules reference and authoring contract for future content
-> **Runtime sources of truth:** `ContentDefinitions.cs`, `BuildSystem.cs`, `SharedPlayerModel.cs`, `SharedWeaponRegistry.cs`, `SharedExpeditionRouteModel.cs` and `ProductionContent.asset`
-> **Design brief:** `docs/DEMONSTRATION_CONTENT_0.10.md`
+> **Runtime sources of truth:** `ContentDefinitions.cs`, `BuildSystem.cs`, `SharedPlayerModel.cs`, `SharedWeaponRegistry.cs`, `SharedExpeditionRouteModel.cs`, `SharedChallengeProfileModel.cs` and `ProductionContent.asset`
+> **Design brief:** `docs/MVP_CONTENT_0.12.md`
 
 ## 1. The most important level rule
 
@@ -45,6 +45,8 @@ Characters begin each expedition with faction-specific starter weapons at level 
 | Eira Raven-Sworn | `ravenbound.eira` | Ravenbound Vikings | Storm Scout | 122 | 5.05 | 0.5 | Murder of Ravens | Frost Axe + Raven Guard |
 | Sylva Reedwalker | `oathbound.sylva` | Oathbound Grove | Canopy Warden | 128 | 4.85 | 1.0 | Verdant Tempest | Grove Thorn Lash + Canopy Vortex |
 | Captain Mara Voss | `ironway.mara` | Ironway Expedition Corps | Field Captain | 135 | 4.65 | 1.5 | Orbital Barrage | Signal Flare + Supply Pulse |
+| Bren Oakhart | `oathbound.bren` | Oathbound Grove | Root Binder | 132 | 4.55 | 1.25 | Living Bulwark | Driftwood Staff + Oath Ring |
+| Rex Calder | `ironway.rex` | Ironway Expedition Corps | Breacher | 142 | 4.40 | 2.0 | Breaching Charge | Iron Beacon + Tide Caller |
 
 ### Haldor Stormborn — Ravenstorm
 

@@ -13,7 +13,7 @@ namespace ProjectExpedition
 
     public static class SaveMigration
     {
-        public const int CurrentVersion = 4;
+        public const int CurrentVersion = 5;
 
         public static MetaProgress Deserialize(string json, out int sourceVersion)
         {
@@ -56,10 +56,13 @@ namespace ProjectExpedition
 
                 SharedMetaProgressionModel.MigrateToVersionFour(progress);
             }
-            else
+
+            if (sourceVersion < 5)
             {
-                SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
+                SharedMetaProgressionModel.MigrateToVersionFive(progress);
             }
+
+            SharedMetaProgressionModel.EnsureStarterUnlocks(progress);
 
             return progress;
         }
@@ -123,6 +126,11 @@ namespace ProjectExpedition
 
         public static bool IsMapUnlocked(int mapIndex) => SharedMetaProgressionModel.IsMapUnlocked(Data, mapIndex);
 
+        public static bool IsVeteranUnlocked() => SharedMetaProgressionModel.IsVeteranUnlocked(Data);
+
+        public static bool IsMutatorUnlocked(ChallengeMutator mutator) =>
+            SharedMetaProgressionModel.IsMutatorUnlocked(Data, mutator);
+
         public static bool CanPurchaseUnlock(string contentId) => SharedMetaProgressionModel.CanPurchase(Data, contentId);
 
         public static PurchaseResult TryPurchaseUnlock(string contentId)
@@ -147,12 +155,14 @@ namespace ProjectExpedition
             return true;
         }
 
-        public static void RecordRun(int kills, int recoveredRenown, float time, bool victory, params string[] characterIds)
+        public static void RecordRun(int kills, int recoveredRenown, float time, bool victory,
+            float renownMultiplier, params string[] characterIds)
         {
             Data.RunsCompleted++;
             Data.BestKills = Mathf.Max(Data.BestKills, kills);
             Data.BestTime = Mathf.Max(Data.BestTime, time);
-            Data.TotalRenown += SharedMetaProgressionModel.CalculateRunRenownEarned(recoveredRenown, kills, victory);
+            Data.TotalRenown += SharedMetaProgressionModel.CalculateRunRenownEarned(
+                recoveredRenown, kills, victory, renownMultiplier);
 
             if (characterIds != null)
             {
@@ -169,6 +179,16 @@ namespace ProjectExpedition
             else
             {
                 Data.HaldorMastery += SharedMetaProgressionModel.CalculateMasteryGain(kills, victory);
+            }
+
+            Save();
+        }
+
+        public static void RecordVictoryChallengeUnlocks(string mapId)
+        {
+            if (!SharedMetaProgressionModel.ApplyVictoryChallengeUnlocks(Data, mapId))
+            {
+                return;
             }
 
             Save();
@@ -254,6 +274,12 @@ namespace ProjectExpedition
         public static void CompleteCampOnboarding()
         {
             Data.CampOnboardingComplete = true;
+            Save();
+        }
+
+        public static void CompleteChallengeOnboarding()
+        {
+            Data.ChallengeOnboardingComplete = true;
             Save();
         }
 

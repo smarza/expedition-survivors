@@ -37,7 +37,7 @@ namespace ProjectExpedition
         public void Begin() => SpawnTimer = InitialSpawnDelay;
 
         public SpawnAdvanceResult Advance(float deltaTime, float elapsed, MapDefinition map,
-            int activeEnemyCount, bool bossRequested)
+            int activeEnemyCount, bool bossRequested, ChallengeProfile challenge = default)
         {
             if (map == null) throw new ArgumentNullException(nameof(map));
 
@@ -48,10 +48,10 @@ namespace ProjectExpedition
 
             if (SpawnTimer <= 0f && activeEnemyCount < MaximumActiveEnemies)
             {
-                regularEnemyCount = Mathf.Clamp(
-                    1 + Mathf.FloorToInt(safeElapsed / GroupGrowthSeconds), 1, MaximumGroupSize);
-                SpawnTimer = Mathf.Max(map.MinimumSpawnInterval,
-                    map.BaseSpawnInterval - safeElapsed * IntervalAccelerationPerSecond);
+                regularEnemyCount = SharedChallengeProfileModel.ApplyGroupSize(Mathf.Clamp(
+                    1 + Mathf.FloorToInt(safeElapsed / GroupGrowthSeconds), 1, MaximumGroupSize), challenge);
+                SpawnTimer = SharedChallengeProfileModel.ApplySpawnInterval(Mathf.Max(map.MinimumSpawnInterval,
+                    map.BaseSpawnInterval - safeElapsed * IntervalAccelerationPerSecond), challenge);
             }
 
             return new SpawnAdvanceResult(regularEnemyCount, bossRequested, difficulty);

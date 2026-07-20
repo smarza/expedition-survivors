@@ -40,7 +40,11 @@ namespace ProjectExpedition
         ExtraOrbit,
         RadialDamage,
         RadialSpeed,
-        ExtraRadial
+        ExtraRadial,
+        SapRegen,
+        SiegeKnockback,
+        ReturningProjectile,
+        PersistentHealAura
     }
 
     [Serializable]
@@ -72,11 +76,15 @@ namespace ProjectExpedition
         public int SylvaMastery;
         public int MaraMastery;
         public int EiraMastery;
+        public int BrenMastery;
+        public int RexMastery;
         public string LastCampLeaderId;
         public string LastCoopPartnerId;
         public string[] RelicsCollected = new string[0];
         public string[] UnlockedContentIds = new string[0];
+        public string[] UnlockedMutatorIds = new string[0];
         public string[] DiscoveredCodexIds = new string[0];
         public bool CampOnboardingComplete;
+        public bool ChallengeOnboardingComplete;
     }
 }

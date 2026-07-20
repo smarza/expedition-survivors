@@ -85,5 +85,64 @@ namespace ProjectExpedition.Tests
 
             Assert.That(route.ResolveVictoryRelicId(), Is.EqualTo("relic.jotunn_echo_warden"));
         }
+
+        [Test]
+        public void Begin_InitializesCanopyScoutObjectivesAndAnnouncements()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("oathbound.scout");
+
+            Assert.That(route.MapId, Is.EqualTo("oathbound.scout"));
+            Assert.That(route.RequiredKillObjective, Is.EqualTo(140));
+            Assert.That(route.OptionalShardObjective, Is.EqualTo(5));
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("THE CANOPY STIRS"));
+        }
+
+        [Test]
+        public void Begin_InitializesRelayScoutObjectivesAndAnnouncements()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("ironway.scout");
+
+            Assert.That(route.MapId, Is.EqualTo("ironway.scout"));
+            Assert.That(route.RequiredKillObjective, Is.EqualTo(155));
+            Assert.That(route.OptionalShardObjective, Is.EqualTo(4));
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("THE RELAY STIRS"));
+        }
+
+        [Test]
+        public void CanopyScoutKills_UnlockBossWithHeartwoodAnnouncement()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("oathbound.scout");
+
+            for (var i = 0; i < 139; i++)
+            {
+                route.OnEnemyKilled(false, false);
+            }
+
+            Assert.That(route.CanSpawnBoss(), Is.False);
+
+            route.OnEnemyKilled(false, false);
+
+            Assert.That(route.CanSpawnBoss(), Is.True);
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("THE HEARTWOOD AWAKENS"));
+        }
+
+        [Test]
+        public void ResolveVictoryRelicId_GrantsHeartwoodWardenWhenSapCollected()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("oathbound.scout");
+
+            Assert.That(route.ResolveVictoryRelicId(), Is.EqualTo("relic.heartwood_echo"));
+
+            for (var i = 0; i < route.OptionalShardObjective; i++)
+            {
+                route.OnOptionalPickupCollected();
+            }
+
+            Assert.That(route.ResolveVictoryRelicId(), Is.EqualTo("relic.heartwood_echo_warden"));
+        }
     }
 }

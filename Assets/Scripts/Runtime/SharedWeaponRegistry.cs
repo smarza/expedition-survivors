@@ -153,7 +153,11 @@ namespace ProjectExpedition
                 "weapon.tide_caller", WeaponBehaviorKind.ProjectileVolley, 18f, 0.95f,
                 baseCount: 3, basePierce: 1, initialTimerDelay: 0.3f, projectileSpeed: 7.8f,
                 projectileDuration: 3f, spreadDegrees: 18f, hitRadius: 0.26f, criticalHitRadius: 0.3f,
-                knockback: 0.16f, criticalKnockback: 0.34f)
+                knockback: 0.16f, criticalKnockback: 0.34f),
+            new WeaponProfile(
+                "weapon.root_lance", WeaponBehaviorKind.ProjectileVolley, 22f, 0.92f,
+                basePierce: 2, initialTimerDelay: 0.3f, projectileSpeed: 10f, projectileDuration: 2.8f,
+                hitRadius: 0.24f, criticalHitRadius: 0.3f, knockback: 0.2f, criticalKnockback: 0.4f)
         };
     }
 
@@ -190,6 +194,31 @@ namespace ProjectExpedition
         public bool IsEvolved;
         public float ExplosionDamageMultiplier;
         public float ExplosionRadius;
+        public int ChainHits;
+        public float ChainRadius;
+        public float ChainDamageMultiplier;
+        public bool ReturnsToOwner;
+        public float CritExplosionRadius;
+        public float CritExplosionMultiplier;
+        public int StaggeredBurstWaves;
+        public float StaggeredBurstDelay;
+        public int PendingRadialBursts;
+        public float PendingRadialBurstTimer;
+        public float PersistentZoneDuration;
+        public float PersistentZoneRadius;
+        public float PersistentZoneTickDamage;
+        public float PersistentZoneTickInterval;
+        public bool PersistentZoneFollowsOwner;
+        public float SanctuaryArmorBonus;
+        public float SanctuaryDuration;
+        public float HealTrailAmount;
+        public float HealTrailInterval;
+        public float SupplyChainDownedHeal;
+        public float SupplyChainMagnetBoost;
+        public float SupplyChainMagnetDuration;
+        public float BreachKnockbackMultiplier;
+        public float BreachArmorAuraBonus;
+        public float BreachArmorAuraDuration;
 
         public WeaponInstance(WeaponProfile profile)
         {
@@ -228,6 +257,31 @@ namespace ProjectExpedition
             IsEvolved = false;
             ExplosionDamageMultiplier = 0f;
             ExplosionRadius = 0f;
+            ChainHits = 0;
+            ChainRadius = 0f;
+            ChainDamageMultiplier = 0f;
+            ReturnsToOwner = false;
+            CritExplosionRadius = 0f;
+            CritExplosionMultiplier = 0f;
+            StaggeredBurstWaves = 0;
+            StaggeredBurstDelay = 0f;
+            PendingRadialBursts = 0;
+            PendingRadialBurstTimer = 0f;
+            PersistentZoneDuration = 0f;
+            PersistentZoneRadius = 0f;
+            PersistentZoneTickDamage = 0f;
+            PersistentZoneTickInterval = 0f;
+            PersistentZoneFollowsOwner = false;
+            SanctuaryArmorBonus = 0f;
+            SanctuaryDuration = 0f;
+            HealTrailAmount = 0f;
+            HealTrailInterval = 0f;
+            SupplyChainDownedHeal = 0f;
+            SupplyChainMagnetBoost = 0f;
+            SupplyChainMagnetDuration = 0f;
+            BreachKnockbackMultiplier = 1f;
+            BreachArmorAuraBonus = 0f;
+            BreachArmorAuraDuration = 0f;
         }
 
         public Vector2 CalculateProjectileDirection(Vector2 baseDirection, int projectileIndex)
@@ -276,6 +330,20 @@ namespace ProjectExpedition
             IsEvolved && hitCount > 0
                 ? Mathf.Min(PulseHealCap, hitCount * PulseHealPerHit)
                 : 0f;
+
+        public SharedProjectileBehavior CreateProjectileBehavior(int ownerPlayerIndex) => new SharedProjectileBehavior(
+            WeaponId,
+            ChainHits,
+            ChainRadius,
+            ChainDamageMultiplier,
+            ReturnsToOwner,
+            ownerPlayerIndex,
+            CritExplosionRadius,
+            CritExplosionMultiplier,
+            HealTrailAmount,
+            HealTrailInterval);
+
+        public float ResolvePulseKnockback() => PulseKnockback * BreachKnockbackMultiplier;
     }
 
     public sealed class SharedWeaponRegistry
@@ -431,6 +499,17 @@ namespace ProjectExpedition
                     continue;
                 }
 
+                if (weapon.PendingRadialBursts > 0)
+                {
+                    weapon.PendingRadialBurstTimer -= deltaTime;
+                    if (weapon.PendingRadialBurstTimer <= 0f)
+                    {
+                        weapon.PendingRadialBursts--;
+                        weapon.PendingRadialBurstTimer = weapon.StaggeredBurstDelay;
+                        _scratchEvents.Add(new WeaponFireEvent(weapon.WeaponId, weapon.Behavior));
+                    }
+                }
+
                 weapon.Timer -= deltaTime;
                 if (weapon.Timer > 0f)
                 {
@@ -522,7 +601,197 @@ namespace ProjectExpedition
                 return true;
             }
 
+            if (evolutionId == "evolution.grove_crown")
+            {
+                return ApplyGroveCrownEvolution();
+            }
+
+            if (evolutionId == "evolution.signal_storm")
+            {
+                return ApplySignalStormEvolution();
+            }
+
+            if (evolutionId == "evolution.iron_sanctuary")
+            {
+                return ApplyIronSanctuaryEvolution();
+            }
+
+            if (evolutionId == "evolution.canopy_eye")
+            {
+                return ApplyCanopyEyeEvolution();
+            }
+
+            if (evolutionId == "evolution.root_cathedral")
+            {
+                return ApplyRootCathedralEvolution();
+            }
+
+            if (evolutionId == "evolution.north_gale")
+            {
+                return ApplyNorthGaleEvolution();
+            }
+
+            if (evolutionId == "evolution.supply_chain")
+            {
+                return ApplySupplyChainEvolution();
+            }
+
+            if (evolutionId == "evolution.root_lance_bloom")
+            {
+                return ApplyRootLanceBloomEvolution();
+            }
+
+            if (evolutionId == "evolution.breach_beacon")
+            {
+                return ApplyBreachBeaconEvolution();
+            }
+
             return false;
+        }
+
+        private bool ApplyGroveCrownEvolution()
+        {
+            var weapon = FindInstance("weapon.grove_thorn_lash");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.28f;
+            weapon.PersistentZoneDuration = 3f;
+            weapon.PersistentZoneRadius = 1.85f;
+            weapon.PersistentZoneTickDamage = weapon.Damage * 0.35f;
+            weapon.PersistentZoneTickInterval = 0.5f;
+            return true;
+        }
+
+        private bool ApplySignalStormEvolution()
+        {
+            var weapon = FindInstance("weapon.signal_flare");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.32f;
+            weapon.ChainHits = 2;
+            weapon.ChainRadius = 4.5f;
+            weapon.ChainDamageMultiplier = 0.65f;
+            return true;
+        }
+
+        private bool ApplyIronSanctuaryEvolution()
+        {
+            var weapon = FindInstance("weapon.iron_beacon");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.22f;
+            weapon.SanctuaryDuration = 4f;
+            weapon.SanctuaryArmorBonus = 3f;
+            weapon.PersistentZoneFollowsOwner = true;
+            return true;
+        }
+
+        private bool ApplyCanopyEyeEvolution()
+        {
+            var weapon = FindInstance("weapon.canopy_vortex");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.25f;
+            weapon.PersistentZoneDuration = 2.5f;
+            weapon.PersistentZoneRadius = 2.2f;
+            weapon.PersistentZoneTickDamage = weapon.Damage * 0.3f;
+            weapon.PersistentZoneTickInterval = 0.4f;
+            return true;
+        }
+
+        private bool ApplyRootCathedralEvolution()
+        {
+            var weapon = FindInstance("weapon.driftwood_staff");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.3f;
+            weapon.StaggeredBurstWaves = 3;
+            weapon.StaggeredBurstDelay = 0.35f;
+            return true;
+        }
+
+        private bool ApplyNorthGaleEvolution()
+        {
+            var weapon = FindInstance("weapon.north_wind_spear");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.28f;
+            weapon.CriticalChance = Mathf.Min(0.55f, weapon.CriticalChance + 0.15f);
+            weapon.ReturnsToOwner = true;
+            weapon.CritExplosionRadius = 1.35f;
+            weapon.CritExplosionMultiplier = 0.55f;
+            return true;
+        }
+
+        private bool ApplySupplyChainEvolution()
+        {
+            var weapon = FindInstance("weapon.supply_pulse");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.HealAmount *= 1.35f;
+            weapon.SupplyChainDownedHeal = 14f;
+            weapon.SupplyChainMagnetBoost = 0.8f;
+            weapon.SupplyChainMagnetDuration = 2f;
+            return true;
+        }
+
+        private bool ApplyRootLanceBloomEvolution()
+        {
+            var weapon = FindInstance("weapon.root_lance");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.24f;
+            weapon.HealTrailAmount = 2.5f;
+            weapon.HealTrailInterval = 0.22f;
+            return true;
+        }
+
+        private bool ApplyBreachBeaconEvolution()
+        {
+            var weapon = FindInstance("weapon.iron_beacon");
+            if (weapon == null || weapon.IsEvolved)
+            {
+                return false;
+            }
+
+            weapon.IsEvolved = true;
+            weapon.Damage *= 1.3f;
+            weapon.BreachKnockbackMultiplier = 2.1f;
+            weapon.BreachArmorAuraBonus = 2f;
+            weapon.BreachArmorAuraDuration = 3f;
+            return true;
         }
 
         public Vector2 CalculateAxeDirection(Vector2 baseDirection, int projectileIndex)

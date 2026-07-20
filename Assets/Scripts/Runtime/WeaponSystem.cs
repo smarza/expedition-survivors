@@ -100,6 +100,7 @@ namespace ProjectExpedition
             _director.Present(PresentationCue.AxeThrow, _owner.transform.position,
                 _owner.Definition.Color, 0.5f);
 
+            var projectileBehavior = weapon.CreateProjectileBehavior(_owner.PlayerIndex);
             for (var i = 0; i < weapon.Count; i++)
             {
                 var usesCritical = weapon.WeaponId == ItemCatalog.FrostAxe.Id
@@ -113,7 +114,7 @@ namespace ProjectExpedition
                     ? Model.CalculateAxeDirection(baseDirection, i)
                     : weapon.CalculateProjectileDirection(baseDirection, i);
                 var projectile = _director.SpawnProjectile(_owner.transform.position);
-                projectile.Initialize(_director, direction, effect);
+                projectile.Initialize(_director, direction, effect, projectileBehavior, _owner);
             }
         }
 
@@ -122,13 +123,14 @@ namespace ProjectExpedition
             if (weapon.HealAmount > 0f)
             {
                 _owner.Heal(weapon.HealAmount);
+                ApplySupplyChainEffects(weapon);
                 _director.ShowPulse(_owner.transform.position, _owner.PlayerIndex);
                 return;
             }
 
             var effect = weapon.WeaponId == ItemCatalog.RavenGuard.Id
                 ? Model.CreateRavenGuardEffect()
-                : weapon.CreatePulseEffect();
+                : CreateOwnerPulseEffect(weapon);
             var hits = _director.ResolveAreaEffect(_owner.transform.position, effect);
             var healing = weapon.WeaponId == ItemCatalog.RavenGuard.Id
                 ? Model.CalculateRavenGuardHealing(hits)
@@ -138,7 +140,78 @@ namespace ProjectExpedition
                 _owner.Heal(healing);
             }
 
+            ApplyOwnerPulseEvolutionEffects(weapon);
             _director.ShowPulse(_owner.transform.position, _owner.PlayerIndex);
+        }
+
+        private SharedEffectRequest CreateOwnerPulseEffect(WeaponInstance weapon)
+        {
+            var effect = weapon.CreatePulseEffect();
+            if (weapon.BreachKnockbackMultiplier <= 1f)
+            {
+                return effect;
+            }
+
+            return new SharedEffectRequest(
+                effect.Kind, effect.Target, effect.Stacking, effect.Damage,
+                effect.Radius, weapon.ResolvePulseKnockback(), effect.Speed, effect.Duration,
+                effect.Pierce, effect.Critical, effect.Evolved);
+        }
+
+        private void ApplyOwnerPulseEvolutionEffects(WeaponInstance weapon)
+        {
+            if (weapon.WeaponId == ItemCatalog.GroveThornLash.Id && weapon.IsEvolved)
+            {
+                _director.SpawnPersistentZone(
+                    (Vector2)_owner.transform.position,
+                    weapon.PersistentZoneRadius,
+                    weapon.PersistentZoneTickDamage,
+                    0.35f,
+                    weapon.PersistentZoneDuration,
+                    weapon.PersistentZoneTickInterval,
+                    false,
+                    _owner.PlayerIndex);
+            }
+
+            if (weapon.WeaponId == ItemCatalog.IronBeacon.Id && weapon.IsEvolved)
+            {
+                if (weapon.SanctuaryDuration > 0f)
+                {
+                    _owner.ApplyTemporaryArmorAura(weapon.SanctuaryArmorBonus, weapon.SanctuaryDuration);
+                }
+
+                if (weapon.BreachArmorAuraDuration > 0f)
+                {
+                    _owner.ApplyTemporaryArmorAura(weapon.BreachArmorAuraBonus, weapon.BreachArmorAuraDuration);
+                }
+            }
+        }
+
+        private void ApplySupplyChainEffects(WeaponInstance weapon)
+        {
+            if (!weapon.IsEvolved || weapon.SupplyChainMagnetDuration <= 0f)
+            {
+                return;
+            }
+
+            _owner.ApplyTemporaryMagnetBoost(weapon.SupplyChainMagnetBoost, weapon.SupplyChainMagnetDuration);
+
+            for (var i = 0; i < _director.Players.Count; i++)
+            {
+                var ally = _director.Players[i];
+                if (ally == null || ally == _owner || !ally.IsDowned)
+                {
+                    continue;
+                }
+
+                var distance = ((Vector2)ally.transform.position - (Vector2)_owner.transform.position).sqrMagnitude;
+                if (distance > weapon.PulseRadius * weapon.PulseRadius)
+                {
+                    continue;
+                }
+
+                ally.Heal(weapon.SupplyChainDownedHeal);
+            }
         }
 
         private void TriggerRadialBurst(WeaponInstance weapon)
@@ -156,6 +229,25 @@ namespace ProjectExpedition
                     weapon.Pierce, false, weapon.IsEvolved);
                 var projectile = _director.SpawnProjectile(origin);
                 projectile.Initialize(_director, direction, effect);
+            }
+
+            if (weapon.IsEvolved && weapon.PersistentZoneDuration > 0f)
+            {
+                _director.SpawnPersistentZone(
+                    origin,
+                    weapon.PersistentZoneRadius,
+                    weapon.PersistentZoneTickDamage,
+                    0.42f,
+                    weapon.PersistentZoneDuration,
+                    weapon.PersistentZoneTickInterval,
+                    false,
+                    _owner.PlayerIndex);
+            }
+
+            if (weapon.IsEvolved && weapon.StaggeredBurstWaves > 1 && weapon.PendingRadialBursts <= 0)
+            {
+                weapon.PendingRadialBursts = weapon.StaggeredBurstWaves - 1;
+                weapon.PendingRadialBurstTimer = weapon.StaggeredBurstDelay;
             }
         }
 

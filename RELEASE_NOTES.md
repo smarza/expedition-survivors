@@ -1,3 +1,14 @@
+# Milestone 0.12.0 — MVP content
+
+- Completed production content for **six heroes**, **six expeditions across three biomes**, **thirty build-slot items**, **twelve evolutions** and **nine enemies** in `ProductionContent.asset`, aligned with code fallbacks.
+- Added Bren Oakhart (`oathbound.bren`) and Rex Calder (`ironway.rex`) with Root Lance, Sap Vial, Siege Plating and six new evolution recipes.
+- Authored canopy (`oathbound.scout` / `oathbound.saga`) and relay (`ironway.scout` / `ironway.saga`) maps with biome IDs, enemy rosters and heartwood/siege relic tiers; extended Frostbound maps with explicit biome and relic fields.
+- Added `SharedChallengeProfileModel` for Standard/Veteran tiers and Swarm Surge, Iron Resolve, Glass Cannon and Relentless Clock mutators.
+- Bumped save envelope to **v5** with retroactive canopy/relay scout, Bren/Rex and challenge unlock migration from v4 profiles.
+- Added Editor menu **Expedition → Validate Production Content** (`ProductionContentValidator`) and `ProjectExpedition.Editor` assembly.
+- Added `docs/MVP_CONTENT_0.12.md` and `docs/TESTING_0.12.md`.
+- Extended automated gate inventory to **97 EditMode + 14 PlayMode** tests.
+
 # Milestone 0.11.0 — Camp and progression
 
 - Added `SharedMetaProgressionModel` with presentation-free renown unlock purchases, per-hero mastery accrual, codex discovery rules and starter unlock defaults (Haldor + Scout).

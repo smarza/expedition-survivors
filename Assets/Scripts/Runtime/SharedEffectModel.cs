@@ -8,7 +8,8 @@ namespace ProjectExpedition
     {
         Projectile,
         AreaDamage,
-        Heal
+        Heal,
+        PersistentZone
     }
 
     public enum SharedEffectTarget : byte
@@ -62,6 +63,137 @@ namespace ProjectExpedition
         None = 0,
         FireAxeVolley = 1,
         TriggerRavenGuard = 2
+    }
+
+    public readonly struct SharedProjectileBehavior
+    {
+        public readonly string WeaponId;
+        public readonly int ChainHits;
+        public readonly float ChainRadius;
+        public readonly float ChainDamageMultiplier;
+        public readonly bool ReturnsToOwner;
+        public readonly int OwnerPlayerIndex;
+        public readonly float CritExplosionRadius;
+        public readonly float CritExplosionMultiplier;
+        public readonly float HealTrailAmount;
+        public readonly float HealTrailInterval;
+
+        public SharedProjectileBehavior(
+            string weaponId = null,
+            int chainHits = 0,
+            float chainRadius = 0f,
+            float chainDamageMultiplier = 0f,
+            bool returnsToOwner = false,
+            int ownerPlayerIndex = 0,
+            float critExplosionRadius = 0f,
+            float critExplosionMultiplier = 0f,
+            float healTrailAmount = 0f,
+            float healTrailInterval = 0f)
+        {
+            WeaponId = weaponId;
+            ChainHits = chainHits;
+            ChainRadius = chainRadius;
+            ChainDamageMultiplier = chainDamageMultiplier;
+            ReturnsToOwner = returnsToOwner;
+            OwnerPlayerIndex = ownerPlayerIndex;
+            CritExplosionRadius = critExplosionRadius;
+            CritExplosionMultiplier = critExplosionMultiplier;
+            HealTrailAmount = healTrailAmount;
+            HealTrailInterval = healTrailInterval;
+        }
+    }
+
+    public sealed class SharedPersistentZoneInstance
+    {
+        public Vector2 Position;
+        public float Radius;
+        public float DamagePerTick;
+        public float Knockback;
+        public float RemainingDuration;
+        public float TickInterval;
+        public float TickTimer;
+        public bool FollowOwner;
+        public int OwnerPlayerIndex;
+    }
+
+    public sealed class SharedPersistentZoneModel
+    {
+        private readonly List<SharedPersistentZoneInstance> _zones = new List<SharedPersistentZoneInstance>(16);
+
+        public IReadOnlyList<SharedPersistentZoneInstance> ActiveZones => _zones;
+
+        public void Clear() => _zones.Clear();
+
+        public void Spawn(
+            Vector2 position,
+            float radius,
+            float damagePerTick,
+            float knockback,
+            float duration,
+            float tickInterval,
+            bool followOwner,
+            int ownerPlayerIndex)
+        {
+            _zones.Add(new SharedPersistentZoneInstance
+            {
+                Position = position,
+                Radius = radius,
+                DamagePerTick = damagePerTick,
+                Knockback = knockback,
+                RemainingDuration = duration,
+                TickInterval = tickInterval,
+                TickTimer = tickInterval,
+                FollowOwner = followOwner,
+                OwnerPlayerIndex = ownerPlayerIndex
+            });
+        }
+
+        public void Advance(float deltaTime, Func<int, Vector2> resolveOwnerPosition)
+        {
+            if (deltaTime <= 0f)
+            {
+                return;
+            }
+
+            for (var i = _zones.Count - 1; i >= 0; i--)
+            {
+                var zone = _zones[i];
+                zone.RemainingDuration -= deltaTime;
+
+                if (zone.FollowOwner && resolveOwnerPosition != null)
+                {
+                    zone.Position = resolveOwnerPosition(zone.OwnerPlayerIndex);
+                }
+
+                zone.TickTimer -= deltaTime;
+                if (zone.RemainingDuration <= 0f)
+                {
+                    _zones.RemoveAt(i);
+                }
+            }
+        }
+
+        public bool TryConsumeTick(int zoneIndex, out SharedEffectRequest effect, out Vector2 center)
+        {
+            effect = default;
+            center = default;
+
+            if (zoneIndex < 0 || zoneIndex >= _zones.Count)
+            {
+                return false;
+            }
+
+            var zone = _zones[zoneIndex];
+            if (zone.TickTimer > 0f || zone.RemainingDuration <= 0f)
+            {
+                return false;
+            }
+
+            center = zone.Position;
+            effect = SharedEffectPipeline.CreatePersistentZoneTick(zone.DamagePerTick, zone.Radius, zone.Knockback);
+            zone.TickTimer = zone.TickInterval;
+            return true;
+        }
     }
 
     /// <summary>
@@ -158,6 +290,10 @@ namespace ProjectExpedition
                 case UpgradeId.UltimateCooldown: player.ImproveUltimateCooldown(); return true;
                 case UpgradeId.UltimateDamage: player.ImproveUltimateDamage(); return true;
                 case UpgradeId.Heal: player.Heal(24f); return true;
+                case UpgradeId.SapRegen:
+                    player.AddMaxHealth(18f);
+                    player.AddHealthRegen(0.4f, 2f);
+                    return true;
                 case UpgradeId.None: return true;
                 default: return false;
             }
@@ -173,5 +309,17 @@ namespace ProjectExpedition
         public static SharedEffectRequest CreateJotunnCleaverExplosion(float projectileDamage) =>
             new SharedEffectRequest(SharedEffectKind.AreaDamage, SharedEffectTarget.Enemies,
                 SharedEffectStacking.Independent, projectileDamage * 0.42f, 1.25f, 0.3f);
+
+        public static SharedEffectRequest CreatePersistentZoneTick(float damage, float radius, float knockback) =>
+            new SharedEffectRequest(SharedEffectKind.PersistentZone, SharedEffectTarget.Enemies,
+                SharedEffectStacking.Independent, damage, radius, knockback);
+
+        public static SharedEffectRequest CreateNorthGaleCritExplosion(float projectileDamage) =>
+            new SharedEffectRequest(SharedEffectKind.AreaDamage, SharedEffectTarget.Enemies,
+                SharedEffectStacking.Independent, projectileDamage * 0.55f, 1.35f, 0.38f);
+
+        public static SharedEffectRequest CreateSignalStormChain(float projectileDamage) =>
+            new SharedEffectRequest(SharedEffectKind.AreaDamage, SharedEffectTarget.Enemies,
+                SharedEffectStacking.Independent, projectileDamage * 0.65f, 0.28f, 0.22f);
     }
 }

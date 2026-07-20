@@ -7,7 +7,8 @@ namespace ProjectExpedition
     public enum UnlockCategory
     {
         Hero,
-        Expedition
+        Expedition,
+        Challenge
     }
 
     public enum CodexCategory
@@ -17,7 +18,8 @@ namespace ProjectExpedition
         Weapon,
         Gear,
         Evolution,
-        Relic
+        Relic,
+        Challenge
     }
 
     public enum CodexVisibility
@@ -87,8 +89,15 @@ namespace ProjectExpedition
         public const string EiraId = "ravenbound.eira";
         public const string SylvaId = "oathbound.sylva";
         public const string MaraId = "ironway.mara";
+        public const string BrenId = "oathbound.bren";
+        public const string RexId = "ironway.rex";
         public const string ScoutMapId = "frostbound.scout";
         public const string SagaMapId = "frostbound.saga";
+        public const string CanopyScoutMapId = "oathbound.scout";
+        public const string CanopySagaMapId = "oathbound.saga";
+        public const string RelayScoutMapId = "ironway.scout";
+        public const string RelaySagaMapId = "ironway.saga";
+        public const string VeteranTierUnlockId = "challenge.veteran";
 
         private static readonly string[] StarterUnlockIds = { HaldorId, ScoutMapId };
 
@@ -97,9 +106,20 @@ namespace ProjectExpedition
             new UnlockDefinition(HaldorId, "Haldor Stormborn", 0, UnlockCategory.Hero),
             new UnlockDefinition(ScoutMapId, "The Frostbound Shore (Scout)", 0, UnlockCategory.Expedition),
             new UnlockDefinition(SylvaId, "Sylva Reedwalker", 75, UnlockCategory.Hero),
+            new UnlockDefinition(CanopyScoutMapId, "The Verdant Canopy (Scout)", 90, UnlockCategory.Expedition),
             new UnlockDefinition(EiraId, "Eira Raven-Sworn", 110, UnlockCategory.Hero),
+            new UnlockDefinition(RelayScoutMapId, "The Scorched Relay (Scout)", 120, UnlockCategory.Expedition),
             new UnlockDefinition(MaraId, "Captain Mara Voss", 145, UnlockCategory.Hero),
-            new UnlockDefinition(SagaMapId, "The Frostbound Shore: Long Night", 200, UnlockCategory.Expedition)
+            new UnlockDefinition(BrenId, "Bren Oakhart", 175, UnlockCategory.Hero),
+            new UnlockDefinition(SagaMapId, "The Frostbound Shore: Long Night", 200, UnlockCategory.Expedition),
+            new UnlockDefinition(RexId, "Rex Calder", 210, UnlockCategory.Hero),
+            new UnlockDefinition(CanopySagaMapId, "The Verdant Canopy: Deep Root", 220, UnlockCategory.Expedition),
+            new UnlockDefinition(RelaySagaMapId, "The Scorched Relay: Siege Line", 240, UnlockCategory.Expedition),
+            new UnlockDefinition(VeteranTierUnlockId, "Veteran Tier", 0, UnlockCategory.Challenge),
+            new UnlockDefinition("challenge.swarm_surge", "Swarm Surge", 0, UnlockCategory.Challenge),
+            new UnlockDefinition("challenge.iron_resolve", "Iron Resolve", 0, UnlockCategory.Challenge),
+            new UnlockDefinition("challenge.glass_cannon", "Glass Cannon", 0, UnlockCategory.Challenge),
+            new UnlockDefinition("challenge.relentless_clock", "Relentless Clock", 0, UnlockCategory.Challenge)
         };
 
         private static readonly CodexDefinition[] CodexCatalog =
@@ -110,32 +130,78 @@ namespace ProjectExpedition
                 "Ravenbound storm scout — swift pathfinder with Murder of Ravens."),
             new CodexDefinition(SylvaId, CodexCategory.Hero, "Sylva Reedwalker",
                 "Oathbound canopy warden — thorn lash and canopy vortex."),
+            new CodexDefinition(BrenId, CodexCategory.Hero, "Bren Oakhart",
+                "Oathbound rootbinder — driftwood staff and oath ring."),
             new CodexDefinition(MaraId, CodexCategory.Hero, "Captain Mara Voss",
                 "Ironway field captain — signal flare and supply pulse."),
+            new CodexDefinition(RexId, CodexCategory.Hero, "Rex Calder",
+                "Ironway breacher — iron beacon and tide caller."),
             new CodexDefinition(ScoutMapId, CodexCategory.Expedition, "The Frostbound Shore (Scout)",
                 "Five-minute Scout route with objectives, Jotunn boss and extraction beacon."),
             new CodexDefinition(SagaMapId, CodexCategory.Expedition, "The Frostbound Shore: Long Night",
                 "Twelve-minute expedition with denser phases and stronger elites."),
+            new CodexDefinition(CanopyScoutMapId, CodexCategory.Expedition, "The Verdant Canopy (Scout)",
+                "Five-minute grove Scout route with thorn spirits and a Heartwood guardian."),
+            new CodexDefinition(CanopySagaMapId, CodexCategory.Expedition, "The Verdant Canopy: Deep Root",
+                "Twelve-minute canopy route with denser root paths and stronger wardens."),
+            new CodexDefinition(RelayScoutMapId, CodexCategory.Expedition, "The Scorched Relay (Scout)",
+                "Five-minute relay assault through scrap drones and a siege automaton."),
+            new CodexDefinition(RelaySagaMapId, CodexCategory.Expedition, "The Scorched Relay: Siege Line",
+                "Twelve-minute relay route with denser signal pressure and stronger raiders."),
             new CodexDefinition("weapon.frost_axe", CodexCategory.Weapon, "Frost Axe",
                 "Automatic rune-axe throws with critical strikes."),
             new CodexDefinition("weapon.raven_guard", CodexCategory.Weapon, "Raven Guard",
                 "Automatic shield shockwave around the owner."),
+            new CodexDefinition("weapon.north_wind_spear", CodexCategory.Weapon, "North Wind Spear",
+                "Directed spear projectile with growing pierce."),
+            new CodexDefinition("weapon.rune_bolt", CodexCategory.Weapon, "Rune Bolt",
+                "Fast rune projectile volley."),
             new CodexDefinition("weapon.grove_thorn_lash", CodexCategory.Weapon, "Grove Thorn Lash",
                 "Fast thorn pulse around Sylva."),
             new CodexDefinition("weapon.canopy_vortex", CodexCategory.Weapon, "Canopy Vortex",
                 "Radial canopy burst."),
+            new CodexDefinition("weapon.driftwood_staff", CodexCategory.Weapon, "Driftwood Staff",
+                "Slow radial driftwood burst."),
+            new CodexDefinition("weapon.oath_ring", CodexCategory.Weapon, "Oath Ring",
+                "Orbiting oath blades around the owner."),
             new CodexDefinition("weapon.signal_flare", CodexCategory.Weapon, "Signal Flare",
                 "Explosive signal projectile."),
             new CodexDefinition("weapon.supply_pulse", CodexCategory.Weapon, "Supply Pulse",
                 "Periodic heal pulse."),
-            new CodexDefinition("gear.jotunn_rune", CodexCategory.Gear, "Jotunn Rune",
-                "Catalyst — prepares Frost Axe for the Jotunn Cleaver evolution."),
+            new CodexDefinition("weapon.iron_beacon", CodexCategory.Weapon, "Iron Beacon",
+                "Large defensive pulse centered on the owner."),
+            new CodexDefinition("weapon.tide_caller", CodexCategory.Weapon, "Tide Caller",
+                "Wide shore projectile volley."),
+            new CodexDefinition("gear.longship_boots", CodexCategory.Gear, "Longship Boots",
+                "Increases movement speed."),
             new CodexDefinition("gear.bear_blooded", CodexCategory.Gear, "Bear-Blooded",
                 "Catalyst — prepares Raven Guard for the Storm Aegis evolution."),
+            new CodexDefinition("gear.raven_armor", CodexCategory.Gear, "Raven Armor",
+                "Reduces every contact hit."),
+            new CodexDefinition("gear.saga_carver", CodexCategory.Gear, "Saga Carver",
+                "Increases the chance of golden critical strikes."),
+            new CodexDefinition("gear.raven_hourglass", CodexCategory.Gear, "Raven Hourglass",
+                "Ultimate recharges faster per level."),
+            new CodexDefinition("gear.final_verse", CodexCategory.Gear, "Final Verse",
+                "Increases Ultimate damage and impact area."),
+            new CodexDefinition("gear.windswept_cloak", CodexCategory.Gear, "Windswept Cloak",
+                "Increases movement speed."),
+            new CodexDefinition("gear.hollow_gourds", CodexCategory.Gear, "Hollow Gourds",
+                "Increases maximum health and heals the same amount."),
+            new CodexDefinition("gear.oath_feather", CodexCategory.Gear, "Oath Feather",
+                "Reduces every contact hit."),
+            new CodexDefinition("gear.signal_magnet", CodexCategory.Gear, "Signal Magnet",
+                "Increases XP pickup radius."),
+            new CodexDefinition("gear.field_manual", CodexCategory.Gear, "Field Manual",
+                "Ultimate recharges faster per level."),
+            new CodexDefinition("gear.jotunn_rune", CodexCategory.Gear, "Jotunn Rune",
+                "Catalyst — prepares Frost Axe for the Jotunn Cleaver evolution."),
             new CodexDefinition("gear.grove_seed", CodexCategory.Gear, "Grove Seed",
                 "Catalyst — prepares Grove Thorn Lash for the Grove Crown evolution."),
             new CodexDefinition("gear.flare_core", CodexCategory.Gear, "Flare Core",
                 "Catalyst — prepares Signal Flare for the Signal Storm evolution."),
+            new CodexDefinition("gear.oath_band", CodexCategory.Gear, "Oath Band",
+                "Catalyst — prepares Oath Ring for the Oath Maelstrom evolution."),
             new CodexDefinition("evolution.jotunn_cleaver", CodexCategory.Evolution, "Jotunn Cleaver",
                 "Frost axes explode and split damage across clustered enemies.",
                 "Max Frost Axe + Jotunn Rune catalyst discovered.",
@@ -152,10 +218,36 @@ namespace ProjectExpedition
                 "Signal Flares chain to two nearby enemies after impact.",
                 "Max Signal Flare + Flare Core catalyst discovered.",
                 "weapon.signal_flare", "gear.flare_core"),
+            new CodexDefinition("evolution.oath_maelstrom", CodexCategory.Evolution, "Oath Maelstrom",
+                "Oath Ring gains an extra blade and a wider orbit radius.",
+                "Max Oath Ring + Oath Band catalyst discovered.",
+                "weapon.oath_ring", "gear.oath_band"),
+            new CodexDefinition("evolution.iron_sanctuary", CodexCategory.Evolution, "Iron Sanctuary",
+                "Iron Beacon persists as a moving shield zone after each pulse.",
+                "Max Iron Beacon + Field Manual catalyst discovered.",
+                "weapon.iron_beacon", "gear.field_manual"),
             new CodexDefinition("relic.jotunn_echo", CodexCategory.Relic, "Jotunn Echo",
                 "Trophy from a Scout victory — echoes of the fallen Jotunn."),
             new CodexDefinition("relic.jotunn_echo_warden", CodexCategory.Relic, "Jotunn Echo Warden",
-                "Trophy from a Scout victory with all rune shards recovered.")
+                "Trophy from a Scout victory with all rune shards recovered."),
+            new CodexDefinition("relic.heartwood_echo", CodexCategory.Relic, "Heartwood Echo",
+                "Trophy from a Verdant Canopy Scout victory."),
+            new CodexDefinition("relic.heartwood_echo_warden", CodexCategory.Relic, "Heartwood Echo Warden",
+                "Trophy from a Scout victory with every sap crystal recovered."),
+            new CodexDefinition("relic.siege_echo", CodexCategory.Relic, "Siege Echo",
+                "Trophy from a Scorched Relay Scout victory."),
+            new CodexDefinition("relic.siege_echo_warden", CodexCategory.Relic, "Siege Echo Warden",
+                "Trophy from a Scout victory with every supply crate recovered."),
+            new CodexDefinition(VeteranTierUnlockId, CodexCategory.Challenge, "Veteran Tier",
+                "Harder expedition tier — stronger enemies and faster spawns for bonus renown."),
+            new CodexDefinition("challenge.swarm_surge", CodexCategory.Challenge, "Swarm Surge",
+                "Larger enemy groups for bonus renown."),
+            new CodexDefinition("challenge.iron_resolve", CodexCategory.Challenge, "Iron Resolve",
+                "No healing rewards for bonus renown."),
+            new CodexDefinition("challenge.glass_cannon", CodexCategory.Challenge, "Glass Cannon",
+                "Higher weapon damage and damage taken for bonus renown."),
+            new CodexDefinition("challenge.relentless_clock", CodexCategory.Challenge, "Relentless Clock",
+                "Earlier boss and lower kill objective for bonus renown.")
         };
 
         public static IReadOnlyList<UnlockDefinition> Unlocks => UnlockCatalog;
@@ -193,6 +285,10 @@ namespace ProjectExpedition
                     return progress.MaraMastery;
                 case EiraId:
                     return progress.EiraMastery;
+                case BrenId:
+                    return progress.BrenMastery;
+                case RexId:
+                    return progress.RexMastery;
                 default:
                     return 0;
             }
@@ -210,6 +306,10 @@ namespace ProjectExpedition
                     return "weapon.grove_thorn_lash";
                 case MaraId:
                     return "weapon.signal_flare";
+                case BrenId:
+                    return "weapon.driftwood_staff";
+                case RexId:
+                    return "weapon.iron_beacon";
                 default:
                     return null;
             }
@@ -220,11 +320,13 @@ namespace ProjectExpedition
             return Math.Max(1, kills / 25) + (victory ? 3 : 0);
         }
 
-        public static int CalculateRunRenownEarned(int recoveredRenown, int kills, bool victory)
+        public static int CalculateRunRenownEarned(int recoveredRenown, int kills, bool victory,
+            float renownMultiplier = 1f)
         {
             var killBonus = Math.Max(1, kills / RenownKillBonusDivisor);
             var victoryBonus = victory ? RenownVictoryBonus : 0;
-            return recoveredRenown + killBonus + victoryBonus;
+            var total = recoveredRenown + killBonus + victoryBonus;
+            return Math.Max(0, (int)Math.Round(total * Math.Max(0f, renownMultiplier)));
         }
 
         public static float MasteryDamageMultiplier(int mastery)
@@ -255,6 +357,25 @@ namespace ProjectExpedition
                 case EiraId:
                     progress.EiraMastery += gain;
                     break;
+                case BrenId:
+                    progress.BrenMastery += gain;
+                    break;
+                case RexId:
+                    progress.RexMastery += gain;
+                    break;
+            }
+        }
+
+        public static void EnsureMutatorUnlocks(MetaProgress progress)
+        {
+            if (progress == null)
+            {
+                return;
+            }
+
+            if (progress.UnlockedMutatorIds == null)
+            {
+                progress.UnlockedMutatorIds = new string[0];
             }
         }
 
@@ -274,6 +395,8 @@ namespace ProjectExpedition
             {
                 AddUnlock(progress, StarterUnlockIds[i]);
             }
+
+            EnsureMutatorUnlocks(progress);
         }
 
         public static void MigrateToVersionFour(MetaProgress progress)
@@ -309,6 +432,142 @@ namespace ProjectExpedition
             {
                 AddUnlock(progress, SagaMapId);
             }
+        }
+
+        public static void MigrateToVersionFive(MetaProgress progress)
+        {
+            if (progress == null)
+            {
+                return;
+            }
+
+            EnsureStarterUnlocks(progress);
+            EnsureMutatorUnlocks(progress);
+
+            if (ContainsUnlock(progress, SylvaId) || progress.TotalRenown >= 90)
+            {
+                AddUnlock(progress, CanopyScoutMapId);
+            }
+
+            if (ContainsUnlock(progress, EiraId) || progress.TotalRenown >= 120)
+            {
+                AddUnlock(progress, RelayScoutMapId);
+            }
+
+            if (ContainsUnlock(progress, MaraId) || progress.TotalRenown >= 175)
+            {
+                AddUnlock(progress, BrenId);
+            }
+
+            if (ContainsUnlock(progress, SagaMapId) || progress.TotalRenown >= 210)
+            {
+                AddUnlock(progress, RexId);
+            }
+
+            if (HasRelic(progress, "relic.heartwood_echo") || HasRelic(progress, "relic.heartwood_echo_warden"))
+            {
+                AddUnlock(progress, CanopySagaMapId);
+            }
+
+            if (HasRelic(progress, "relic.siege_echo") || HasRelic(progress, "relic.siege_echo_warden"))
+            {
+                AddUnlock(progress, RelaySagaMapId);
+            }
+
+            if (progress.RunsCompleted >= 1 || HasAnyRelic(progress))
+            {
+                AddUnlock(progress, VeteranTierUnlockId);
+            }
+
+            if (HasRelic(progress, "relic.jotunn_echo") || HasRelic(progress, "relic.jotunn_echo_warden"))
+            {
+                AddMutatorUnlock(progress, SharedChallengeProfileModel.MutatorUnlockId(ChallengeMutator.IronResolve));
+            }
+
+            if (HasRelic(progress, "relic.heartwood_echo") || HasRelic(progress, "relic.heartwood_echo_warden"))
+            {
+                AddMutatorUnlock(progress, SharedChallengeProfileModel.MutatorUnlockId(ChallengeMutator.SwarmSurge));
+            }
+
+            if (HasRelic(progress, "relic.siege_echo") || HasRelic(progress, "relic.siege_echo_warden"))
+            {
+                AddMutatorUnlock(progress, SharedChallengeProfileModel.MutatorUnlockId(ChallengeMutator.RelentlessClock));
+            }
+
+            if (ContainsUnlock(progress, SagaMapId)
+                || ContainsUnlock(progress, CanopySagaMapId)
+                || ContainsUnlock(progress, RelaySagaMapId))
+            {
+                AddMutatorUnlock(progress, SharedChallengeProfileModel.MutatorUnlockId(ChallengeMutator.GlassCannon));
+            }
+        }
+
+        public static bool IsVeteranUnlocked(MetaProgress progress)
+        {
+            return IsUnlocked(progress, VeteranTierUnlockId);
+        }
+
+        public static bool IsMutatorUnlocked(MetaProgress progress, ChallengeMutator mutator)
+        {
+            return IsMutatorUnlocked(progress, SharedChallengeProfileModel.MutatorUnlockId(mutator));
+        }
+
+        public static bool IsMutatorUnlocked(MetaProgress progress, string mutatorId)
+        {
+            if (progress == null || string.IsNullOrWhiteSpace(mutatorId))
+            {
+                return false;
+            }
+
+            EnsureMutatorUnlocks(progress);
+            return ContainsMutatorUnlock(progress, mutatorId);
+        }
+
+        public static bool ApplyVictoryChallengeUnlocks(MetaProgress progress, string mapId)
+        {
+            if (progress == null || string.IsNullOrWhiteSpace(mapId))
+            {
+                return false;
+            }
+
+            var map = ContentCatalog.FindMap(mapId);
+            if (map == null)
+            {
+                return false;
+            }
+
+            var changed = false;
+
+            if (IsScoutMapId(mapId))
+            {
+                if (!IsVeteranUnlocked(progress))
+                {
+                    AddUnlock(progress, VeteranTierUnlockId);
+                    changed = true;
+                }
+            }
+
+            var biomeMutator = SharedChallengeProfileModel.MutatorForBiome(map.BiomeId);
+            var biomeMutatorId = SharedChallengeProfileModel.MutatorUnlockId(biomeMutator);
+
+            if (!string.IsNullOrWhiteSpace(biomeMutatorId) && !IsMutatorUnlocked(progress, biomeMutatorId))
+            {
+                AddMutatorUnlock(progress, biomeMutatorId);
+                changed = true;
+            }
+
+            if (!IsScoutMapId(mapId))
+            {
+                var glassCannonId = SharedChallengeProfileModel.MutatorUnlockId(ChallengeMutator.GlassCannon);
+
+                if (!IsMutatorUnlocked(progress, glassCannonId))
+                {
+                    AddMutatorUnlock(progress, glassCannonId);
+                    changed = true;
+                }
+            }
+
+            return changed;
         }
 
         public static UnlockDefinition? FindUnlock(string contentId)
@@ -379,6 +638,11 @@ namespace ProjectExpedition
                 return false;
             }
 
+            if (unlock.Value.Category == UnlockCategory.Challenge)
+            {
+                return false;
+            }
+
             return AvailableRenown(progress) >= unlock.Value.RenownCost;
         }
 
@@ -402,6 +666,12 @@ namespace ProjectExpedition
             if (!unlock.HasValue)
             {
                 result.Message = "Unknown unlock.";
+                return result;
+            }
+
+            if (unlock.Value.Category == UnlockCategory.Challenge)
+            {
+                result.Message = "Challenge unlocks are earned in expeditions.";
                 return result;
             }
 
@@ -766,6 +1036,56 @@ namespace ProjectExpedition
             }
 
             return false;
+        }
+
+        private static bool HasAnyRelic(MetaProgress progress)
+        {
+            return progress?.RelicsCollected != null && progress.RelicsCollected.Length > 0;
+        }
+
+        private static bool IsScoutMapId(string mapId)
+        {
+            return !string.IsNullOrWhiteSpace(mapId)
+                && mapId.EndsWith(".scout", StringComparison.Ordinal);
+        }
+
+        private static bool ContainsMutatorUnlock(MetaProgress progress, string mutatorId)
+        {
+            if (progress?.UnlockedMutatorIds == null)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < progress.UnlockedMutatorIds.Length; i++)
+            {
+                if (progress.UnlockedMutatorIds[i] == mutatorId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void AddMutatorUnlock(MetaProgress progress, string mutatorId)
+        {
+            if (string.IsNullOrWhiteSpace(mutatorId) || ContainsMutatorUnlock(progress, mutatorId))
+            {
+                return;
+            }
+
+            EnsureMutatorUnlocks(progress);
+
+            var mutators = progress.UnlockedMutatorIds;
+            var updated = new string[mutators.Length + 1];
+
+            for (var i = 0; i < mutators.Length; i++)
+            {
+                updated[i] = mutators[i];
+            }
+
+            updated[mutators.Length] = mutatorId;
+            progress.UnlockedMutatorIds = updated;
         }
 
         private static int WrapIndex(int value, int count)

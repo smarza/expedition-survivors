@@ -56,9 +56,27 @@ namespace ProjectExpedition
 
         public void AttachRunAmbience(Transform runRoot)
         {
-            if (runRoot == null) return;
-            var ambience = new GameObject("Frostbound Ambience");
+            if (runRoot == null || _director == null)
+            {
+                return;
+            }
+
+            var map = _director.SelectedMap;
+            var ambience = new GameObject("Biome Ambience");
             ambience.transform.SetParent(runRoot, false);
+
+            if (map.LandmarkProfileId == BiomeCatalog.CanopyId)
+            {
+                ambience.AddComponent<CanopyAmbience>().Initialize(_director);
+                return;
+            }
+
+            if (map.LandmarkProfileId == BiomeCatalog.RelayId)
+            {
+                ambience.AddComponent<RelayAmbience>().Initialize(_director);
+                return;
+            }
+
             ambience.AddComponent<FrostboundAmbience>().Initialize(_director);
         }
 
@@ -410,6 +428,118 @@ namespace ProjectExpedition
                 var y = 8f - Mathf.Repeat(Hash01(i * 71) * 17f + time * speed, 17f);
                 _flakes[i].localPosition = new Vector3(x + Mathf.Sin(time + i) * 0.35f, y, 0f);
                 _flakes[i].Rotate(0f, 0f, (20f + i % 5 * 8f) * Time.unscaledDeltaTime);
+            }
+        }
+
+        private static float Hash01(int value)
+        {
+            unchecked
+            {
+                var x = (uint)value + 0x9e3779b9u;
+                x ^= x >> 16;
+                x *= 0x7feb352d;
+                x ^= x >> 15;
+                return (x & 0xffff) / 65535f;
+            }
+        }
+    }
+
+    public sealed class CanopyAmbience : MonoBehaviour
+    {
+        private const int ParticleCount = 32;
+        private readonly Transform[] _particles = new Transform[ParticleCount];
+        private GameDirector _director;
+
+        public void Initialize(GameDirector director)
+        {
+            _director = director;
+
+            for (var i = 0; i < _particles.Length; i++)
+            {
+                var particle = new GameObject($"Canopy Leaf {i + 1}");
+                particle.transform.SetParent(transform, false);
+                var renderer = particle.AddComponent<SpriteRenderer>();
+                renderer.sprite = RuntimeAssets.Diamond;
+                renderer.color = new Color(0.42f, 0.78f, 0.32f, 0.16f + Hash01(i * 19) * 0.22f);
+                renderer.sortingOrder = -7;
+                particle.transform.localScale = Vector3.one * Mathf.Lerp(0.02f, 0.06f, Hash01(i * 29));
+                _particles[i] = particle.transform;
+            }
+        }
+
+        private void Update()
+        {
+            if (_director == null)
+            {
+                return;
+            }
+
+            transform.position = _director.GroupCenter;
+            var time = Time.unscaledTime;
+
+            for (var i = 0; i < _particles.Length; i++)
+            {
+                var speed = 0.28f + Hash01(i * 11) * 0.55f;
+                var x = Mathf.Repeat(Hash01(i * 37) * 24f + time * speed * 0.35f, 24f) - 12f;
+                var y = 7f - Mathf.Repeat(Hash01(i * 53) * 15f + time * speed, 15f);
+                _particles[i].localPosition = new Vector3(x + Mathf.Sin(time * 0.8f + i) * 0.25f, y, 0f);
+                _particles[i].Rotate(0f, 0f, (16f + i % 4 * 6f) * Time.unscaledDeltaTime);
+            }
+        }
+
+        private static float Hash01(int value)
+        {
+            unchecked
+            {
+                var x = (uint)value + 0x9e3779b9u;
+                x ^= x >> 16;
+                x *= 0x7feb352d;
+                x ^= x >> 15;
+                return (x & 0xffff) / 65535f;
+            }
+        }
+    }
+
+    public sealed class RelayAmbience : MonoBehaviour
+    {
+        private const int SparkCount = 28;
+        private readonly Transform[] _sparks = new Transform[SparkCount];
+        private GameDirector _director;
+
+        public void Initialize(GameDirector director)
+        {
+            _director = director;
+
+            for (var i = 0; i < _sparks.Length; i++)
+            {
+                var spark = new GameObject($"Relay Spark {i + 1}");
+                spark.transform.SetParent(transform, false);
+                var renderer = spark.AddComponent<SpriteRenderer>();
+                renderer.sprite = RuntimeAssets.Diamond;
+                renderer.color = new Color(0.92f, 0.58f, 0.18f, 0.12f + Hash01(i * 23) * 0.18f);
+                renderer.sortingOrder = -7;
+                spark.transform.localScale = Vector3.one * Mathf.Lerp(0.02f, 0.05f, Hash01(i * 41));
+                _sparks[i] = spark.transform;
+            }
+        }
+
+        private void Update()
+        {
+            if (_director == null)
+            {
+                return;
+            }
+
+            transform.position = _director.GroupCenter;
+            var time = Time.unscaledTime;
+
+            for (var i = 0; i < _sparks.Length; i++)
+            {
+                var speed = 0.45f + Hash01(i * 17) * 0.75f;
+                var x = Mathf.Repeat(Hash01(i * 59) * 22f + time * speed * 0.5f, 22f) - 11f;
+                var y = 6f - Mathf.Repeat(Hash01(i * 67) * 13f + time * speed * 1.1f, 13f);
+                _sparks[i].localPosition = new Vector3(x, y, 0f);
+                _sparks[i].Rotate(0f, 0f, (28f + i % 3 * 10f) * Time.unscaledDeltaTime);
             }
         }
 

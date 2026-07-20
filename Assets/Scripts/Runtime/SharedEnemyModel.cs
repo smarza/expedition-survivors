@@ -41,11 +41,13 @@ namespace ProjectExpedition
         public bool Alive { get; private set; }
 
         public void Begin(Vector2 position, EnemyDefinition definition, float difficulty,
-            float rolledBaseSpeed, float rolledRadius, int rolledExperience)
+            float rolledBaseSpeed, float rolledRadius, int rolledExperience,
+            ChallengeProfile challenge = default)
         {
             if (definition == null) throw new ArgumentNullException(nameof(definition));
             Position = position;
-            Health = definition.BaseHealth + difficulty * definition.HealthPerDifficulty;
+            Health = SharedChallengeProfileModel.ApplyEnemyHealthMultiplier(
+                definition.BaseHealth + difficulty * definition.HealthPerDifficulty, challenge);
             Speed = rolledBaseSpeed + difficulty * definition.SpeedPerDifficulty;
             ContactDamage = definition.BaseContactDamage +
                 difficulty * definition.ContactDamagePerDifficulty;

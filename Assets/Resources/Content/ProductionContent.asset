@@ -84,6 +84,42 @@ MonoBehaviour:
     starterWeaponIds:
     - weapon.signal_flare
     - weapon.supply_pulse
+  - id: oathbound.bren
+    displayName: Bren Oakhart
+    tribe: Oathbound Grove
+    role: Root Binder
+    description: An oathbound rootbinder who anchors allies with living bark and slow, punishing grove magic.
+    lockedPreviewLine: An Oathbound rootbinder — living bark and grove magic still waiting to be revealed.
+    color: {r: 0.32, g: 0.62, b: 0.38, a: 1}
+    maxHealth: 132
+    moveSpeed: 4.55
+    armor: 1.25
+    ultimateName: Living Bulwark
+    ultimateDescription: Bren becomes briefly untouchable and erupts a ring of roots that slows nearby enemies.
+    ultimateCooldown: 56
+    ultimateDamage: 108
+    ultimateRadius: 5.8
+    starterWeaponIds:
+    - weapon.driftwood_staff
+    - weapon.oath_ring
+  - id: ironway.rex
+    displayName: Rex Calder
+    tribe: Ironway Expedition Corps
+    role: Breacher
+    description: An Ironway demolitions specialist who breaks enemy lines with beacons, charges and heavy knockback.
+    lockedPreviewLine: An Ironway breacher — demolitions and frontline pressure still to be discovered.
+    color: {r: 0.72, g: 0.58, b: 0.42, a: 1}
+    maxHealth: 142
+    moveSpeed: 4.4
+    armor: 2
+    ultimateName: Breaching Charge
+    ultimateDescription: Rex becomes briefly untouchable and fires a breaching line through the nearest threat cluster.
+    ultimateCooldown: 55
+    ultimateDamage: 128
+    ultimateRadius: 5.5
+    starterWeaponIds:
+    - weapon.iron_beacon
+    - weapon.tide_caller
   maps:
   - id: frostbound.scout
     displayName: The Frostbound Shore
@@ -103,6 +139,15 @@ MonoBehaviour:
     extractionDuration: 15
     extractionBeaconX: 0
     extractionBeaconY: 14
+    biomeId: frostbound
+    regularEnemyId: enemy.draugr_raider
+    eliteEnemyId: enemy.frost_wraith_captain
+    bossEnemyId: enemy.jotunn_warlord
+    victoryRelicStandardId: relic.jotunn_echo
+    victoryRelicBonusId: relic.jotunn_echo_warden
+    killObjectiveLabel: DRAUGR
+    optionalPickupLabel: SHARDS
+    landmarkProfileId: frostbound
   - id: frostbound.saga
     displayName: 'The Frostbound Shore: Long Night'
     region: Jotunn Coast
@@ -122,6 +167,127 @@ MonoBehaviour:
     extractionDuration: 15
     extractionBeaconX: 0
     extractionBeaconY: 14
+    biomeId: frostbound
+    regularEnemyId: enemy.draugr_raider
+    eliteEnemyId: enemy.frost_wraith_captain
+    bossEnemyId: enemy.jotunn_warlord
+    victoryRelicStandardId: relic.jotunn_echo
+    victoryRelicBonusId: relic.jotunn_echo_warden
+    killObjectiveLabel: DRAUGR
+    optionalPickupLabel: SHARDS
+    landmarkProfileId: frostbound
+  - id: oathbound.scout
+    displayName: The Verdant Canopy
+    region: Oathbound Canopy
+    description: A shorter grove route through living canopy, thorn spirits and a Heartwood guardian.
+    lockedPreviewLine: The Verdant Canopy — thorn spirits and a Heartwood guardian still await unlock.
+    durationLabel: SCOUT EXPEDITION — 5 MIN
+    duration: 300
+    bossSpawnTime: 240
+    baseSpawnInterval: 0.88
+    minimumSpawnInterval: 0.24
+    difficultyRamp: 44
+    groundColor: {r: 0.06, g: 0.12, b: 0.08, a: 1}
+    weaponSlots: 4
+    gearSlots: 4
+    requiredKillObjective: 140
+    optionalShardObjective: 5
+    extractionDuration: 15
+    extractionBeaconX: 0
+    extractionBeaconY: 14
+    biomeId: oathbound.canopy
+    regularEnemyId: enemy.bramble_stalker
+    eliteEnemyId: enemy.canopy_warden
+    bossEnemyId: enemy.heartwood_colossus
+    victoryRelicStandardId: relic.heartwood_echo
+    victoryRelicBonusId: relic.heartwood_echo_warden
+    killObjectiveLabel: STALKERS
+    optionalPickupLabel: SAP
+    landmarkProfileId: oathbound.canopy
+  - id: oathbound.saga
+    displayName: 'The Verdant Canopy: Deep Root'
+    region: Oathbound Canopy
+    description: The full canopy route with denser root paths, stronger wardens and a late Heartwood confrontation.
+    lockedPreviewLine: The full Verdant Canopy route — denser phases still await unlock.
+    durationLabel: QUICK EXPEDITION — 12 MIN
+    duration: 720
+    bossSpawnTime: 630
+    baseSpawnInterval: 0.84
+    minimumSpawnInterval: 0.18
+    difficultyRamp: 40
+    groundColor: {r: 0.045, g: 0.095, b: 0.065, a: 1}
+    weaponSlots: 6
+    gearSlots: 6
+    requiredKillObjective: 170
+    optionalShardObjective: 5
+    extractionDuration: 15
+    extractionBeaconX: 0
+    extractionBeaconY: 14
+    biomeId: oathbound.canopy
+    regularEnemyId: enemy.bramble_stalker
+    eliteEnemyId: enemy.canopy_warden
+    bossEnemyId: enemy.heartwood_colossus
+    victoryRelicStandardId: relic.heartwood_echo
+    victoryRelicBonusId: relic.heartwood_echo_warden
+    killObjectiveLabel: STALKERS
+    optionalPickupLabel: SAP
+    landmarkProfileId: oathbound.canopy
+  - id: ironway.scout
+    displayName: The Scorched Relay
+    region: Ironway Relay Front
+    description: A shorter relay assault through scrap drones, signal raiders and a siege automaton.
+    lockedPreviewLine: The Scorched Relay — scrap drones and a siege automaton still await unlock.
+    durationLabel: SCOUT EXPEDITION — 5 MIN
+    duration: 300
+    bossSpawnTime: 240
+    baseSpawnInterval: 0.84
+    minimumSpawnInterval: 0.24
+    difficultyRamp: 48
+    groundColor: {r: 0.11, g: 0.1, b: 0.09, a: 1}
+    weaponSlots: 4
+    gearSlots: 4
+    requiredKillObjective: 155
+    optionalShardObjective: 4
+    extractionDuration: 15
+    extractionBeaconX: 0
+    extractionBeaconY: 14
+    biomeId: ironway.relay
+    regularEnemyId: enemy.scrap_drone
+    eliteEnemyId: enemy.signal_raider
+    bossEnemyId: enemy.siege_automaton
+    victoryRelicStandardId: relic.siege_echo
+    victoryRelicBonusId: relic.siege_echo_warden
+    killObjectiveLabel: DRONES
+    optionalPickupLabel: CRATES
+    landmarkProfileId: ironway.relay
+  - id: ironway.saga
+    displayName: 'The Scorched Relay: Siege Line'
+    region: Ironway Relay Front
+    description: The full relay route with denser signal pressure, stronger raiders and a late siege confrontation.
+    lockedPreviewLine: The full Scorched Relay route — denser siege pressure still awaits unlock.
+    durationLabel: QUICK EXPEDITION — 12 MIN
+    duration: 720
+    bossSpawnTime: 630
+    baseSpawnInterval: 0.8
+    minimumSpawnInterval: 0.18
+    difficultyRamp: 44
+    groundColor: {r: 0.085, g: 0.075, b: 0.07, a: 1}
+    weaponSlots: 6
+    gearSlots: 6
+    requiredKillObjective: 185
+    optionalShardObjective: 4
+    extractionDuration: 15
+    extractionBeaconX: 0
+    extractionBeaconY: 14
+    biomeId: ironway.relay
+    regularEnemyId: enemy.scrap_drone
+    eliteEnemyId: enemy.signal_raider
+    bossEnemyId: enemy.siege_automaton
+    victoryRelicStandardId: relic.siege_echo
+    victoryRelicBonusId: relic.siege_echo_warden
+    killObjectiveLabel: DRONES
+    optionalPickupLabel: CRATES
+    landmarkProfileId: ironway.relay
   items:
   - id: weapon.frost_axe
     displayName: Frost Axe
@@ -341,6 +507,24 @@ MonoBehaviour:
     - 1
     evolutionOf: 
     catalystId: 
+  - id: weapon.root_lance
+    displayName: Root Lance
+    shortName: LANCE
+    description: Directed root lance volley. Each level grants the listed damage, interval or pierce modifier.
+    category: 0
+    maxLevel: 8
+    color: {r: 0.48, g: 0.72, b: 0.38, a: 1}
+    levelEffects:
+    - 0
+    - 1
+    - 4
+    - 3
+    - 1
+    - 4
+    - 3
+    - 1
+    evolutionOf: 
+    catalystId: 
   - id: gear.longship_boots
     displayName: Longship Boots
     shortName: BOOTS
@@ -506,6 +690,36 @@ MonoBehaviour:
     - 12
     evolutionOf: 
     catalystId: 
+  - id: gear.sap_vial
+    displayName: Sap Vial
+    shortName: SAP
+    description: Increases maximum health and sap regeneration.
+    category: 1
+    maxLevel: 5
+    color: {r: 0.62, g: 0.82, b: 0.42, a: 1}
+    levelEffects:
+    - 22
+    - 22
+    - 22
+    - 22
+    - 22
+    evolutionOf: 
+    catalystId: 
+  - id: gear.siege_plating
+    displayName: Siege Plating
+    shortName: PLATE
+    description: Reduces every contact hit. A rare catalyst that prepares Iron Beacon for evolution.
+    category: 1
+    maxLevel: 5
+    color: {r: 0.58, g: 0.62, b: 0.68, a: 1}
+    levelEffects:
+    - 7
+    - 7
+    - 7
+    - 7
+    - 7
+    evolutionOf: 
+    catalystId: 
   - id: gear.jotunn_rune
     displayName: Jotunn Rune
     shortName: RUNE
@@ -616,6 +830,72 @@ MonoBehaviour:
     - 0
     evolutionOf: weapon.iron_beacon
     catalystId: gear.field_manual
+  - id: evolution.canopy_eye
+    displayName: Canopy Eye
+    shortName: EYE
+    description: Canopy Vortex leaves a residual damaging whirlwind where it bursts.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.42, g: 0.92, b: 0.62, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.canopy_vortex
+    catalystId: gear.windswept_cloak
+  - id: evolution.root_cathedral
+    displayName: Root Cathedral
+    shortName: CATH
+    description: Driftwood Staff releases three staggered radial bursts.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.52, g: 0.68, b: 0.38, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.driftwood_staff
+    catalystId: gear.hollow_gourds
+  - id: evolution.north_gale
+    displayName: North Gale
+    shortName: GALE
+    description: North Wind Spear returns in an arc and critical hits explode.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.72, g: 0.88, b: 0.98, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.north_wind_spear
+    catalystId: gear.saga_carver
+  - id: evolution.supply_chain
+    displayName: Supply Chain
+    shortName: CHAIN
+    description: Supply Pulse heals downed allies nearby and boosts pickup radius.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.55, g: 0.88, b: 0.62, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.supply_pulse
+    catalystId: gear.signal_magnet
+  - id: evolution.root_lance_bloom
+    displayName: Root Lance Bloom
+    shortName: BLOOM
+    description: Root Lance leaves a brief curative trail for its owner.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.58, g: 0.82, b: 0.48, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.root_lance
+    catalystId: gear.sap_vial
+  - id: evolution.breach_beacon
+    displayName: Breach Beacon
+    shortName: BREACH
+    description: Iron Beacon pulses with heavy knockback and a brief armor aura.
+    category: 3
+    maxLevel: 1
+    color: {r: 0.68, g: 0.58, b: 0.48, a: 1}
+    levelEffects:
+    - 0
+    evolutionOf: weapon.iron_beacon
+    catalystId: gear.siege_plating
   - id: boon.field_rations
     displayName: Field Rations
     shortName: HEAL
@@ -676,3 +956,99 @@ MonoBehaviour:
     maximumExperienceExclusive: 61
     primaryColor: {r: 0.62, g: 0.18, b: 0.24, a: 1}
     alternateColor: {r: 0.62, g: 0.18, b: 0.24, a: 1}
+  - id: enemy.bramble_stalker
+    displayName: Bramble Stalker
+    boss: 0
+    baseHealth: 19
+    healthPerDifficulty: 5.2
+    minimumSpeed: 1.2
+    maximumSpeed: 2
+    speedPerDifficulty: 0.026
+    baseContactDamage: 8
+    contactDamagePerDifficulty: 0.55
+    minimumRadius: 0.26
+    maximumRadius: 0.4
+    minimumExperience: 2
+    maximumExperienceExclusive: 5
+    primaryColor: {r: 0.32, g: 0.58, b: 0.28, a: 1}
+    alternateColor: {r: 0.42, g: 0.48, b: 0.22, a: 1}
+  - id: enemy.canopy_warden
+    displayName: Canopy Warden
+    boss: 0
+    baseHealth: 88
+    healthPerDifficulty: 16
+    minimumSpeed: 1.45
+    maximumSpeed: 1.95
+    speedPerDifficulty: 0.022
+    baseContactDamage: 13
+    contactDamagePerDifficulty: 0.95
+    minimumRadius: 0.36
+    maximumRadius: 0.5
+    minimumExperience: 8
+    maximumExperienceExclusive: 14
+    primaryColor: {r: 0.48, g: 0.82, b: 0.38, a: 1}
+    alternateColor: {r: 0.28, g: 0.62, b: 0.32, a: 1}
+  - id: enemy.heartwood_colossus
+    displayName: Heartwood Colossus
+    boss: 1
+    baseHealth: 640
+    healthPerDifficulty: 78
+    minimumSpeed: 1.55
+    maximumSpeed: 1.75
+    speedPerDifficulty: 0.02
+    baseContactDamage: 24
+    contactDamagePerDifficulty: 0.32
+    minimumRadius: 0.82
+    maximumRadius: 0.82
+    minimumExperience: 58
+    maximumExperienceExclusive: 59
+    primaryColor: {r: 0.38, g: 0.52, b: 0.22, a: 1}
+    alternateColor: {r: 0.38, g: 0.52, b: 0.22, a: 1}
+  - id: enemy.scrap_drone
+    displayName: Scrap Drone
+    boss: 0
+    baseHealth: 21
+    healthPerDifficulty: 5.8
+    minimumSpeed: 1.35
+    maximumSpeed: 2.15
+    speedPerDifficulty: 0.028
+    baseContactDamage: 10
+    contactDamagePerDifficulty: 0.65
+    minimumRadius: 0.24
+    maximumRadius: 0.38
+    minimumExperience: 2
+    maximumExperienceExclusive: 5
+    primaryColor: {r: 0.58, g: 0.56, b: 0.52, a: 1}
+    alternateColor: {r: 0.72, g: 0.48, b: 0.28, a: 1}
+  - id: enemy.signal_raider
+    displayName: Signal Raider
+    boss: 0
+    baseHealth: 92
+    healthPerDifficulty: 17
+    minimumSpeed: 1.55
+    maximumSpeed: 2.05
+    speedPerDifficulty: 0.024
+    baseContactDamage: 15
+    contactDamagePerDifficulty: 1.05
+    minimumRadius: 0.34
+    maximumRadius: 0.48
+    minimumExperience: 8
+    maximumExperienceExclusive: 14
+    primaryColor: {r: 0.78, g: 0.62, b: 0.28, a: 1}
+    alternateColor: {r: 0.62, g: 0.58, b: 0.48, a: 1}
+  - id: enemy.siege_automaton
+    displayName: Siege Automaton
+    boss: 1
+    baseHealth: 700
+    healthPerDifficulty: 88
+    minimumSpeed: 1.6
+    maximumSpeed: 1.8
+    speedPerDifficulty: 0.02
+    baseContactDamage: 27
+    contactDamagePerDifficulty: 0.38
+    minimumRadius: 0.88
+    maximumRadius: 0.88
+    minimumExperience: 60
+    maximumExperienceExclusive: 61
+    primaryColor: {r: 0.58, g: 0.42, b: 0.28, a: 1}
+    alternateColor: {r: 0.58, g: 0.42, b: 0.28, a: 1}

@@ -79,7 +79,7 @@ namespace ProjectExpedition.Tests
             var progress = SaveMigration.Deserialize(versionThree, out var sourceVersion);
 
             Assert.That(sourceVersion, Is.EqualTo(3));
-            Assert.That(SaveMigration.CurrentVersion, Is.EqualTo(4));
+            Assert.That(SaveMigration.CurrentVersion, Is.EqualTo(5));
             Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.SylvaId), Is.True);
             Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.EiraId), Is.True);
             Assert.That(SharedMetaProgressionModel.IsUnlocked(progress, SharedMetaProgressionModel.MaraId), Is.True);

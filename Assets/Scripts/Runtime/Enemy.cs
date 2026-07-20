@@ -41,24 +41,40 @@ namespace ProjectExpedition
 
         public void Initialize(GameDirector director, float difficulty, bool boss, bool elite = false)
         {
+            var map = director.SelectedMap;
+            var definition = boss
+                ? EnemyCatalog.FindById(map.BossEnemyId)
+                : elite
+                    ? EnemyCatalog.FindById(map.EliteEnemyId)
+                    : EnemyCatalog.FindById(map.RegularEnemyId);
+
+            Initialize(director, difficulty, definition, elite && !boss);
+        }
+
+        public void Initialize(GameDirector director, float difficulty, EnemyDefinition definition, bool elite = false)
+        {
             _director = director;
-            _elite = elite && !boss;
-            var definition = boss ? EnemyCatalog.Jotunn
-                : _elite ? EnemyCatalog.FrostWraithCaptain
-                : EnemyCatalog.Draugr;
+            _elite = elite && definition != null && !definition.Boss;
+
+            if (definition == null)
+            {
+                definition = EnemyCatalog.Draugr;
+            }
+
             gameObject.name = definition.Name;
             var rolledBaseSpeed = director.Rng.Range(definition.MinimumSpeed, definition.MaximumSpeed);
             var rolledRadius = director.Rng.Range(definition.MinimumRadius, definition.MaximumRadius);
             var rolledExperience = director.Rng.Range(definition.MinimumExperience, definition.MaximumExperienceExclusive);
             _model.Begin(transform.position, definition, difficulty, rolledBaseSpeed, rolledRadius,
-                rolledExperience);
+                rolledExperience, director.SelectedChallenge);
             transform.localScale = Vector3.one * Radius * 2f;
-            _baseColor = boss || _elite || !director.Rng.Chance(0.5f)
+            var isBoss = definition.Boss;
+            _baseColor = isBoss || _elite || !director.Rng.Chance(0.5f)
                 ? definition.PrimaryColor
                 : definition.AlternateColor;
             _renderer.color = _baseColor;
-            _renderer.sortingOrder = boss ? 8 : _elite ? 7 : 5;
-            _crown.SetActive(boss);
+            _renderer.sortingOrder = isBoss ? 8 : _elite ? 7 : 5;
+            _crown.SetActive(isBoss);
             _animationSeed = transform.position.x * 0.31f + transform.position.y * 0.17f;
         }
 

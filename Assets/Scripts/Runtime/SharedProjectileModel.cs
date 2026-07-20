@@ -19,20 +19,27 @@ namespace ProjectExpedition
         public bool Critical { get; private set; }
         public bool Evolved { get; private set; }
         public bool Active { get; private set; }
+        public float TotalLifetime { get; private set; }
 
         public void Begin(Vector2 position, Vector2 direction, float damage, float speed,
-            int pierce, bool critical, bool evolved, float lifetime = 3.2f)
+            int pierce, bool critical, bool evolved, float lifetime = 3.2f, float radius = 0f)
         {
             Position = position;
             Direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.right;
             Damage = Mathf.Max(0f, damage);
             Speed = Mathf.Max(0f, speed);
-            Radius = critical ? 0.32f : 0.25f;
-            RemainingLifetime = Mathf.Max(0.01f, lifetime);
+            Radius = radius > 0f ? radius : critical ? 0.32f : 0.25f;
+            TotalLifetime = Mathf.Max(0.01f, lifetime);
+            RemainingLifetime = TotalLifetime;
             RemainingPierce = Mathf.Max(0, pierce);
             Critical = critical;
             Evolved = evolved;
             Active = true;
+        }
+
+        public void SetDirection(Vector2 direction)
+        {
+            Direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Direction;
         }
 
         public void Advance(float deltaTime)
@@ -52,9 +59,23 @@ namespace ProjectExpedition
 
         public void RegisterHit()
         {
-            if (!Active) return;
+            if (!Active)
+            {
+                return;
+            }
+
             RemainingPierce--;
-            if (RemainingPierce < 0) Stop();
+            if (RemainingPierce < 0)
+            {
+                Stop();
+            }
+        }
+
+        public void ReactivateForReturn(float lifetime = 1.4f)
+        {
+            Active = true;
+            RemainingLifetime = lifetime;
+            RemainingPierce = 0;
         }
 
         public void Stop()

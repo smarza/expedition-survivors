@@ -106,6 +106,9 @@ namespace ProjectExpedition
         public float MusicVolume = 0.55f;
         public float SfxVolume = 0.8f;
         public bool FirstRunHintsSeen;
+        public int ChallengeTier;
+        public int ChallengeMutatorA;
+        public int ChallengeMutatorB;
         public InputBindingProfile Keyboard = new InputBindingProfile();
     }
 
@@ -178,6 +181,9 @@ namespace ProjectExpedition
             data.MasterVolume = Mathf.Clamp01(data.MasterVolume);
             data.MusicVolume = Mathf.Clamp01(data.MusicVolume);
             data.SfxVolume = Mathf.Clamp01(data.SfxVolume);
+            data.ChallengeTier = Mathf.Clamp(data.ChallengeTier, 0, 1);
+            data.ChallengeMutatorA = Mathf.Clamp(data.ChallengeMutatorA, 0, 4);
+            data.ChallengeMutatorB = Mathf.Clamp(data.ChallengeMutatorB, 0, 4);
             return data;
         }
 
@@ -191,6 +197,9 @@ namespace ProjectExpedition
             _data.MasterVolume = Mathf.Clamp01(_data.MasterVolume);
             _data.MusicVolume = Mathf.Clamp01(_data.MusicVolume);
             _data.SfxVolume = Mathf.Clamp01(_data.SfxVolume);
+            _data.ChallengeTier = Mathf.Clamp(_data.ChallengeTier, 0, 1);
+            _data.ChallengeMutatorA = Mathf.Clamp(_data.ChallengeMutatorA, 0, 4);
+            _data.ChallengeMutatorB = Mathf.Clamp(_data.ChallengeMutatorB, 0, 4);
         }
     }
 

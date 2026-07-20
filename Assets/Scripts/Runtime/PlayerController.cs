@@ -142,7 +142,9 @@ namespace ProjectExpedition
 
         public void TakeDamage(float rawDamage)
         {
-            var result = _model.TakeDamage(rawDamage);
+            var damage = SharedChallengeProfileModel.ApplyPlayerDamageTakenMultiplier(
+                rawDamage, _director.SelectedChallenge);
+            var result = _model.TakeDamage(damage);
             if (result == PlayerDamageResult.Ignored) return;
             _presentation.ShowHit();
             _director.Present(PresentationCue.Impact, transform.position, _heroColor, 0.55f);
@@ -162,6 +164,12 @@ namespace ProjectExpedition
         public void ImproveUltimateDamage() => _model.ImproveUltimateDamage();
 
         public void AddMaxHealth(float amount) => _model.AddMaxHealth(amount);
+
+        public void ApplyTemporaryMagnetBoost(float amount, float durationSeconds) =>
+            _model.ApplyTemporaryMagnetBoost(amount, durationSeconds);
+
+        public void ApplyTemporaryArmorAura(float amount, float durationSeconds) =>
+            _model.ApplyTemporaryArmorAura(amount, durationSeconds);
 
         public void ApplyBuildResult(BuildApplyResult result)
         {

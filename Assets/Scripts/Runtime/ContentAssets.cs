@@ -52,12 +52,33 @@ namespace ProjectExpedition
         public float extractionDuration = 15f;
         public float extractionBeaconX;
         public float extractionBeaconY = 14f;
+        public string biomeId = BiomeCatalog.FrostboundId;
+        public string regularEnemyId = "enemy.draugr_raider";
+        public string eliteEnemyId = "enemy.frost_wraith_captain";
+        public string bossEnemyId = "enemy.jotunn_warlord";
+        public string victoryRelicStandardId = "relic.jotunn_echo";
+        public string victoryRelicBonusId = "relic.jotunn_echo_warden";
+        public string killObjectiveLabel = "DRAUGR";
+        public string optionalPickupLabel = "SHARDS";
+        public string[] phaseAnnouncements = new string[0];
+        public string bossEntranceAnnouncement;
+        public string eliteSpawnAnnouncement;
+        public string landmarkProfileId = BiomeCatalog.FrostboundId;
 
-        public MapDefinition Build() => new MapDefinition(
-            id, displayName, region, description, durationLabel, duration, bossSpawnTime,
-            baseSpawnInterval, minimumSpawnInterval, difficultyRamp, groundColor, weaponSlots, gearSlots,
-            requiredKillObjective, optionalShardObjective, extractionDuration, extractionBeaconX,
-            extractionBeaconY, lockedPreviewLine);
+        public MapDefinition Build()
+        {
+            var announcements = phaseAnnouncements != null && phaseAnnouncements.Length >= 5
+                ? phaseAnnouncements
+                : null;
+
+            return new MapDefinition(
+                id, displayName, region, description, durationLabel, duration, bossSpawnTime,
+                baseSpawnInterval, minimumSpawnInterval, difficultyRamp, groundColor, weaponSlots, gearSlots,
+                requiredKillObjective, optionalShardObjective, extractionDuration, extractionBeaconX,
+                extractionBeaconY, lockedPreviewLine, biomeId, regularEnemyId, eliteEnemyId, bossEnemyId,
+                victoryRelicStandardId, victoryRelicBonusId, killObjectiveLabel, optionalPickupLabel,
+                announcements, bossEntranceAnnouncement, eliteSpawnAnnouncement, landmarkProfileId);
+        }
     }
 
     [Serializable]
@@ -167,11 +188,73 @@ namespace ProjectExpedition
             26f, 0.35f, 0.85f, 0.85f, 60, 61,
             new Color(0.62f, 0.18f, 0.24f), new Color(0.62f, 0.18f, 0.24f));
 
+        public static EnemyDefinition BrambleStalker { get; private set; } = new EnemyDefinition(
+            "enemy.bramble_stalker", "Bramble Stalker", false, 19f, 5.2f, 1.2f, 2.0f, 0.026f,
+            8f, 0.55f, 0.26f, 0.40f, 2, 5,
+            new Color(0.32f, 0.58f, 0.28f), new Color(0.42f, 0.48f, 0.22f));
+
+        public static EnemyDefinition CanopyWarden { get; private set; } = new EnemyDefinition(
+            "enemy.canopy_warden", "Canopy Warden", false, 88f, 16f, 1.45f, 1.95f, 0.022f,
+            13f, 0.95f, 0.36f, 0.50f, 8, 14,
+            new Color(0.48f, 0.82f, 0.38f), new Color(0.28f, 0.62f, 0.32f));
+
+        public static EnemyDefinition HeartwoodColossus { get; private set; } = new EnemyDefinition(
+            "enemy.heartwood_colossus", "Heartwood Colossus", true, 640f, 78f, 1.55f, 1.75f, 0.02f,
+            24f, 0.32f, 0.82f, 0.82f, 58, 59,
+            new Color(0.38f, 0.52f, 0.22f), new Color(0.38f, 0.52f, 0.22f));
+
+        public static EnemyDefinition ScrapDrone { get; private set; } = new EnemyDefinition(
+            "enemy.scrap_drone", "Scrap Drone", false, 21f, 5.8f, 1.35f, 2.15f, 0.028f,
+            10f, 0.65f, 0.24f, 0.38f, 2, 5,
+            new Color(0.58f, 0.56f, 0.52f), new Color(0.72f, 0.48f, 0.28f));
+
+        public static EnemyDefinition SignalRaider { get; private set; } = new EnemyDefinition(
+            "enemy.signal_raider", "Signal Raider", false, 92f, 17f, 1.55f, 2.05f, 0.024f,
+            15f, 1.05f, 0.34f, 0.48f, 8, 14,
+            new Color(0.78f, 0.62f, 0.28f), new Color(0.62f, 0.58f, 0.48f));
+
+        public static EnemyDefinition SiegeAutomaton { get; private set; } = new EnemyDefinition(
+            "enemy.siege_automaton", "Siege Automaton", true, 700f, 88f, 1.60f, 1.80f, 0.02f,
+            27f, 0.38f, 0.88f, 0.88f, 60, 61,
+            new Color(0.58f, 0.42f, 0.28f), new Color(0.58f, 0.42f, 0.28f));
+
         public static EnemyDefinition[] All { get; private set; } = new EnemyDefinition[0];
 
         static EnemyCatalog()
         {
-            All = new[] { Draugr, FrostWraithCaptain, Jotunn };
+            All = new[]
+            {
+                Draugr, FrostWraithCaptain, Jotunn, BrambleStalker, CanopyWarden, HeartwoodColossus,
+                ScrapDrone, SignalRaider, SiegeAutomaton
+            };
+        }
+
+        public static EnemyDefinition FindById(string enemyId)
+        {
+            if (string.IsNullOrWhiteSpace(enemyId))
+            {
+                return Draugr;
+            }
+
+            for (var i = 0; i < All.Length; i++)
+            {
+                if (All[i] != null && All[i].Id == enemyId)
+                {
+                    return All[i];
+                }
+            }
+
+            if (enemyId == Jotunn.Id)
+            {
+                return Jotunn;
+            }
+
+            if (enemyId == FrostWraithCaptain.Id)
+            {
+                return FrostWraithCaptain;
+            }
+
+            return Draugr;
         }
 
         public static void Apply(ProductionContentDatabase database)

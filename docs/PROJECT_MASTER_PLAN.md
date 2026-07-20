@@ -481,6 +481,23 @@ Final closeout completed on 2026-07-20:
 - owner gameplay acceptance completed;
 - merged into `main` via PR #3 and tagged as `v0.10.0`.
 
+### 12.5 Milestone: 0.12.0
+
+Release candidate implemented:
+
+- full `ProductionContent.asset` parity with code fallbacks for six heroes, six maps, thirty slot items, twelve evolutions and nine enemies;
+- canopy and relay biomes with authored enemy rosters, relic tiers and `BiomeCatalog` phase announcements;
+- `SharedChallengeProfileModel` for Standard/Veteran tiers and four mutators wired into spawn, damage, renown and save v5 migration;
+- Editor **Expedition → Validate Production Content** workflow and `ProjectExpedition.Editor` assembly;
+- 97 EditMode and 14 PlayMode tests in the release-candidate inventory;
+- MVP content and acceptance guides in `MVP_CONTENT_0.12.md` and `TESTING_0.12.md`.
+
+Closeout gate:
+
+- static validation, all Unity tests, Web/Pages and Windows milestone compilation green;
+- three-biome owner matrix in `docs/TESTING_0.12.md`;
+- merge and `v0.12.0` tag only after explicit owner acceptance.
+
 ## 13. Current technical architecture
 
 | Component | Current responsibility |
@@ -770,6 +787,45 @@ Status: release-candidate documentation and 74 EditMode + 13 PlayMode tests prep
 3. Pass static validation, all Unity tests, Web/Pages and Windows milestone compilation.
 4. Run the matrix in `docs/TESTING_0.11.md` through Pages preview and the Windows artifact.
 5. Merge and tag only after explicit owner acceptance.
+
+## 15D. Detailed 0.12.0 execution plan
+
+#### Phase A — Content asset and biomes
+
+Status: implemented.
+
+1. Extend `ProductionContent.asset` with Bren/Rex, canopy/relay maps, new weapons/gear/evolutions and biome enemies.
+2. Add explicit biome, enemy and relic fields to all six expedition records.
+3. Keep `ContentDefinitions`, `BuildSystem`, `ContentAssets` and `SharedWeaponRegistry` fallbacks aligned.
+
+Exit gate: runtime loads authored content without falling back silently.
+
+#### Phase B — Challenge and migration
+
+Status: implemented.
+
+1. Add `SharedChallengeProfileModel` and save envelope v5 retroactive unlock rules.
+2. Wire challenge modifiers into route, spawn and renown calculations.
+
+Exit gate: Veteran tier and biome mutators unlock through progression without breaking healing/evolution rules.
+
+#### Phase C — Authoring workflow
+
+Status: implemented.
+
+1. Add `ProductionContentValidator` Editor menu and `ProjectExpedition.Editor` assembly.
+2. Extend automated EditMode/PlayMode suites and `tools/validate_project.py` minimum content counts.
+
+Exit gate: static validation and Unity tests enforce the 0.12 content contract.
+
+#### Phase D — Regression and milestone close
+
+Status: release-candidate documentation and 97 EditMode + 14 PlayMode tests prepared; CI/manual gates pending.
+
+1. Pass static validation and all Unity tests.
+2. Pass WebGL compilation, Pages deployment and Windows milestone compilation.
+3. Run the matrix in `docs/TESTING_0.12.md` through Pages preview and the Windows artifact.
+4. Merge and tag only after explicit owner acceptance.
 
 ## 16. Roadmap to 1.0
 

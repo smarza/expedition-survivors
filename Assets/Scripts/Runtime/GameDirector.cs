@@ -26,6 +26,8 @@ namespace ProjectExpedition
         public string FoundationStatus { get; private set; } = "NOT CHECKED";
         public int PendingPlayerCount { get; private set; } = 1;
         public MapDefinition SelectedMap { get; private set; } = ContentCatalog.Maps[0];
+        public ChallengeProfile SelectedChallenge { get; private set; } =
+            new ChallengeProfile(ChallengeTier.Standard, ChallengeMutator.None, ChallengeMutator.None);
         public readonly CharacterDefinition[] SelectedCharacters =
             { ContentCatalog.Characters[0], ContentCatalog.Characters[1] };
         public IReadOnlyList<RewardOption> CurrentRewards => _currentRewards;
@@ -46,6 +48,7 @@ namespace ProjectExpedition
         private readonly SharedRunModel _runModel = new SharedRunModel();
         private readonly SharedExpeditionRouteModel _routeModel = new SharedExpeditionRouteModel();
         private readonly SharedSpawnModel _spawnModel = new SharedSpawnModel();
+        private readonly SharedPersistentZoneModel _persistentZones = new SharedPersistentZoneModel();
         private Transform _poolRoot;
         private ComponentPool<Enemy> _enemyPool;
         private ComponentPool<AxeProjectile> _projectilePool;
@@ -154,15 +157,17 @@ namespace ProjectExpedition
                 return;
             }
 
+            AdvancePersistentZones(Time.deltaTime);
+
             if (!_routeModel.BossKilled)
             {
                 if (_routeModel.CanSpawnBoss())
                 {
-                    _runModel.TryTriggerBoss(SelectedMap.BossSpawnTime);
+                    _runModel.TryTriggerBoss(_routeModel.BossSpawnTime);
                 }
 
                 var spawn = _spawnModel.Advance(Time.deltaTime, Elapsed, SelectedMap, Enemies.Count,
-                    _routeModel.CanSpawnBoss() && !_routeModel.BossSpawned);
+                    _routeModel.CanSpawnBoss() && !_routeModel.BossSpawned, SelectedChallenge);
                 TrySpawnWarlordElite(spawn.Difficulty);
 
                 for (var i = 0; i < spawn.RegularEnemyCount; i++)
@@ -192,6 +197,14 @@ namespace ProjectExpedition
             SelectedCharacters[1] = ContentCatalog.Character(secondCharacter);
             State = RunState.MapSelect;
         }
+
+        public void SetSelectedChallenge(ChallengeProfile challenge)
+        {
+            SelectedChallenge = challenge;
+        }
+
+        public float ApplyWeaponDamage(float damage) =>
+            SharedChallengeProfileModel.ApplyWeaponDamageMultiplier(damage, SelectedChallenge);
 
         public void SelectMapAndStart(int mapIndex)
         {
@@ -242,10 +255,11 @@ namespace ProjectExpedition
                 Players.Add(player);
             }
             _runModel.Begin(playerCount, BalanceRules.ExperienceToNext);
-            _routeModel.Begin(SelectedMap.Id);
+            _routeModel.Begin(SelectedMap.Id, SelectedChallenge);
             Kills = 0;
             RunRenown = 0;
             _spawnModel.Begin();
+            _persistentZones.Clear();
             _runRecorded = false;
             _warlordEliteSpawned = false;
             ClearExtractionBeacon();
@@ -268,13 +282,57 @@ namespace ProjectExpedition
 
         private void CreateArena()
         {
-            var ground = new GameObject("Frozen Shore");
+            var ground = new GameObject("Expedition Ground");
             ground.transform.SetParent(_runRoot, false);
             ground.transform.localScale = new Vector3(80f, 80f, 1f);
             var groundRenderer = ground.AddComponent<SpriteRenderer>();
             groundRenderer.sprite = RuntimeAssets.Circle;
             groundRenderer.color = SelectedMap.GroundColor;
             groundRenderer.sortingOrder = -20;
+
+            CreateBiomeScatter(SelectedMap.LandmarkProfileId);
+            CreateAuthoredLandmarks(SelectedMap.LandmarkProfileId);
+        }
+
+        private void CreateBiomeScatter(string landmarkProfileId)
+        {
+            if (landmarkProfileId == BiomeCatalog.CanopyId)
+            {
+                for (var i = 0; i < 90; i++)
+                {
+                    var marker = new GameObject(i % 5 == 0 ? "Canopy Leaf" : "Root Shard");
+                    marker.transform.SetParent(_runRoot, false);
+                    marker.transform.position = new Vector3(Rng.Range(-38f, 38f), Rng.Range(-38f, 38f), 0f);
+                    marker.transform.localScale = Vector3.one * Rng.Range(0.08f, 0.28f);
+                    var renderer = marker.AddComponent<SpriteRenderer>();
+                    renderer.sprite = i % 5 == 0 ? RuntimeAssets.Diamond : RuntimeAssets.Circle;
+                    renderer.color = i % 5 == 0
+                        ? new Color(0.28f, 0.52f, 0.24f)
+                        : new Color(0.18f, 0.32f, 0.18f);
+                    renderer.sortingOrder = -10;
+                }
+
+                return;
+            }
+
+            if (landmarkProfileId == BiomeCatalog.RelayId)
+            {
+                for (var i = 0; i < 90; i++)
+                {
+                    var marker = new GameObject(i % 5 == 0 ? "Signal Scrap" : "Relay Debris");
+                    marker.transform.SetParent(_runRoot, false);
+                    marker.transform.position = new Vector3(Rng.Range(-38f, 38f), Rng.Range(-38f, 38f), 0f);
+                    marker.transform.localScale = Vector3.one * Rng.Range(0.08f, 0.28f);
+                    var renderer = marker.AddComponent<SpriteRenderer>();
+                    renderer.sprite = i % 5 == 0 ? RuntimeAssets.Diamond : RuntimeAssets.Circle;
+                    renderer.color = i % 5 == 0
+                        ? new Color(0.62f, 0.48f, 0.22f)
+                        : new Color(0.28f, 0.26f, 0.24f);
+                    renderer.sortingOrder = -10;
+                }
+
+                return;
+            }
 
             for (var i = 0; i < 90; i++)
             {
@@ -287,11 +345,26 @@ namespace ProjectExpedition
                 renderer.color = i % 5 == 0 ? new Color(0.22f, 0.45f, 0.49f) : new Color(0.17f, 0.25f, 0.28f);
                 renderer.sortingOrder = -10;
             }
-
-            CreateAuthoredLandmarks();
         }
 
-        private void CreateAuthoredLandmarks()
+        private void CreateAuthoredLandmarks(string landmarkProfileId)
+        {
+            if (landmarkProfileId == BiomeCatalog.CanopyId)
+            {
+                CreateCanopyLandmarks();
+                return;
+            }
+
+            if (landmarkProfileId == BiomeCatalog.RelayId)
+            {
+                CreateRelayLandmarks();
+                return;
+            }
+
+            CreateFrostboundLandmarks();
+        }
+
+        private void CreateFrostboundLandmarks()
         {
             CreateDriftwoodWreck(new Vector3(-12f, -8f, 0f));
             CreateRuneCircle(new Vector3(8f, 6f, 0f));
@@ -303,6 +376,84 @@ namespace ProjectExpedition
                 ExpeditionPhase.Extraction,
                 new Vector3(1.1f, 1.45f, 1f),
                 -4);
+        }
+
+        private void CreateCanopyLandmarks()
+        {
+            CreateCanopyRoot(new Vector3(-10f, -7f, 0f));
+            CreateMossCircle(new Vector3(7f, 5f, 0f));
+            CreateBossApproachMarkers();
+            _extractionBeaconPlaceholder = CreateLandmark(
+                "Canopy Beacon Placeholder",
+                new Vector3(SelectedMap.ExtractionBeaconX, SelectedMap.ExtractionBeaconY, 0f),
+                RuntimeAssets.Diamond,
+                ExpeditionPhase.Extraction,
+                new Vector3(1.1f, 1.45f, 1f),
+                -4);
+        }
+
+        private void CreateRelayLandmarks()
+        {
+            CreateSignalTower(new Vector3(-11f, -6f, 0f));
+            CreateSupplyDepot(new Vector3(9f, 4f, 0f));
+            CreateBossApproachMarkers();
+            _extractionBeaconPlaceholder = CreateLandmark(
+                "Extraction Point Placeholder",
+                new Vector3(SelectedMap.ExtractionBeaconX, SelectedMap.ExtractionBeaconY, 0f),
+                RuntimeAssets.Diamond,
+                ExpeditionPhase.Extraction,
+                new Vector3(1.1f, 1.45f, 1f),
+                -4);
+        }
+
+        private void CreateCanopyRoot(Vector3 position)
+        {
+            var root = new GameObject("Ancestral Root");
+            root.transform.SetParent(_runRoot, false);
+            root.transform.position = position;
+            AddLandmarkPart(root.transform, "Root Heart", RuntimeAssets.Circle,
+                ExpeditionPhase.Driftwood, Vector3.zero, new Vector3(2.2f, 0.68f, 1f), -8);
+            AddLandmarkPart(root.transform, "Thorn Branch", RuntimeAssets.Diamond,
+                ExpeditionPhase.Driftwood, new Vector3(0.35f, 0.45f, 0f), new Vector3(0.24f, 0.95f, 1f), -7);
+        }
+
+        private void CreateMossCircle(Vector3 center)
+        {
+            var circleRoot = new GameObject("Moss Circle");
+            circleRoot.transform.SetParent(_runRoot, false);
+            circleRoot.transform.position = center;
+            AddLandmarkPart(circleRoot.transform, "Moss Heart", RuntimeAssets.Circle,
+                ExpeditionPhase.Shoreline, Vector3.zero, new Vector3(0.72f, 0.72f, 1f), -6);
+
+            for (var i = 0; i < 6; i++)
+            {
+                var angle = i * (Mathf.PI * 2f / 6f);
+                var offset = new Vector3(Mathf.Cos(angle) * 1.05f, Mathf.Sin(angle) * 1.05f, 0f);
+                AddLandmarkPart(circleRoot.transform, $"Moss Stone {i + 1}", RuntimeAssets.Diamond,
+                    ExpeditionPhase.Shoreline, offset, Vector3.one * 0.28f, -5);
+            }
+        }
+
+        private void CreateSignalTower(Vector3 position)
+        {
+            var towerRoot = new GameObject("Broken Signal Tower");
+            towerRoot.transform.SetParent(_runRoot, false);
+            towerRoot.transform.position = position;
+            AddLandmarkPart(towerRoot.transform, "Tower Base", RuntimeAssets.Circle,
+                ExpeditionPhase.Driftwood, Vector3.zero, new Vector3(1.4f, 0.55f, 1f), -8);
+            AddLandmarkPart(towerRoot.transform, "Broken Antenna", RuntimeAssets.Diamond,
+                ExpeditionPhase.Driftwood, new Vector3(0.1f, 0.65f, 0f), new Vector3(0.18f, 1.1f, 1f), -7);
+        }
+
+        private void CreateSupplyDepot(Vector3 center)
+        {
+            var depotRoot = new GameObject("Supply Depot");
+            depotRoot.transform.SetParent(_runRoot, false);
+            depotRoot.transform.position = center;
+            AddLandmarkPart(depotRoot.transform, "Crate Stack", RuntimeAssets.Circle,
+                ExpeditionPhase.Shoreline, Vector3.zero, new Vector3(1.2f, 0.8f, 1f), -6);
+            AddLandmarkPart(depotRoot.transform, "Signal Flag", RuntimeAssets.Diamond,
+                ExpeditionPhase.Shoreline, new Vector3(0.55f, 0.35f, 0f), new Vector3(0.22f, 0.55f, 1f), -5);
         }
 
         private void CreateDriftwoodWreck(Vector3 position)
@@ -425,7 +576,7 @@ namespace ProjectExpedition
 
             Present(PresentationCue.BossSpawn, position, new Color(1f, 0.34f, 0.16f), 3.2f);
             _cameraFollow.AddTrauma(0.62f);
-            _hud.SetAnnouncement("THE JOTUNN WARLORD CRASHES THROUGH THE SHORE — HOLD THE LINE", 4.8f);
+            _hud.SetAnnouncement(SelectedMap.BossEntranceAnnouncement, 4.8f);
         }
 
         private void TrySpawnWarlordElite(float difficulty)
@@ -442,7 +593,7 @@ namespace ProjectExpedition
 
             _warlordEliteSpawned = true;
             SpawnEnemy(false, difficulty, true);
-            _hud.SetAnnouncement("A FROST WRAITH CAPTAIN EMERGES", 3.2f);
+            _hud.SetAnnouncement(SelectedMap.EliteSpawnAnnouncement, 3.2f);
         }
 
         private void SpawnRuneShards()
@@ -551,8 +702,13 @@ namespace ProjectExpedition
 
         public int ResolveAreaEffect(Vector2 center, SharedEffectRequest effect, bool repelExperienceGems = false)
         {
-            if (effect.Kind != SharedEffectKind.AreaDamage ||
-                effect.Target != SharedEffectTarget.Enemies)
+            if (effect.Kind != SharedEffectKind.AreaDamage &&
+                effect.Kind != SharedEffectKind.PersistentZone)
+            {
+                return 0;
+            }
+
+            if (effect.Target != SharedEffectTarget.Enemies)
             {
                 return 0;
             }
@@ -577,12 +733,59 @@ namespace ProjectExpedition
                 if ((enemy.Position - center).sqrMagnitude <=
                     (effect.Radius + enemy.Radius) * (effect.Radius + enemy.Radius))
                 {
-                    enemy.TakeDamage(effect.Damage, effect.Knockback, center);
+                    enemy.TakeDamage(ApplyWeaponDamage(effect.Damage), effect.Knockback, center);
                     hitCount++;
                 }
             }
 
             return hitCount;
+        }
+
+        public void SpawnPersistentZone(
+            Vector2 position,
+            float radius,
+            float damagePerTick,
+            float knockback,
+            float duration,
+            float tickInterval,
+            bool followOwner,
+            int ownerPlayerIndex)
+        {
+            _persistentZones.Spawn(
+                position,
+                radius,
+                damagePerTick,
+                knockback,
+                duration,
+                tickInterval,
+                followOwner,
+                ownerPlayerIndex);
+        }
+
+        private void AdvancePersistentZones(float deltaTime)
+        {
+            _persistentZones.Advance(deltaTime, ResolvePlayerPosition);
+
+            for (var i = 0; i < _persistentZones.ActiveZones.Count; i++)
+            {
+                if (!_persistentZones.TryConsumeTick(i, out var effect, out var center))
+                {
+                    continue;
+                }
+
+                ResolveAreaEffect(center, effect);
+                Present(PresentationCue.ProjectileTrail, center, new Color(0.55f, 0.82f, 0.42f), 0.22f);
+            }
+        }
+
+        private Vector2 ResolvePlayerPosition(int playerIndex)
+        {
+            if (playerIndex < 0 || playerIndex >= Players.Count || Players[playerIndex] == null)
+            {
+                return Vector2.zero;
+            }
+
+            return Players[playerIndex].transform.position;
         }
 
         public void OnEnemyKilled(Enemy enemy, int experienceValue, bool boss, bool elite)
@@ -646,7 +849,8 @@ namespace ProjectExpedition
             _currentRewards.Clear();
             var builds = new PlayerBuild[Mathf.Max(1, Players.Count)];
             for (var i = 0; i < builds.Length; i++) builds[i] = Players[i].Build;
-            _currentRewards.AddRange(RewardFactory.Generate(builds, RewardTurnPlayerIndex, Players.Count, Rng));
+            _currentRewards.AddRange(RewardFactory.Generate(builds, RewardTurnPlayerIndex, Players.Count, Rng,
+                SharedChallengeProfileModel.AllowsHealingRewards(SelectedChallenge)));
             DiscoverLevelUpOffers(_currentRewards);
             State = RunState.LevelUp;
             Time.timeScale = 0f;
@@ -719,10 +923,14 @@ namespace ProjectExpedition
                     characterIds[i] = SelectedCharacters[Mathf.Clamp(i, 0, SelectedCharacters.Length - 1)].Id;
                 }
 
-                LastRunRenownEarned = SharedMetaProgressionModel.CalculateRunRenownEarned(RunRenown, Kills, victory);
-                SaveService.RecordRun(Kills, RunRenown, Elapsed, victory, characterIds);
+                var renownMultiplier = SharedChallengeProfileModel.ResolveRenownMultiplier(SelectedChallenge);
+                LastRunRenownEarned = SharedMetaProgressionModel.CalculateRunRenownEarned(
+                    RunRenown, Kills, victory, renownMultiplier);
+                SaveService.RecordRun(Kills, RunRenown, Elapsed, victory, renownMultiplier, characterIds);
                 if (victory)
                 {
+                    SaveService.RecordVictoryChallengeUnlocks(SelectedMap.Id);
+
                     var relicId = _routeModel.ResolveVictoryRelicId();
                     if (!string.IsNullOrEmpty(relicId))
                         SaveService.RecordRelicCollected(relicId);
