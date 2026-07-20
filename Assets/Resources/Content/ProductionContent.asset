@@ -95,7 +95,7 @@ MonoBehaviour:
     groundColor: {r: 0.075, g: 0.13, b: 0.16, a: 1}
     weaponSlots: 4
     gearSlots: 4
-    requiredKillObjective: 150
+    requiredKillObjective: 120
     optionalShardObjective: 5
     extractionDuration: 15
     extractionBeaconX: 0
@@ -659,13 +659,13 @@ MonoBehaviour:
   - id: enemy.jotunn_warlord
     displayName: Jotunn Warlord
     boss: 1
-    baseHealth: 680
-    healthPerDifficulty: 85
-    minimumSpeed: 1.65
-    maximumSpeed: 1.85
-    speedPerDifficulty: 0.02
-    baseContactDamage: 26
-    contactDamagePerDifficulty: 0.35
+    baseHealth: 620
+    healthPerDifficulty: 80
+    minimumSpeed: 1.35
+    maximumSpeed: 1.35
+    speedPerDifficulty: 0
+    baseContactDamage: 22
+    contactDamagePerDifficulty: 0
     minimumRadius: 0.85
     maximumRadius: 0.85
     minimumExperience: 60

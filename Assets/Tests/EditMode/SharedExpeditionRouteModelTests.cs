@@ -13,7 +13,7 @@ namespace ProjectExpedition.Tests
 
             Assert.That(route.MapId, Is.EqualTo("frostbound.scout"));
             Assert.That(route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Shoreline));
-            Assert.That(route.RequiredKillObjective, Is.EqualTo(150));
+            Assert.That(route.RequiredKillObjective, Is.EqualTo(120));
             Assert.That(route.OptionalShardObjective, Is.EqualTo(5));
             Assert.That(route.ExtractionBeaconX, Is.Zero.Within(0.0001f));
             Assert.That(route.ExtractionBeaconY, Is.EqualTo(14f).Within(0.0001f));
@@ -26,7 +26,7 @@ namespace ProjectExpedition.Tests
             var route = new SharedExpeditionRouteModel();
             route.Begin("frostbound.scout");
 
-            for (var i = 0; i < 149; i++)
+            for (var i = 0; i < 119; i++)
                 route.OnEnemyKilled(false, false);
 
             Assert.That(route.CanSpawnBoss(), Is.False);
@@ -34,7 +34,7 @@ namespace ProjectExpedition.Tests
 
             route.OnEnemyKilled(false, false);
 
-            Assert.That(route.DraugrKills, Is.EqualTo(150));
+            Assert.That(route.DraugrKills, Is.EqualTo(120));
             Assert.That(route.CanSpawnBoss(), Is.True);
             Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("THE JOTUNN HAS FOUND YOU"));
         }

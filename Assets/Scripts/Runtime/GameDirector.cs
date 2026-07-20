@@ -56,9 +56,6 @@ namespace ProjectExpedition
         private bool _warlordEliteSpawned;
         private GameObject _extractionBeacon;
         private GameObject _extractionBeaconPlaceholder;
-        private Vector2 _gemRepulsionOrigin;
-        private float _gemRepulsionStrength;
-        private float _gemRepulsionUntil;
 
         public int ActiveProjectiles => _projectilePool?.ActiveCount ?? 0;
         public int ActiveGems => _gemPool?.ActiveCount ?? 0;
@@ -169,7 +166,7 @@ namespace ProjectExpedition
 
                 if (spawn.SpawnBoss && !_routeModel.BossSpawned)
                 {
-                    SpawnBossWithEntrance(spawn.Difficulty);
+                    SpawnEnemy(true, spawn.Difficulty);
                     _routeModel.MarkBossSpawned();
                 }
             }
@@ -248,9 +245,6 @@ namespace ProjectExpedition
             var expeditionLabel = playerCount > 1
                 ? $"{SelectedCharacters[0].Name.ToUpperInvariant()} + {SelectedCharacters[1].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}"
                 : $"{SelectedCharacters[0].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}";
-            SaveService.RecordLastRunCharacters(
-                SelectedCharacters[0].Id,
-                playerCount > 1 ? SelectedCharacters[1].Id : null);
             _hud.SetAnnouncement(replayingSeed
                 ? $"REPLAYING SEED {RunSeed} — {expeditionLabel}"
                 : expeditionLabel, 3f);
@@ -386,11 +380,7 @@ namespace ProjectExpedition
 
         private void SpawnEnemy(bool boss, float difficulty, bool elite = false)
         {
-            if (Players.Count == 0)
-            {
-                return;
-            }
-
+            if (Players.Count == 0) return;
             var angle = Rng.Range(0f, Mathf.PI * 2f);
             var distance = Rng.Range(SharedSpawnModel.MinimumSpawnDistance,
                 SharedSpawnModel.MaximumSpawnDistance);
@@ -399,26 +389,6 @@ namespace ProjectExpedition
             enemy.Initialize(this, difficulty, boss, elite);
             Enemies.Add(enemy);
             _enemyGrid.Add(enemy);
-        }
-
-        private void SpawnBossWithEntrance(float difficulty)
-        {
-            if (Players.Count == 0)
-            {
-                return;
-            }
-
-            var angle = Rng.Range(0f, Mathf.PI * 2f);
-            var distance = Rng.Range(13.5f, 16.5f);
-            var position = SharedSpawnModel.CalculateSpawnPosition(GroupCenter, angle, distance);
-            var enemy = _enemyPool.Get(position);
-            enemy.Initialize(this, difficulty, true, false);
-            Enemies.Add(enemy);
-            _enemyGrid.Add(enemy);
-
-            Present(PresentationCue.BossSpawn, position, new Color(1f, 0.34f, 0.16f), 3.2f);
-            _cameraFollow.AddTrauma(0.62f);
-            _hud.SetAnnouncement("THE JOTUNN WARLORD CRASHES THROUGH THE SHORE — HOLD THE LINE", 4.8f);
         }
 
         private void TrySpawnWarlordElite(float difficulty)
@@ -542,31 +512,16 @@ namespace ProjectExpedition
                 : otherCenter + offset.normalized * maximumSeparation;
         }
 
-        public int ResolveAreaEffect(Vector2 center, SharedEffectRequest effect, bool repelExperienceGems = false)
+        public int ResolveAreaEffect(Vector2 center, SharedEffectRequest effect)
         {
             if (effect.Kind != SharedEffectKind.AreaDamage ||
-                effect.Target != SharedEffectTarget.Enemies)
-            {
-                return 0;
-            }
-
-            if (repelExperienceGems)
-            {
-                _gemRepulsionOrigin = center;
-                _gemRepulsionStrength = 4.5f;
-                _gemRepulsionUntil = Time.time + 0.55f;
-            }
-
+                effect.Target != SharedEffectTarget.Enemies) return 0;
             var hitCount = 0;
             GetEnemiesInRadius(center, effect.Radius + 0.9f, _spatialScratch);
             for (var i = _spatialScratch.Count - 1; i >= 0; i--)
             {
                 var enemy = _spatialScratch[i];
-                if (enemy == null || !enemy.Alive)
-                {
-                    continue;
-                }
-
+                if (enemy == null || !enemy.Alive) continue;
                 if ((enemy.Position - center).sqrMagnitude <=
                     (effect.Radius + enemy.Radius) * (effect.Radius + enemy.Radius))
                 {
@@ -574,7 +529,6 @@ namespace ProjectExpedition
                     hitCount++;
                 }
             }
-
             return hitCount;
         }
 
@@ -586,12 +540,6 @@ namespace ProjectExpedition
             var position = enemy.transform.position;
             var gem = _gemPool.Get(position);
             gem.Initialize(this, experienceValue);
-
-            if (Time.time <= _gemRepulsionUntil)
-            {
-                gem.ApplyUltimateRepulsion(_gemRepulsionOrigin, _gemRepulsionStrength, _gemRepulsionUntil - Time.time);
-            }
-
             Present(PresentationCue.EnemyDefeated, position,
                 boss ? new Color(1f, 0.45f, 0.22f) : new Color(0.5f, 0.82f, 0.9f),
                 boss ? 2.4f : 0.7f);

@@ -20,8 +20,7 @@ namespace ProjectExpedition
         PlayerDowned,
         PlayerRevived,
         Victory,
-        Defeat,
-        BossSpawn
+        Defeat
     }
 
     public enum PresentationMusicState
@@ -74,7 +73,6 @@ namespace ProjectExpedition
                 case PresentationCue.Impact: _cameraFollow.AddTrauma(0.08f); break;
                 case PresentationCue.PlayerDowned: _cameraFollow.AddTrauma(0.28f); break;
                 case PresentationCue.Ultimate: _cameraFollow.AddTrauma(0.48f); break;
-                case PresentationCue.BossSpawn: _cameraFollow.AddTrauma(0.62f); break;
                 case PresentationCue.Victory: _cameraFollow.AddTrauma(0.35f); break;
             }
         }
@@ -113,7 +111,6 @@ namespace ProjectExpedition
             switch (cue)
             {
                 case PresentationCue.Ultimate:
-                case PresentationCue.BossSpawn:
                 case PresentationCue.PlayerDowned:
                 case PresentationCue.Victory:
                 case PresentationCue.Defeat: return 16;
@@ -334,12 +331,10 @@ namespace ProjectExpedition
             _cue = cue;
             _color = color;
             _scale = Mathf.Max(0.1f, scale);
-            _duration = cue == PresentationCue.Ultimate || cue == PresentationCue.Victory ||
-                        cue == PresentationCue.BossSpawn ? 0.7f : 0.24f;
+            _duration = cue == PresentationCue.Ultimate || cue == PresentationCue.Victory ? 0.7f : 0.24f;
             if (PresentationPreferences.Data.ReducedFlashes) _duration *= 0.72f;
             _age = 0f;
-            _renderer.sprite = cue == PresentationCue.Ultimate || cue == PresentationCue.RavenGuard ||
-                               cue == PresentationCue.BossSpawn
+            _renderer.sprite = cue == PresentationCue.Ultimate || cue == PresentationCue.RavenGuard
                 ? RuntimeAssets.Circle : RuntimeAssets.Diamond;
             transform.localScale = Vector3.zero;
             transform.rotation = Quaternion.identity;
@@ -351,7 +346,7 @@ namespace ProjectExpedition
             var progress = Mathf.Clamp01(_age / Mathf.Max(0.01f, _duration));
             var eased = 1f - (1f - progress) * (1f - progress);
             var start = _cue == PresentationCue.Impact ? 0.12f : 0.2f;
-            var end = _cue == PresentationCue.Ultimate || _cue == PresentationCue.BossSpawn ? 6f : 1.1f;
+            var end = _cue == PresentationCue.Ultimate ? 6f : 1.1f;
             transform.localScale = Vector3.one * Mathf.Lerp(start, end, eased) * _scale;
             transform.Rotate(0f, 0f, 420f * Time.unscaledDeltaTime);
             var maximumAlpha = PresentationPreferences.Data.ReducedFlashes ? 0.24f : 0.58f;

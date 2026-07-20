@@ -89,7 +89,7 @@ Phases for `frostbound.scout`:
 
 Objectives:
 
-1. **Required — Cull the Raider Tide:** defeat 150 Draugr (`objective.draugr_cull`, target 150). Unlocks boss eligibility even before the 4:00 timer.
+1. **Required — Cull the Raider Tide:** defeat 120 Draugr (`objective.draugr_cull`, target 120). Unlocks boss eligibility even before the 4:00 timer.
 2. **Optional — Recover Rune Shards:** collect 5 shard pickups (`objective.rune_shards`, target 5). Grants bonus relic tier.
 
 Extraction: after Jotunn defeat, a beacon spawns at `(0, 14)`. Players must reach within 3.5 units or survive 15 s at the beacon to complete victory.

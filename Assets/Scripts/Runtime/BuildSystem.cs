@@ -48,16 +48,8 @@ namespace ProjectExpedition
             return index >= 0 && index < LevelEffects.Length ? LevelEffects[index] : UpgradeId.None;
         }
 
-        public string EffectDescriptionAtLevel(int level)
-        {
-            var catalystDescription = UpgradeDescriptions.ForEvolutionCatalyst(Id);
-            if (catalystDescription != null)
-            {
-                return catalystDescription;
-            }
-
-            return UpgradeDescriptions.For(EffectAtLevel(level), Id);
-        }
+        public string EffectDescriptionAtLevel(int level) =>
+            UpgradeDescriptions.For(EffectAtLevel(level), Id);
     }
 
     public static class UpgradeDescriptions
@@ -135,23 +127,6 @@ namespace ProjectExpedition
                         ? $"+1 projectile per {radialLabel} burst"
                         : "+1 projectile per radial burst";
                 default: return "Base item level; no additional modifier";
-            }
-        }
-
-        public static string ForEvolutionCatalyst(string itemId)
-        {
-            switch (itemId)
-            {
-                case "gear.jotunn_rune":
-                    return "+1 Frost Axe pierce";
-                case "gear.flare_core":
-                    return "+1 Signal Flare projectile per volley";
-                case "gear.grove_seed":
-                    return "+1 Canopy Vortex burst projectile";
-                case "gear.oath_band":
-                    return "+1 Oath Ring blade";
-                default:
-                    return null;
             }
         }
 

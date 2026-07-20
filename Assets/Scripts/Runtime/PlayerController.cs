@@ -112,7 +112,7 @@ namespace ProjectExpedition
             if (Definition == null || !_model.TryActivateUltimate()) return;
             _presentation.ShowUltimate();
             var effect = SharedEffectPipeline.CreateUltimate(_model);
-            _director.ResolveAreaEffect(transform.position, effect, true);
+            _director.ResolveAreaEffect(transform.position, effect);
             _director.ShowUltimate(transform.position, PlayerIndex, effect.Radius);
             _director.Announce($"{HeroName.ToUpperInvariant()} — {UltimateName.ToUpperInvariant()}", 2.2f);
         }

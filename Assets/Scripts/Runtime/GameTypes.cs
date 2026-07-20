@@ -68,8 +68,6 @@ namespace ProjectExpedition
         public int BestKills;
         public float BestTime;
         public int HaldorMastery;
-        public string LastCampLeaderId;
-        public string LastCoopPartnerId;
         public string[] RelicsCollected = new string[0];
     }
 }

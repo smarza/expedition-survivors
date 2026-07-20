@@ -45,7 +45,7 @@ namespace ProjectExpedition
         public Color groundColor = new Color(0.075f, 0.13f, 0.16f);
         public int weaponSlots = 4;
         public int gearSlots = 4;
-        public int requiredKillObjective = 150;
+        public int requiredKillObjective = 120;
         public int optionalShardObjective = 5;
         public float extractionDuration = 15f;
         public float extractionBeaconX;
@@ -161,8 +161,8 @@ namespace ProjectExpedition
             new Color(0.55f, 0.82f, 0.95f), new Color(0.35f, 0.65f, 0.88f));
 
         public static EnemyDefinition Jotunn { get; private set; } = new EnemyDefinition(
-            "enemy.jotunn_warlord", "Jotunn Warlord", true, 680f, 85f, 1.65f, 1.85f, 0.02f,
-            26f, 0.35f, 0.85f, 0.85f, 60, 61,
+            "enemy.jotunn_warlord", "Jotunn Warlord", true, 620f, 80f, 1.35f, 1.35f, 0f,
+            22f, 0f, 0.85f, 0.85f, 60, 61,
             new Color(0.62f, 0.18f, 0.24f), new Color(0.62f, 0.18f, 0.24f));
 
         public static EnemyDefinition[] All { get; private set; } = new EnemyDefinition[0];
