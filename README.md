@@ -1,4 +1,4 @@
-# Project Expedition — Demonstration Content 0.10.0 (release candidate)
+# Project Expedition — Demonstration Content 0.10.0
 
 An original survivors-like prototype built for Unity 6 LTS. The milestone is intentionally self-contained: it has no purchased packages or external asset dependencies and bootstraps itself from an empty scene.
 

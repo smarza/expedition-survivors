@@ -1,6 +1,6 @@
 # Expedition Survivors — build, reward and character reference
 
-> **Applies to:** 0.10.0 Demonstration Content release candidate
+> **Applies to:** 0.10.0 Demonstration Content
 > **Purpose:** player-facing rules reference and authoring contract for future content
 > **Runtime sources of truth:** `ContentDefinitions.cs`, `BuildSystem.cs`, `SharedPlayerModel.cs`, `SharedWeaponRegistry.cs`, `SharedExpeditionRouteModel.cs` and `ProductionContent.asset`
 > **Design brief:** `docs/DEMONSTRATION_CONTENT_0.10.md`
