@@ -108,5 +108,101 @@ namespace ProjectExpedition.Tests
                 Assert.That(Resources.Load<AudioClip>(PresentationAudioMixer.SfxResourcePath(cue)), Is.Not.Null,
                     $"Missing imported SFX asset for {cue}.");
         }
+
+        [Test]
+        public void LayoutZone_DividesHorizontalColumnsFromLeftEdge()
+        {
+            var parent = new LayoutZone(24f, 92f, 1872f, 760f);
+            var inner = parent.Inset(12f);
+            var gridWidth = CharacterSelectLayoutMetrics.SoloGridWidth(inner.Rect.width);
+            var columns = inner.DivideHorizontal(
+                CharacterSelectLayoutMetrics.ColumnGap,
+                CharacterSelectLayoutMetrics.StatsColumnWidth,
+                gridWidth,
+                CharacterSelectLayoutMetrics.FilterColumnWidth);
+
+            Assert.That(columns.Length, Is.EqualTo(3));
+            Assert.That(columns[0].Rect.width, Is.EqualTo(CharacterSelectLayoutMetrics.StatsColumnWidth));
+            Assert.That(columns[1].Rect.width, Is.EqualTo(gridWidth).Within(0.01f));
+            Assert.That(columns[2].Rect.width, Is.EqualTo(CharacterSelectLayoutMetrics.FilterColumnWidth));
+            Assert.That(columns[1].Rect.x, Is.EqualTo(columns[0].Rect.xMax + CharacterSelectLayoutMetrics.ColumnGap).Within(0.01f));
+        }
+
+        [Test]
+        public void LayoutZone_DividesVerticalRowsFromTopEdge()
+        {
+            var parent = new LayoutZone(0f, 0f, 1920f, 1080f);
+            var rows = parent.DivideVertical(16f, 72f, 772f, 168f);
+
+            Assert.That(rows.Length, Is.EqualTo(3));
+            Assert.That(rows[0].Rect.height, Is.EqualTo(72f));
+            Assert.That(rows[1].Rect.y, Is.EqualTo(88f).Within(0.01f));
+            Assert.That(rows[2].Rect.height, Is.EqualTo(168f));
+        }
+
+        [Test]
+        public void CharacterSelectGrid_MeetsMinimumTileSizeAt1080p()
+        {
+            var innerBodyWidth = 1872f - 24f;
+            var gridWidth = CharacterSelectLayoutMetrics.SoloGridWidth(innerBodyWidth);
+            var gridHeight = 760f;
+            var characterCount = ContentCatalog.Characters.Length;
+            var columns = CharacterSelectLayoutMetrics.SoloGridColumns;
+
+            Assert.That(
+                CharacterSelectLayoutMetrics.MeetsMinimumTileSize(
+                    gridWidth,
+                    gridHeight,
+                    characterCount,
+                    columns,
+                    PresentationSpacing.Space12),
+                Is.True);
+        }
+
+        [Test]
+        public void CharacterSelectGrid_MeetsMinimumTileSizeAtSteamDeckScale()
+        {
+            var deck = PresentationLayout.Calculate(1280f, 800f, new Rect(0f, 0f, 1280f, 800f));
+            var innerBodyWidth = (1872f - 24f) * deck.Scale;
+            var scaledGridWidth = CharacterSelectLayoutMetrics.SoloGridWidth(innerBodyWidth);
+            var scaledGridHeight = 760f * deck.Scale;
+            var characterCount = ContentCatalog.Characters.Length;
+            var columns = CharacterSelectLayoutMetrics.SoloGridColumns;
+
+            Assert.That(
+                CharacterSelectLayoutMetrics.MeetsMinimumTileSize(
+                    scaledGridWidth,
+                    scaledGridHeight,
+                    characterCount,
+                    columns,
+                    PresentationSpacing.Space12 * deck.Scale),
+                Is.True);
+        }
+
+        [Test]
+        public void PresentationTypography_UsesCompactTokenSizes()
+        {
+            Assert.That(PresentationTypography.BaseSize(CompactFontToken.Display), Is.EqualTo(36));
+            Assert.That(PresentationTypography.BaseSize(CompactFontToken.Heading), Is.EqualTo(22));
+            Assert.That(PresentationTypography.BaseSize(CompactFontToken.Body), Is.EqualTo(16));
+            Assert.That(PresentationTypography.BaseSize(CompactFontToken.Caption), Is.EqualTo(13));
+            Assert.That(PresentationTypography.BaseSize(CompactFontToken.Micro), Is.EqualTo(11));
+        }
+
+        [Test]
+        public void PresentationTextMeasure_ReturnsNonZeroHeightForWrappedBody()
+        {
+            var style = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = PresentationTypography.BaseSize(CompactFontToken.Body),
+                wordWrap = true
+            };
+            var height = PresentationTextMeasure.MeasureHeight(
+                style,
+                "Frostbound expedition leader with rune axe and raven mantle.",
+                420f);
+
+            Assert.That(height, Is.GreaterThan(18f));
+        }
     }
 }

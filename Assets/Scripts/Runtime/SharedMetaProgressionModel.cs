@@ -883,9 +883,18 @@ namespace ProjectExpedition
 
         public static int NextCharacterIndex(int currentIndex, int columnDelta, int rowDelta)
         {
+            return NextCharacterIndex(
+                currentIndex,
+                columnDelta,
+                rowDelta,
+                CharacterSelectPresentation.GridColumns);
+        }
+
+        public static int NextCharacterIndex(int currentIndex, int columnDelta, int rowDelta, int gridColumns)
+        {
             return NextGridIndex(
                 ContentCatalog.Characters.Length,
-                CharacterSelectPresentation.GridColumns,
+                gridColumns,
                 currentIndex,
                 columnDelta,
                 rowDelta);

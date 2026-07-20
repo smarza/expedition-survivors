@@ -2,7 +2,8 @@
   "name": "ProjectExpedition.Runtime",
   "rootNamespace": "ProjectExpedition",
   "references": [
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "UnityEngine.UIElementsModule"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

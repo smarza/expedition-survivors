@@ -1,0 +1,210 @@
+.character-select-root {
+    flex-grow: 1;
+    background-color: rgb(6, 15, 23);
+    padding: 20px 40px;
+}
+
+.character-select-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+    margin-bottom: 12px;
+}
+
+.character-select-renown {
+    width: 220px;
+    height: 56px;
+    -unity-text-align: middle-left;
+    font-size: 13px;
+    color: rgb(158, 184, 194);
+    background-color: rgb(14, 27, 37);
+    padding-left: 12px;
+    border-width: 2px;
+    border-color: rgba(237, 179, 61, 0.45);
+}
+
+.character-select-title {
+    flex-grow: 1;
+    -unity-text-align: middle-center;
+    font-size: 36px;
+    -unity-font-style: bold;
+    color: rgb(209, 230, 237);
+}
+
+.character-select-back {
+    width: 220px;
+    height: 56px;
+    font-size: 16px;
+    -unity-font-style: bold;
+}
+
+.character-select-body {
+    flex-direction: row;
+    flex-grow: 1;
+    min-height: 772px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background-color: rgb(14, 27, 37);
+    border-width: 2px;
+    border-color: rgba(237, 179, 61, 0.35);
+}
+
+.character-select-stats,
+.character-select-grid,
+.character-select-filter {
+    background-color: rgb(11, 22, 29);
+    padding: 12px;
+    margin-right: 16px;
+}
+
+.character-select-stats {
+    width: 240px;
+}
+
+.character-select-grid {
+    width: 880px;
+}
+
+.character-select-filter {
+    width: 240px;
+    margin-right: 0;
+}
+
+.character-select-section-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(158, 184, 194);
+    margin-bottom: 8px;
+}
+
+.character-select-stats-scroll,
+.character-select-grid-scroll,
+.character-select-expeditions-scroll {
+    flex-grow: 1;
+}
+
+.character-select-filter-toggle {
+    height: 40px;
+    margin-bottom: 8px;
+}
+
+.character-select-filter-hint {
+    font-size: 11px;
+    color: rgb(158, 184, 194);
+    margin-bottom: 12px;
+    white-space: normal;
+}
+
+.character-select-expeditions-title {
+    margin-top: 8px;
+}
+
+.character-select-footer {
+    flex-direction: row;
+    align-items: stretch;
+    height: 168px;
+    padding: 12px 20px;
+    background-color: rgb(14, 27, 37);
+    border-width: 2px;
+    border-color: rgba(237, 179, 61, 0.35);
+}
+
+.character-select-portrait {
+    width: 144px;
+    height: 144px;
+    margin-right: 12px;
+    background-color: rgb(5, 15, 20);
+}
+
+.character-select-detail {
+    flex-grow: 1;
+    margin-right: 16px;
+}
+
+.character-select-detail-name {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(237, 179, 61);
+}
+
+.character-select-detail-role {
+    font-size: 13px;
+    color: rgb(158, 184, 194);
+    margin-bottom: 6px;
+}
+
+.character-select-detail-description,
+.character-select-detail-ultimate,
+.character-select-detail-hint {
+    font-size: 16px;
+    color: rgb(209, 230, 237);
+    white-space: normal;
+}
+
+.character-select-detail-hint {
+    font-size: 11px;
+    color: rgb(158, 184, 194);
+    margin-top: 6px;
+}
+
+.character-select-confirm {
+    width: 300px;
+    align-self: center;
+    height: 58px;
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.character-select-stat-row {
+    flex-direction: row;
+    align-items: center;
+    height: 28px;
+    margin-bottom: 8px;
+}
+
+.character-select-stat-label {
+    flex-grow: 1;
+    font-size: 11px;
+    color: rgb(158, 184, 194);
+}
+
+.character-select-stat-value {
+    width: 60px;
+    -unity-text-align: middle-right;
+    font-size: 13px;
+    color: rgb(209, 230, 237);
+}
+
+.character-select-grid-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.character-select-grid-tile {
+    width: 200px;
+    height: 180px;
+    margin: 0 16px 16px 0;
+    background-color: rgb(10, 19, 27);
+    border-width: 2px;
+    border-color: rgb(20, 38, 52);
+    padding: 8px;
+}
+
+.character-select-grid-tile-selected {
+    border-color: rgb(237, 179, 61);
+    background-color: rgb(23, 46, 56);
+}
+
+.character-select-grid-tile-name {
+    font-size: 13px;
+    -unity-font-style: bold;
+    white-space: normal;
+    color: rgb(209, 230, 237);
+}
+
+.character-select-expedition-row {
+    font-size: 11px;
+    color: rgb(158, 184, 194);
+    margin-bottom: 4px;
+}

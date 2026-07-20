@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <Style src="CharacterSelectScreen.uss" />
+    <ui:VisualElement name="root" class="character-select-root">
+        <ui:VisualElement name="header" class="character-select-header">
+            <ui:Label name="renown-label" text="RENOWN 0" class="character-select-renown" />
+            <ui:Label name="title-label" text="CHOOSE YOUR SURVIVOR" class="character-select-title" />
+            <ui:Button name="back-button" text="BACK" class="character-select-back" />
+        </ui:VisualElement>
+        <ui:VisualElement name="body" class="character-select-body">
+            <ui:VisualElement name="stats-column" class="character-select-stats">
+                <ui:Label text="SURVIVOR STATS" class="character-select-section-title" />
+                <ui:ScrollView name="stats-scroll" class="character-select-stats-scroll" />
+            </ui:VisualElement>
+            <ui:VisualElement name="grid-column" class="character-select-grid">
+                <ui:Label text="ROSTER" class="character-select-section-title" />
+                <ui:ScrollView name="grid-scroll" class="character-select-grid-scroll" />
+            </ui:VisualElement>
+            <ui:VisualElement name="filter-column" class="character-select-filter">
+                <ui:Label text="ROSTER FILTER" class="character-select-section-title" />
+                <ui:Button name="filter-toggle" text="FILTER: OFF" class="character-select-filter-toggle" />
+                <ui:Label name="filter-hint" text="Showing the full roster." class="character-select-filter-hint" />
+                <ui:Label text="EXPEDITIONS" class="character-select-section-title character-select-expeditions-title" />
+                <ui:ScrollView name="expeditions-scroll" class="character-select-expeditions-scroll" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="footer" class="character-select-footer">
+            <ui:VisualElement name="portrait-slot" class="character-select-portrait" />
+            <ui:VisualElement name="detail-column" class="character-select-detail">
+                <ui:Label name="detail-name" text="HALDOR STORMBORN" class="character-select-detail-name" />
+                <ui:Label name="detail-role" text="RAVENBOUND — LEADER" class="character-select-detail-role" />
+                <ui:Label name="detail-description" text="" class="character-select-detail-description" />
+                <ui:Label name="detail-ultimate" text="" class="character-select-detail-ultimate" />
+                <ui:Label name="detail-hint" text="" class="character-select-detail-hint" />
+            </ui:VisualElement>
+            <ui:Button name="confirm-button" text="SELECT" class="character-select-confirm" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

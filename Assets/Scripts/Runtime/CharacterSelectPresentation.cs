@@ -8,9 +8,23 @@ namespace ProjectExpedition
         Large
     }
 
+    public enum CharacterStatIconKind
+    {
+        Health,
+        Speed,
+        Armor,
+        Magnet,
+        Cooldown,
+        Damage,
+        Radius
+    }
+
     public static class CharacterSelectPresentation
     {
-        public const int GridColumns = 3;
+        public const int GridColumns = CharacterSelectLayoutMetrics.SoloGridColumns;
+
+        public static int GridColumnsFor(int playerCount) =>
+            CharacterSelectLayoutMetrics.GridColumnsFor(playerCount);
 
         public static void DrawPortrait(Rect rect, CharacterDefinition definition, bool unlocked,
             CharacterPortraitSize size)
@@ -55,7 +69,119 @@ namespace ProjectExpedition
             var badgeRect = new Rect(rect.xMax - 34f, rect.y + 8f, 26f, 26f);
             DrawPanel(badgeRect, new Color(0.08f, 0.1f, 0.12f, 0.92f));
             DrawBorder(badgeRect, new Color(0.55f, 0.58f, 0.62f, 0.95f), 2f);
-            GUI.Label(badgeRect, "🔒", CreateLockStyle());
+            GUI.Label(badgeRect, "LOCK", CreateLockStyle());
+        }
+
+        public static void DrawStatIcon(Rect rect, CharacterStatIconKind kind, Color tint)
+        {
+            var iconRect = new Rect(rect.x + 2f, rect.y + 2f, rect.width - 4f, rect.height - 4f);
+            var color = ApplyHeroTint(ResolveStatBaseColor(kind), tint);
+
+            switch (kind)
+            {
+                case CharacterStatIconKind.Health:
+                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.42f, color);
+                    break;
+                case CharacterStatIconKind.Speed:
+                    DrawDiamond(iconRect.center, new Vector2(0.34f, 0.48f) * (Mathf.Min(iconRect.width, iconRect.height) / 128f), color, 18f);
+                    break;
+                case CharacterStatIconKind.Armor:
+                    DrawPanel(iconRect, color);
+                    DrawBorder(iconRect, Color.Lerp(color, Color.white, 0.35f), 2f);
+                    break;
+                case CharacterStatIconKind.Magnet:
+                    DrawDiamond(iconRect.center, Vector2.one * (iconRect.width / 160f), color);
+                    break;
+                case CharacterStatIconKind.Cooldown:
+                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.34f,
+                        new Color(color.r, color.g, color.b, 0.72f));
+                    DrawDiamond(iconRect.center, Vector2.one * (iconRect.width / 220f), color, 45f);
+                    break;
+                case CharacterStatIconKind.Damage:
+                    DrawDiamond(iconRect.center, new Vector2(0.18f, 0.42f) * (Mathf.Min(iconRect.width, iconRect.height) / 128f), color, -24f);
+                    break;
+                case CharacterStatIconKind.Radius:
+                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.46f,
+                        new Color(color.r, color.g, color.b, 0.28f));
+                    DrawEmblem(iconRect.center, Mathf.Min(iconRect.width, iconRect.height) * 0.24f, color);
+                    break;
+            }
+        }
+
+        public static void DrawStarterWeaponIcon(Rect rect, string weaponId, Color heroTint)
+        {
+            DrawPanel(rect, new Color(0.03f, 0.06f, 0.08f, 0.95f));
+            DrawBorder(rect, new Color(0.35f, 0.42f, 0.48f, 0.85f), 2f);
+
+            var weaponColor = ResolveWeaponColor(weaponId, heroTint);
+            var center = rect.center;
+            var scale = Mathf.Clamp(Mathf.Min(rect.width, rect.height) / 160f, 0.45f, 1.1f);
+
+            switch (weaponId)
+            {
+                case "weapon.frost_axe":
+                    DrawDiamond(center, new Vector2(0.12f, 0.28f) * scale, weaponColor, -24f);
+                    break;
+                case "weapon.raven_guard":
+                    DrawEmblem(center, 0.34f * scale, weaponColor);
+                    break;
+                case "weapon.grove_thorn_lash":
+                    DrawDiamond(center, new Vector2(0.1f, 0.34f) * scale, weaponColor, 12f);
+                    break;
+                case "weapon.canopy_vortex":
+                    DrawEmblem(center, 0.28f * scale, weaponColor);
+                    DrawDiamond(center, Vector2.one * 0.12f * scale, weaponColor, 45f);
+                    break;
+                case "weapon.signal_flare":
+                    DrawDiamond(center, new Vector2(0.14f, 0.22f) * scale, weaponColor, -18f);
+                    break;
+                case "weapon.supply_pulse":
+                    DrawEmblem(center, 0.22f * scale, weaponColor);
+                    DrawPanel(new Rect(rect.x + 4f, rect.y + rect.height * 0.5f - 2f, rect.width - 8f, 4f), weaponColor);
+                    break;
+                default:
+                    DrawDiamond(center, Vector2.one * 0.18f * scale, weaponColor);
+                    break;
+            }
+        }
+
+        public static string ResolvePrimaryStarterWeaponId(CharacterDefinition definition)
+        {
+            if (definition?.StarterWeaponIds == null || definition.StarterWeaponIds.Length == 0)
+            {
+                return "weapon.frost_axe";
+            }
+
+            return definition.StarterWeaponIds[0];
+        }
+
+        private static Color ResolveStatBaseColor(CharacterStatIconKind kind)
+        {
+            switch (kind)
+            {
+                case CharacterStatIconKind.Health: return new Color(0.82f, 0.24f, 0.28f);
+                case CharacterStatIconKind.Speed: return new Color(0.42f, 0.88f, 0.52f);
+                case CharacterStatIconKind.Armor: return new Color(0.58f, 0.66f, 0.74f);
+                case CharacterStatIconKind.Magnet: return new Color(0.35f, 0.82f, 0.96f);
+                case CharacterStatIconKind.Cooldown: return new Color(0.72f, 0.58f, 0.92f);
+                case CharacterStatIconKind.Damage: return new Color(0.96f, 0.52f, 0.22f);
+                case CharacterStatIconKind.Radius: return new Color(0.92f, 0.78f, 0.28f);
+                default: return new Color(0.62f, 0.72f, 0.76f);
+            }
+        }
+
+        private static Color ResolveWeaponColor(string weaponId, Color heroTint)
+        {
+            switch (weaponId)
+            {
+                case "weapon.frost_axe": return ApplyHeroTint(new Color(0.42f, 0.91f, 1f), heroTint);
+                case "weapon.raven_guard": return ApplyHeroTint(new Color(0.5f, 0.78f, 0.92f), heroTint);
+                case "weapon.grove_thorn_lash": return ApplyHeroTint(new Color(0.42f, 0.78f, 0.32f), heroTint);
+                case "weapon.canopy_vortex": return ApplyHeroTint(new Color(0.32f, 0.72f, 0.42f), heroTint);
+                case "weapon.signal_flare": return ApplyHeroTint(new Color(0.96f, 0.58f, 0.18f), heroTint);
+                case "weapon.supply_pulse": return ApplyHeroTint(new Color(0.82f, 0.62f, 0.28f), heroTint);
+                default: return ApplyHeroTint(new Color(0.72f, 0.76f, 0.82f), heroTint);
+            }
         }
 
         private static void DrawSilhouette(Rect rect, string characterId, Color tint, CharacterPortraitSize size)
