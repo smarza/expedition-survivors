@@ -62,9 +62,41 @@ namespace ProjectExpedition.Editor
                 return false;
             }
 
+            if (!ValidateLootDefinitions(messages))
+            {
+                report = messages.ToString();
+                return false;
+            }
+
             report =
                 $"{database.characters.Length} characters, {database.maps.Length} maps, " +
-                $"{database.items.Length} items, {database.enemies.Length} enemies.";
+                $"{database.items.Length} items, {database.enemies.Length} enemies, " +
+                $"1 loot effect.";
+            return true;
+        }
+
+        private static bool ValidateLootDefinitions(StringBuilder messages)
+        {
+            var healing = LootEffectCatalog.HealingEmbers;
+
+            if (healing == null || string.IsNullOrWhiteSpace(healing.Id))
+            {
+                messages.AppendLine("Default loot effect is missing a stable id.");
+                return false;
+            }
+
+            if (healing.RequiredCount <= 0 || healing.EffectDuration <= 0f || healing.EffectIntensity <= 0f)
+            {
+                messages.AppendLine("Default loot effect has invalid activation or duration values.");
+                return false;
+            }
+
+            if (healing.MinimumDropChance <= 0f || healing.BaseDropChance < healing.MinimumDropChance)
+            {
+                messages.AppendLine("Default loot effect has invalid drop chance bounds.");
+                return false;
+            }
+
             return true;
         }
 

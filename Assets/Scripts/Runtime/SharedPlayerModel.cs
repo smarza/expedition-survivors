@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectExpedition
@@ -123,10 +124,20 @@ namespace ProjectExpedition
         }
 
         public Vector2 CalculateRequestedPosition(Vector2 currentPosition, Vector2 movement,
-            float deltaTime)
+            float deltaTime, IReadOnlyList<ObstacleDefinition> obstacles = null)
         {
             if (IsDowned || deltaTime <= 0f) return currentPosition;
-            return currentPosition + movement * MoveSpeed * deltaTime;
+
+            var requested = currentPosition + movement * MoveSpeed * deltaTime;
+
+            if (obstacles == null || obstacles.Count == 0)
+            {
+                return requested;
+            }
+
+            return SharedMovementCollision.AdvanceCircleTowardsTarget(
+                currentPosition, BalanceRules.PlayerCollisionRadius, requested,
+                MoveSpeed * deltaTime, obstacles);
         }
 
         public bool TryActivateUltimate()

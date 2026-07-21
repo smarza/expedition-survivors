@@ -2421,20 +2421,26 @@ namespace ProjectExpedition
                     stripWidth,
                     GameplayHudLayoutMetrics.PlayerStripHeight);
                 SurvivorsStylePresentation.DrawFlatPanel(row, SurvivorsStylePresentation.PanelNavyInset, 1f);
-                GUI.Label(new Rect(row.x + 10f, row.y + 4f, 260f, 18f),
+                GUI.Label(new Rect(row.x + 10f, row.y + GameplayHudLayoutMetrics.PlayerCaptionTopPadding, 260f,
+                        GameplayHudLayoutMetrics.PlayerCaptionLineHeight),
                     $"P{i + 1}  {player.HeroName.ToUpperInvariant()}  L{_director.Level}", _vsCaption);
 
                 var healthLabel = player.IsDowned
                     ? $"DOWN — REVIVE {Mathf.RoundToInt(player.ReviveProgress * 100f)}%"
                     : $"{Mathf.CeilToInt(player.Health)} / {Mathf.CeilToInt(player.MaxHealth)}";
-                DrawBar(new Rect(row.x + 10f, row.y + 24f, row.width - 20f, GameplayHudLayoutMetrics.BarHeight),
+                var healthColor = GameplayHudPresentation.ResolveHealthBarColor(i,
+                    _director, i == 0 ? new Color(0.28f, 0.68f, 0.88f) : new Color(0.9f, 0.48f, 0.2f));
+                var healthBarTop = GameplayHudLayoutMetrics.PlayerHealthBarTop(row.y);
+                DrawBar(new Rect(row.x + 10f, healthBarTop, row.width - 20f, GameplayHudLayoutMetrics.BarHeight),
                     player.Health / player.MaxHealth,
-                    i == 0 ? new Color(0.28f, 0.68f, 0.88f) : new Color(0.9f, 0.48f, 0.2f), healthLabel, _micro);
+                    healthColor, healthLabel, _micro);
 
                 var ultimateFill = player.UltimateReady ? 1f : 1f - player.UltimateRemaining / Mathf.Max(1f, player.UltimateCooldown);
                 var ultimateLabel = player.UltimateReady ? $"{player.UltimateName.ToUpperInvariant()} — READY"
                     : $"{player.UltimateName.ToUpperInvariant()} — {player.UltimateRemaining:0}s";
-                DrawBar(new Rect(row.x + 10f, row.y + 38f, row.width - 20f, GameplayHudLayoutMetrics.BarHeight - 2f),
+                var ultimateBarTop = GameplayHudLayoutMetrics.PlayerUltimateBarTop(row.y);
+                DrawBar(new Rect(row.x + 10f, ultimateBarTop, row.width - 20f,
+                        GameplayHudLayoutMetrics.SecondaryBarHeight),
                     ultimateFill, new Color(0.7f, 0.38f, 0.9f), ultimateLabel, _micro);
             }
 
@@ -2444,12 +2450,13 @@ namespace ProjectExpedition
                 1920f - GameplayHudLayoutMetrics.ScreenPadding * 2f,
                 GameplayHudLayoutMetrics.BottomBarHeight);
             SurvivorsStylePresentation.DrawFlatPanel(bottomBar, SurvivorsStylePresentation.PanelNavy, 1f);
-            DrawBar(new Rect(bottomBar.x + 8f, bottomBar.y + 6f, bottomBar.width - 16f, 10f),
+            DrawBar(new Rect(bottomBar.x + 8f, bottomBar.y + 8f, bottomBar.width - 16f, GameplayHudLayoutMetrics.BarHeight),
                 _director.Experience / (float)_director.ExperienceToNext,
-                new Color(0.22f, 0.72f, 0.9f), $"XP {_director.Experience} / {_director.ExperienceToNext}", _micro);
+                new Color(0.88f, 0.92f, 0.98f), $"XP {_director.Experience} / {_director.ExperienceToNext}", _micro);
 
             DrawBuildTrayBottomBar(bottomBar);
             DrawObjectivePanelVs();
+            GameplayHudPresentation.DrawLootProgressStrip(new Rect(0f, 0f, 1920f, 1080f), _director, _survivorsHudStyles);
             DrawFirstRunHints();
             if (_director.ShowPerformanceMetrics) DrawPerformancePanel();
             TouchControlsPresentation.Draw(_director);
@@ -2457,12 +2464,15 @@ namespace ProjectExpedition
 
         private void DrawBuildTrayBottomBar(Rect bottomBar)
         {
-            var iconY = bottomBar.y + 22f;
+            var iconY = bottomBar.y + GameplayHudLayoutMetrics.BuildTrayTopOffset;
+            var playerLabelHeight = GameplayHudLayoutMetrics.BuildPlayerLabelHeight;
+
             for (var playerIndex = 0; playerIndex < _director.Players.Count; playerIndex++)
             {
                 var player = _director.Players[playerIndex];
                 var startX = bottomBar.x + 12f + playerIndex * 420f;
-                GUI.Label(new Rect(startX, iconY - 16f, 80f, 14f), $"P{playerIndex + 1}", _micro);
+                GUI.Label(new Rect(startX, iconY - playerLabelHeight - 2f, 80f, playerLabelHeight),
+                    $"P{playerIndex + 1}", _micro);
 
                 var items = player.Build.Items;
                 var visibleIndex = 0;
@@ -4002,9 +4012,22 @@ namespace ProjectExpedition
 
         private void DrawBar(Rect rect, float fill, Color color, string label, GUIStyle style = null)
         {
+            const float inset = 2f;
             DrawPanel(rect, new Color(0.02f, 0.035f, 0.045f, 1f));
-            DrawPanel(new Rect(rect.x + 2, rect.y + 2, (rect.width - 4) * Mathf.Clamp01(fill), rect.height - 4), color);
-            if (!string.IsNullOrEmpty(label)) GUI.Label(rect, label, style ?? _small);
+
+            var fillWidth = Mathf.Max(0f, (rect.width - inset * 2f) * Mathf.Clamp01(fill));
+            if (fillWidth > 0f)
+            {
+                DrawPanel(new Rect(rect.x + inset, rect.y + inset, fillWidth, rect.height - inset * 2f), color);
+            }
+
+            if (string.IsNullOrEmpty(label))
+            {
+                return;
+            }
+
+            var labelStyle = style ?? _small;
+            GUI.Label(rect, label, labelStyle);
         }
 
         private static void DrawSelection(Rect rect, bool selected)

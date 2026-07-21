@@ -29,6 +29,7 @@ namespace ProjectExpedition
         private readonly SharedPlayerModel _model = new SharedPlayerModel();
         private Color _heroColor;
         private HeroPresentation _presentation;
+        private TemporaryEffectGlowPresentation _effectGlow;
 
         public void Initialize(GameDirector director, int playerIndex)
         {
@@ -82,6 +83,8 @@ namespace ProjectExpedition
 
             _presentation = gameObject.AddComponent<HeroPresentation>();
             _presentation.Initialize(_body, runeRenderer, _heroColor, Definition, PlayerIndex);
+            _effectGlow = gameObject.AddComponent<TemporaryEffectGlowPresentation>();
+            _effectGlow.Initialize(_body);
 
             Weapons = new WeaponSystem(director, this);
             Weapons.SyncFromBuild(Build);
@@ -100,7 +103,8 @@ namespace ProjectExpedition
             _model.Advance(Time.deltaTime);
 
             var move = LocalInputRouter.ReadMovement(PlayerIndex, _director.Players.Count);
-            var nextPosition = _model.CalculateRequestedPosition((Vector2)transform.position, move, Time.deltaTime);
+            var nextPosition = _model.CalculateRequestedPosition((Vector2)transform.position, move,
+                Time.deltaTime, _director.ObstacleLayout.Obstacles);
             transform.position = _director.ConstrainToCoopRange(this, nextPosition);
             _presentation.Tick(move, _model.InvulnerabilityRemaining > 0f, false, Time.deltaTime);
 
@@ -192,6 +196,24 @@ namespace ProjectExpedition
             }
 
             Weapons.SyncFromBuild(Build);
+        }
+
+        public void UpdateTemporaryEffectPresentation(SharedTemporaryEffectModel effect)
+        {
+            if (_effectGlow == null || effect == null)
+            {
+                return;
+            }
+
+            if (!effect.HasActiveEffect || effect.ActiveDefinition == null)
+            {
+                _effectGlow.SetEffect(Color.clear, false);
+                return;
+            }
+
+            var appliesToPlayer = effect.ActiveDefinition.EffectTarget == TemporaryEffectTarget.WholeParty ||
+                effect.ActivatorPlayerIndex == PlayerIndex;
+            _effectGlow.SetEffect(effect.ActiveDefinition.ThemeColor, appliesToPlayer);
         }
     }
 }

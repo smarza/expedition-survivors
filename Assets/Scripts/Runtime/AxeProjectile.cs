@@ -72,7 +72,7 @@ namespace ProjectExpedition
             }
 
             UpdateReturningFlight();
-            _flight.Advance(Time.deltaTime);
+            _flight.Advance(Time.deltaTime, _director.ObstacleLayout.Obstacles);
             transform.position = _flight.Position;
             transform.Rotate(0f, 0f, 740f * Time.deltaTime);
             _trailTimer -= Time.deltaTime;

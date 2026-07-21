@@ -6,11 +6,13 @@ namespace ProjectExpedition
     {
         private static Sprite _circle;
         private static Sprite _diamond;
+        private static Sprite _square;
         private static Texture2D _portrait;
         private static Texture2D _white;
 
         public static Sprite Circle => _circle != null ? _circle : (_circle = MakeCircleSprite(64));
         public static Sprite Diamond => _diamond != null ? _diamond : (_diamond = MakeDiamondSprite(48));
+        public static Sprite Square => _square != null ? _square : (_square = MakeSquareSprite(32));
         public static Texture2D Portrait
         {
             get
@@ -50,6 +52,22 @@ namespace ProjectExpedition
                 var inside = Mathf.Abs(x - center) + Mathf.Abs(y - center) <= center * 0.92f;
                 pixels[y * size + x] = inside ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
             }
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * 0.5f, size);
+        }
+
+        private static Sprite MakeSquareSprite(int size)
+        {
+            var texture = NewTexture(size, size);
+            var pixels = new Color32[size * size];
+            var fill = new Color32(255, 255, 255, 255);
+
+            for (var i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = fill;
+            }
+
             texture.SetPixels32(pixels);
             texture.Apply();
             return Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * 0.5f, size);

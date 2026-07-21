@@ -33,7 +33,7 @@ namespace ProjectExpedition
             _repulsionRemaining = 0f;
             _repulsionStrength = 0f;
             gameObject.name = value >= 10 ? "Jotunn Ember" : "Frozen Echo";
-            _renderer.color = value >= 10 ? new Color(1f, 0.72f, 0.18f) : new Color(0.28f, 0.92f, 0.96f);
+            _renderer.color = value >= 10 ? new Color(1f, 0.72f, 0.18f) : new Color(0.96f, 0.98f, 1f);
             transform.localScale = Vector3.one * (value >= 10 ? 0.27f : 0.18f);
         }
 

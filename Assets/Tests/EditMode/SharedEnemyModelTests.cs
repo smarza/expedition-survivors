@@ -16,6 +16,7 @@ namespace ProjectExpedition.Tests
             Assert.That(model.ContactDamage, Is.EqualTo(10.2f).Within(0.0001f));
             Assert.That(model.Radius, Is.EqualTo(0.36f));
             Assert.That(model.ExperienceValue, Is.EqualTo(3));
+            Assert.That(model.EnemyLevel, Is.EqualTo(2));
             Assert.That(model.Boss, Is.False);
             Assert.That(model.Alive, Is.True);
         }
@@ -63,7 +64,7 @@ namespace ProjectExpedition.Tests
         public void Boss_UsesTheSameDifficultyScalingAndStateBoundary()
         {
             var model = new SharedEnemyModel();
-            model.Begin(new Vector2(-2f, 4f), EnemyCatalog.Jotunn, 3f, 1.35f, 0.85f, 60);
+            model.Begin(new Vector2(-2f, 4f), EnemyCatalog.Jotunn, 3f, 6, 1.35f, 0.85f, 60);
 
             Assert.That(model.Boss, Is.True);
             Assert.That(model.Health, Is.EqualTo(935f));
@@ -98,7 +99,7 @@ namespace ProjectExpedition.Tests
             Vector2? position = null, float rolledSpeed = 1.75f, float rolledRadius = 0.36f)
         {
             var model = new SharedEnemyModel();
-            model.Begin(position ?? new Vector2(1f, 2f), EnemyCatalog.Draugr, difficulty,
+            model.Begin(position ?? new Vector2(1f, 2f), EnemyCatalog.Draugr, difficulty, 2,
                 rolledSpeed, rolledRadius, 3);
             return model;
         }

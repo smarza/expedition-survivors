@@ -19,6 +19,9 @@ namespace ProjectExpedition
         public float Elapsed => _runModel.Elapsed;
         public bool BossSpawned => _routeModel.BossSpawned;
         public SharedExpeditionRouteModel Route => _routeModel;
+        public SharedObstacleLayoutModel ObstacleLayout => _obstacleLayout;
+        public SharedLootProgressModel LootProgress => _lootProgress;
+        public SharedTemporaryEffectModel TemporaryEffect => _temporaryEffect;
         public int RunSeed { get; private set; } = 1;
         public RunRandom Rng { get; private set; } = new RunRandom(1);
         public PerformanceMetrics Metrics { get; } = new PerformanceMetrics();
@@ -51,12 +54,16 @@ namespace ProjectExpedition
         private readonly SharedRunModel _runModel = new SharedRunModel();
         private readonly SharedExpeditionRouteModel _routeModel = new SharedExpeditionRouteModel();
         private readonly SharedSpawnModel _spawnModel = new SharedSpawnModel();
+        private readonly SharedObstacleLayoutModel _obstacleLayout = new SharedObstacleLayoutModel();
+        private readonly SharedLootProgressModel _lootProgress = new SharedLootProgressModel();
+        private readonly SharedTemporaryEffectModel _temporaryEffect = new SharedTemporaryEffectModel();
         private readonly SharedPersistentZoneModel _persistentZones = new SharedPersistentZoneModel();
         private Transform _poolRoot;
         private ComponentPool<Enemy> _enemyPool;
         private ComponentPool<AxeProjectile> _projectilePool;
         private ComponentPool<ExperienceGem> _gemPool;
         private ComponentPool<RuneShardPickup> _shardPool;
+        private ComponentPool<LootPickup> _lootPool;
         private ComponentPool<PulseVisual> _pulsePool;
         private ComponentPool<UltimatePulseVisual> _ultimatePulsePool;
         private SpatialHashGrid<Enemy> _enemyGrid;
@@ -161,6 +168,8 @@ namespace ProjectExpedition
             }
 
             AdvancePersistentZones(Time.deltaTime);
+            _temporaryEffect.Advance(Time.deltaTime, Players);
+            HandleTemporaryEffectPresentation();
 
             if (!_routeModel.BossKilled)
             {
@@ -262,6 +271,8 @@ namespace ProjectExpedition
             Kills = 0;
             RunRenown = 0;
             _spawnModel.Begin();
+            _lootProgress.Begin(LootEffectCatalog.DefaultRunLoot);
+            _temporaryEffect.Clear();
             _persistentZones.Clear();
             _runRecorded = false;
             _warlordEliteSpawned = false;
@@ -297,6 +308,23 @@ namespace ProjectExpedition
 
             CreateBiomeScatter(SelectedMap.LandmarkProfileId);
             CreateAuthoredLandmarks(SelectedMap.LandmarkProfileId);
+            CreateObstacleLayout();
+        }
+
+        private void CreateObstacleLayout()
+        {
+            _obstacleLayout.Load(ObstacleLayoutCatalog.ForMap(SelectedMap));
+            var root = new GameObject("Obstacle Layout");
+            root.transform.SetParent(_runRoot, false);
+
+            for (var i = 0; i < _obstacleLayout.Obstacles.Count; i++)
+            {
+                var obstacle = _obstacleLayout.Obstacles[i];
+                var part = new GameObject($"Obstacle {i + 1}");
+                part.transform.SetParent(root.transform, false);
+                part.transform.position = new Vector3(obstacle.Center.x, obstacle.Center.y, 0f);
+                ObstaclePresentation.Attach(part, obstacle);
+            }
         }
 
         private void CreateBiomeScatter(string landmarkProfileId)
@@ -547,35 +575,35 @@ namespace ProjectExpedition
             target.AddComponent<FrostboundLandmarkTint>().Initialize(renderer, homePhase);
         }
 
-        private void SpawnEnemy(bool boss, float difficulty, bool elite = false)
+        private void SpawnEnemy(bool boss, float timeDifficulty, bool elite = false)
         {
             if (Players.Count == 0)
             {
                 return;
             }
 
-            var angle = Rng.Range(0f, Mathf.PI * 2f);
-            var distance = Rng.Range(SharedSpawnModel.MinimumSpawnDistance,
-                SharedSpawnModel.MaximumSpawnDistance);
-            var position = SharedSpawnModel.CalculateSpawnPosition(GroupCenter, angle, distance);
+            var enemyLevel = BalanceRules.ComputeEnemyLevel(_runModel.Level, boss, elite);
+            var effectiveDifficulty = BalanceRules.ResolveEffectiveDifficulty(timeDifficulty, enemyLevel);
+            var position = _obstacleLayout.ResolveSpawnPosition(GroupCenter, Rng,
+                SharedSpawnModel.MinimumSpawnDistance, SharedSpawnModel.MaximumSpawnDistance, 0.36f);
             var enemy = _enemyPool.Get(position);
-            enemy.Initialize(this, difficulty, boss, elite);
+            enemy.Initialize(this, effectiveDifficulty, enemyLevel, boss, elite);
             Enemies.Add(enemy);
             _enemyGrid.Add(enemy);
         }
 
-        private void SpawnBossWithEntrance(float difficulty)
+        private void SpawnBossWithEntrance(float timeDifficulty)
         {
             if (Players.Count == 0)
             {
                 return;
             }
 
-            var angle = Rng.Range(0f, Mathf.PI * 2f);
-            var distance = Rng.Range(13.5f, 16.5f);
-            var position = SharedSpawnModel.CalculateSpawnPosition(GroupCenter, angle, distance);
+            var enemyLevel = BalanceRules.ComputeEnemyLevel(_runModel.Level, true, false);
+            var effectiveDifficulty = BalanceRules.ResolveEffectiveDifficulty(timeDifficulty, enemyLevel);
+            var position = _obstacleLayout.ResolveSpawnPosition(GroupCenter, Rng, 13.5f, 16.5f, 0.85f);
             var enemy = _enemyPool.Get(position);
-            enemy.Initialize(this, difficulty, true, false);
+            enemy.Initialize(this, effectiveDifficulty, enemyLevel, true, false);
             Enemies.Add(enemy);
             _enemyGrid.Add(enemy);
 
@@ -584,7 +612,7 @@ namespace ProjectExpedition
             _hud.SetAnnouncement(SelectedMap.BossEntranceAnnouncement, 4.8f);
         }
 
-        private void TrySpawnWarlordElite(float difficulty)
+        private void TrySpawnWarlordElite(float timeDifficulty)
         {
             if (_warlordEliteSpawned || _routeModel.BossSpawned || _routeModel.BossKilled)
                 return;
@@ -597,7 +625,7 @@ namespace ProjectExpedition
                 return;
 
             _warlordEliteSpawned = true;
-            SpawnEnemy(false, difficulty, true);
+            SpawnEnemy(false, timeDifficulty, true);
             _hud.SetAnnouncement(SelectedMap.EliteSpawnAnnouncement, 3.2f);
         }
 
@@ -810,6 +838,13 @@ namespace ProjectExpedition
             Present(PresentationCue.EnemyDefeated, position,
                 boss ? new Color(1f, 0.45f, 0.22f) : new Color(0.5f, 0.82f, 0.9f),
                 boss ? 2.4f : 0.7f);
+
+            if (!boss && _lootProgress.TryRollDrop(Level, Kills, Players.Count, Rng))
+            {
+                var pickup = _lootPool.Get(position);
+                pickup.Initialize(this, _lootProgress.TrackedDefinition);
+            }
+
             ReleaseEnemy(enemy);
             _routeModel.OnEnemyKilled(boss, elite);
 
@@ -820,6 +855,59 @@ namespace ProjectExpedition
             if (boss)
                 SpawnExtractionBeacon();
         }
+
+        public void OnLootCollected(LootEffectDefinition definition, int collectorPlayerIndex)
+        {
+            var tracked = definition ?? LootEffectCatalog.DefaultRunLoot;
+            var result = _lootProgress.OnCollected(_temporaryEffect.HasActiveEffect);
+            Present(PresentationCue.LootCollected, ResolvePlayerPosition(collectorPlayerIndex),
+                tracked.ThemeColor, 0.45f);
+
+            if (result == LootCollectResult.DiscardedWhileActive)
+            {
+                _hud.SetAnnouncement($"{tracked.DisplayName.ToUpperInvariant()} — ALREADY ACTIVE", 1.4f);
+                return;
+            }
+
+            if (result == LootCollectResult.Incremented)
+            {
+                _hud.SetAnnouncement(
+                    $"+1 {tracked.DisplayName.ToUpperInvariant()}  ({_lootProgress.CurrentCount}/{_lootProgress.RequiredCount})",
+                    1.8f);
+                return;
+            }
+
+            if (result != LootCollectResult.Activated)
+            {
+                return;
+            }
+
+            _temporaryEffect.Activate(tracked, collectorPlayerIndex);
+            Present(PresentationCue.LootActivated, GroupCenter, tracked.ThemeColor, 1.6f);
+            _hud.SetAnnouncement($"{tracked.DisplayName.ToUpperInvariant()} ACTIVATED", 2.4f);
+        }
+
+        private void HandleTemporaryEffectPresentation()
+        {
+            if (_temporaryEffect.JustExpired)
+            {
+                Present(PresentationCue.TemporaryEffectExpired, GroupCenter,
+                    _temporaryEffect.LastExpiredThemeColor, 0.8f);
+            }
+
+            for (var i = 0; i < Players.Count; i++)
+            {
+                var player = Players[i];
+                if (player == null)
+                {
+                    continue;
+                }
+
+                player.UpdateTemporaryEffectPresentation(_temporaryEffect);
+            }
+        }
+
+        public void ReleaseLootPickup(LootPickup pickup) => _lootPool.Release(pickup);
 
         public void OnRuneShardCollected(RuneShardPickup shard)
         {
@@ -1143,6 +1231,7 @@ namespace ProjectExpedition
             _projectilePool = new ComponentPool<AxeProjectile>(() => CreatePooled<AxeProjectile>("Pooled Frost Axe"), _poolRoot, 64);
             _gemPool = new ComponentPool<ExperienceGem>(() => CreatePooled<ExperienceGem>("Pooled Experience"), _poolRoot, 96);
             _shardPool = new ComponentPool<RuneShardPickup>(() => CreatePooled<RuneShardPickup>("Pooled Rune Shard"), _poolRoot, 16);
+            _lootPool = new ComponentPool<LootPickup>(() => CreatePooled<LootPickup>("Pooled Loot"), _poolRoot, 32);
             _pulsePool = new ComponentPool<PulseVisual>(() => CreatePooled<PulseVisual>("Pooled Raven Guard Pulse"), _poolRoot, 16);
             _ultimatePulsePool = new ComponentPool<UltimatePulseVisual>(() => CreatePooled<UltimatePulseVisual>("Pooled Ultimate Pulse"), _poolRoot, 4);
             if (ProductionFoundationChecks.Run(out var report))
@@ -1170,6 +1259,7 @@ namespace ProjectExpedition
             _projectilePool?.ReleaseAll();
             _gemPool?.ReleaseAll();
             _shardPool?.ReleaseAll();
+            _lootPool?.ReleaseAll();
             _pulsePool?.ReleaseAll();
             _ultimatePulsePool?.ReleaseAll();
             _enemyGrid?.Clear();

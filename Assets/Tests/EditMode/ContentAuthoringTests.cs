@@ -31,6 +31,17 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void LootEffectCatalog_DefaultHealingEmbers_IsConfiguredForPartyActivation()
+        {
+            var loot = LootEffectCatalog.HealingEmbers;
+
+            Assert.That(loot.RequiredCount, Is.EqualTo(10));
+            Assert.That(loot.EffectType, Is.EqualTo(TemporaryEffectType.Regeneration));
+            Assert.That(loot.EffectTarget, Is.EqualTo(TemporaryEffectTarget.WholeParty));
+            Assert.That(loot.EvaluateDropChance(1, 0, 1), Is.GreaterThan(loot.MinimumDropChance));
+        }
+
+        [Test]
         public void ItemCatalog_ContainsTwelveEvolutionsAndThirtySlotItems()
         {
             var evolutionCount = 0;

@@ -383,6 +383,13 @@ namespace ProjectExpedition
 
     public static class BalanceRules
     {
+        public const float PlayerCollisionRadius = 0.38f;
+        public const int RegularEnemyLevelOffset = 1;
+        public const int EliteEnemyLevelOffset = 2;
+        public const int BossEnemyLevelOffset = 3;
+        public const float ExperiencePerEnemyLevel = 0.12f;
+        public const float EliteExperienceMultiplier = 1.35f;
+
         public static int ExperienceToNext(int currentLevel, int playerCount)
         {
             var level = Mathf.Max(1, currentLevel);
@@ -395,6 +402,48 @@ namespace ProjectExpedition
         {
             var multiplier = Mathf.Pow(0.9f, Mathf.Max(0, cooldownUpgrades));
             return Mathf.Max(28f, baseCooldown * multiplier);
+        }
+
+        public static int ComputeEnemyLevel(int playerLevel, bool boss, bool elite)
+        {
+            var safePlayerLevel = Mathf.Max(1, playerLevel);
+
+            if (boss)
+            {
+                return safePlayerLevel + BossEnemyLevelOffset;
+            }
+
+            if (elite)
+            {
+                return safePlayerLevel + EliteEnemyLevelOffset;
+            }
+
+            return safePlayerLevel + RegularEnemyLevelOffset;
+        }
+
+        public static float LevelToDifficulty(int enemyLevel) => Mathf.Max(1f, enemyLevel);
+
+        public static float ResolveEffectiveDifficulty(float timeDifficulty, int enemyLevel)
+        {
+            return Mathf.Max(timeDifficulty, LevelToDifficulty(enemyLevel));
+        }
+
+        public static int ExperienceForEnemy(int baseExperienceRoll, int enemyLevel, bool elite, bool boss)
+        {
+            var safeLevel = Mathf.Max(1, enemyLevel);
+            var multiplier = 1f + (safeLevel - 1) * ExperiencePerEnemyLevel;
+
+            if (elite)
+            {
+                multiplier *= EliteExperienceMultiplier;
+            }
+
+            if (boss)
+            {
+                multiplier *= 1f;
+            }
+
+            return Mathf.Max(1, Mathf.RoundToInt(baseExperienceRoll * multiplier));
         }
     }
 }

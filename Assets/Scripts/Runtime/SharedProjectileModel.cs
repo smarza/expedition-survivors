@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectExpedition
@@ -42,10 +43,21 @@ namespace ProjectExpedition
             Direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Direction;
         }
 
-        public void Advance(float deltaTime)
+        public void Advance(float deltaTime, IReadOnlyList<ObstacleDefinition> obstacles = null)
         {
             if (!Active || deltaTime <= 0f) return;
-            Position += Direction * Speed * deltaTime;
+
+            var step = Direction * Speed * deltaTime;
+            var nextPosition = Position + step;
+
+            if (obstacles != null && obstacles.Count > 0 &&
+                SharedMovementCollision.SegmentBlockedByObstacles(Position, nextPosition, Radius, obstacles))
+            {
+                Stop();
+                return;
+            }
+
+            Position = nextPosition;
             RemainingLifetime -= deltaTime;
             if (RemainingLifetime <= 0f) Stop();
         }

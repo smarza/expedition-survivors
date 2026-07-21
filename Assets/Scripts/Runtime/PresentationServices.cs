@@ -21,7 +21,10 @@ namespace ProjectExpedition
         PlayerRevived,
         Victory,
         Defeat,
-        BossSpawn
+        BossSpawn,
+        LootCollected,
+        LootActivated,
+        TemporaryEffectExpired
     }
 
     public enum PresentationMusicState
@@ -144,6 +147,9 @@ namespace ProjectExpedition
                 case PresentationCue.AxeThrow:
                 case PresentationCue.ProjectileTrail:
                 case PresentationCue.ExperiencePickup: return 144;
+                case PresentationCue.LootCollected:
+                case PresentationCue.LootActivated:
+                case PresentationCue.TemporaryEffectExpired: return 112;
                 default: return 196;
             }
         }

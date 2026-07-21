@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectExpedition
@@ -37,15 +38,17 @@ namespace ProjectExpedition
         public float ContactCooldownRemaining { get; private set; }
         public float Radius { get; private set; }
         public int ExperienceValue { get; private set; }
+        public int EnemyLevel { get; private set; }
         public bool Boss { get; private set; }
         public bool Alive { get; private set; }
 
         public void Begin(Vector2 position, EnemyDefinition definition, float difficulty,
-            float rolledBaseSpeed, float rolledRadius, int rolledExperience,
+            int enemyLevel, float rolledBaseSpeed, float rolledRadius, int rolledExperience,
             ChallengeProfile challenge = default)
         {
             if (definition == null) throw new ArgumentNullException(nameof(definition));
             Position = position;
+            EnemyLevel = Mathf.Max(1, enemyLevel);
             Health = SharedChallengeProfileModel.ApplyEnemyHealthMultiplier(
                 definition.BaseHealth + difficulty * definition.HealthPerDifficulty, challenge);
             Speed = rolledBaseSpeed + difficulty * definition.SpeedPerDifficulty;
@@ -59,7 +62,7 @@ namespace ProjectExpedition
         }
 
         public EnemyAdvanceResult AdvanceTowards(Vector2 targetPosition, float targetRadius,
-            float deltaTime)
+            float deltaTime, IReadOnlyList<ObstacleDefinition> obstacles = null)
         {
             if (!Alive || deltaTime <= 0f) return EnemyAdvanceResult.None;
 
@@ -67,7 +70,9 @@ namespace ProjectExpedition
             var delta = targetPosition - Position;
             if (delta.sqrMagnitude > MinimumMovementDistanceSquared)
             {
-                Position += delta.normalized * Speed * deltaTime;
+                var maxStep = Speed * deltaTime;
+                Position = SharedMovementCollision.AdvanceCircleTowardsTarget(
+                    Position, Radius, targetPosition, maxStep, obstacles);
                 result |= EnemyAdvanceResult.Moved;
             }
 
@@ -81,7 +86,8 @@ namespace ProjectExpedition
             return result;
         }
 
-        public EnemyDamageResult TakeDamage(float amount, float knockback, Vector2 source)
+        public EnemyDamageResult TakeDamage(float amount, float knockback, Vector2 source,
+            IReadOnlyList<ObstacleDefinition> obstacles = null)
         {
             if (!Alive) return EnemyDamageResult.Ignored;
 
@@ -92,7 +98,9 @@ namespace ProjectExpedition
                 var away = Position - source;
                 if (away.sqrMagnitude > MinimumMovementDistanceSquared)
                 {
-                    Position += away.normalized * knockback;
+                    var knockbackDelta = away.normalized * knockback;
+                    Position = SharedMovementCollision.ResolveCircleKnockback(Position, Radius,
+                        knockbackDelta, obstacles);
                     result |= EnemyDamageResult.Moved;
                 }
             }
@@ -112,6 +120,7 @@ namespace ProjectExpedition
             ContactCooldownRemaining = 0f;
             Radius = 0f;
             ExperienceValue = 0;
+            EnemyLevel = 0;
             Boss = false;
         }
     }
