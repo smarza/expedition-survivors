@@ -22,6 +22,15 @@ namespace ProjectExpedition
             }
 
             var tint = unlocked ? definition.GroundColor : Desaturate(definition.GroundColor, 0.35f);
+
+            if (UiArtCatalog.TryGetMapKeyArt(definition.Id, out var keyArt))
+            {
+                GUI.DrawTexture(rect, keyArt, ScaleMode.ScaleAndCrop);
+                DrawPanel(new Rect(rect.x, rect.y, rect.width, rect.height),
+                    new Color(0.02f, 0.05f, 0.08f, unlocked ? 0.08f : 0.55f));
+                return;
+            }
+
             DrawShoreScene(rect, definition.Id, tint, size);
 
             if (!unlocked)

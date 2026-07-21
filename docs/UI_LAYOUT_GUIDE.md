@@ -15,6 +15,19 @@ Project Expedition and reference games like Vampire Survivors both target a **19
 
 The redesign increases information density through **layout zones**, **compact typography**, and **measured text heights** — not through changing resolution.
 
+## Title Screen (boot)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│              [ Title key art — full bleed 1920×1080 ]            │
+│                    PROJECT EXPEDITION                            │
+│  ─── navy vignette bottom ~280px ───                             │
+│         [ ENTER CAMP ]          [ SETTINGS ]                     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Flow: `TitleScreen` → Camp (`MainMenu`) or Settings (returns to Title).
+
 ## Character Select zones (solo)
 
 Inspired by Vampire Survivors' information density:

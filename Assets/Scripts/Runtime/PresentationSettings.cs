@@ -24,7 +24,15 @@ namespace ProjectExpedition
         PlayStation,
         Switch,
         SteamDeck,
-        GenericGamepad
+        GenericGamepad,
+        Touch
+    }
+
+    public enum TouchControlsMode
+    {
+        Auto,
+        On,
+        Off
     }
 
     [Serializable]
@@ -109,6 +117,7 @@ namespace ProjectExpedition
         public int ChallengeTier;
         public int ChallengeMutatorA;
         public int ChallengeMutatorB;
+        public TouchControlsMode TouchControls = TouchControlsMode.Auto;
         public InputBindingProfile Keyboard = new InputBindingProfile();
     }
 
@@ -263,6 +272,23 @@ namespace ProjectExpedition
 
         public static string Prompt(BindingAction action, InputPromptDevice device)
         {
+            if (device == InputPromptDevice.Touch)
+            {
+                switch (action)
+                {
+                    case BindingAction.Submit: return "[TAP]";
+                    case BindingAction.Back: return "[TAP BACK]";
+                    case BindingAction.Ultimate: return "[ULT]";
+                    case BindingAction.Pause: return "[PAUSE]";
+                    case BindingAction.BuildDetails: return "[DETAILS]";
+                    case BindingAction.MoveUp:
+                    case BindingAction.MoveDown:
+                    case BindingAction.MoveLeft:
+                    case BindingAction.MoveRight: return "[DRAG]";
+                    default: return "[TAP]";
+                }
+            }
+
             if (device == InputPromptDevice.Keyboard)
                 return $"[{InputBindingProfile.Display(PresentationPreferences.Data.Keyboard.Get(action))}]";
             switch (action)

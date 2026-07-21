@@ -193,4 +193,22 @@ namespace ProjectExpedition
             return tileWidth >= MinimumGridTileSize && tileHeight >= MinimumGridTileSize;
         }
     }
+
+    public static class MapSelectLayoutMetrics
+    {
+        public const float ScreenPadding = 24f;
+        public const float HeaderHeight = 96f;
+        public const float FooterHeight = 88f;
+        public const float PanelGap = 16f;
+        public const float GridWidth = 520f;
+        public const float TileGap = 12f;
+        public const float MinimumTileHeight = 120f;
+        public const int GridColumns = 2;
+
+        public static Rect ContentRect(Rect screen) => new Rect(
+            ScreenPadding,
+            HeaderHeight,
+            screen.width - ScreenPadding * 2f,
+            screen.height - HeaderHeight - FooterHeight - ScreenPadding);
+    }
 }

@@ -241,9 +241,11 @@ namespace ProjectExpedition
         public static void DrawWeaponFrame(Rect rect, string weaponId, Color heroTint)
         {
             DrawFlatPanel(rect, new Color(0.02f, 0.05f, 0.09f, 1f), 1f);
-            CharacterSelectPresentation.DrawStarterWeaponIcon(
+            ItemPresentation.DrawItemIcon(
                 InsetRect(rect, 4f),
                 weaponId,
+                ItemIconSize.Medium,
+                false,
                 heroTint);
         }
 
@@ -256,6 +258,47 @@ namespace ProjectExpedition
             DrawPanel(rect, fill);
             DrawBorder(rect, border, 2f);
             return GUI.Button(rect, label, _transparentButtonStyle);
+        }
+
+        public static bool DrawTouchable(Rect rect, System.Action onPress = null)
+        {
+            var pressed = GUI.Button(rect, GUIContent.none, GUIStyle.none);
+
+            if (pressed && onPress != null)
+            {
+                onPress();
+            }
+
+            return pressed || TouchInputRouter.RectTapped(rect);
+        }
+
+        public static bool DrawVsFooterButton(Rect rect, string label, SurvivorsButtonKind kind, bool selected = false)
+        {
+            if (selected)
+            {
+                DrawBorder(new Rect(rect.x - 4f, rect.y - 4f, rect.width + 8f, rect.height + 8f),
+                    BorderGoldBright, 2f);
+            }
+
+            return DrawButton(rect, label, kind);
+        }
+
+        public static SurvivorsHudStyles CreateHudStyles() => SurvivorsHudStyles.Create();
+
+        public static void DrawPanel(Rect rect, Color color)
+        {
+            var previousColor = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(rect, RuntimeAssets.White);
+            GUI.color = previousColor;
+        }
+
+        public static void DrawBorder(Rect rect, Color color, float thickness)
+        {
+            DrawPanel(new Rect(rect.x, rect.y, rect.width, thickness), color);
+            DrawPanel(new Rect(rect.x, rect.yMax - thickness, rect.width, thickness), color);
+            DrawPanel(new Rect(rect.x, rect.y, thickness, rect.height), color);
+            DrawPanel(new Rect(rect.xMax - thickness, rect.y, thickness, rect.height), color);
         }
 
         public static Rect InsetRect(Rect rect, float padding) =>
@@ -356,22 +399,6 @@ namespace ProjectExpedition
             GUI.color = color;
             GUI.DrawTexture(rect, texture, ScaleMode.ScaleToFit, true);
             GUI.color = previousColor;
-        }
-
-        private static void DrawPanel(Rect rect, Color color)
-        {
-            var previousColor = GUI.color;
-            GUI.color = color;
-            GUI.DrawTexture(rect, RuntimeAssets.White);
-            GUI.color = previousColor;
-        }
-
-        private static void DrawBorder(Rect rect, Color color, float thickness)
-        {
-            DrawPanel(new Rect(rect.x, rect.y, rect.width, thickness), color);
-            DrawPanel(new Rect(rect.x, rect.yMax - thickness, rect.width, thickness), color);
-            DrawPanel(new Rect(rect.x, rect.y, thickness, rect.height), color);
-            DrawPanel(new Rect(rect.xMax - thickness, rect.y, thickness, rect.height), color);
         }
 
         private static void SetTextColor(GUIStyle style, Color color)

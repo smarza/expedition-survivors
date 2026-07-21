@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement class="survivors-screen title-screen">
+        <ui:VisualElement class="title-screen__art" />
+        <ui:Label text="PROJECT EXPEDITION" class="survivors-title" />
+        <ui:VisualElement class="title-screen__footer">
+            <ui:Button text="ENTER CAMP" class="survivors-footer-button survivors-footer-button--green" />
+            <ui:Button text="SETTINGS" class="survivors-footer-button survivors-footer-button--blue" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

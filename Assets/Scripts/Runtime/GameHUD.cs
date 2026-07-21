@@ -89,12 +89,14 @@ namespace ProjectExpedition
         private int _codexCategorySelection;
         private int _codexEntrySelection;
         private int _onboardingStep;
-        private RunState _previousRunState = RunState.MainMenu;
+        private RunState _previousRunState = RunState.TitleScreen;
         private string _campPurchaseMessage;
         private float _campPurchaseMessageTimer;
         private bool _highlightCodexButton;
         private bool _characterSelectUnlockedFilter;
         private CharacterSelectUiToolkitScreen _characterSelectUiToolkit;
+        private SurvivorsHudStyles _survivorsHudStyles;
+        private int _titleSelection;
         private const int MainMenuButtonCount = 4;
         private static readonly BindingAction[] RebindableActions =
         {
@@ -172,6 +174,7 @@ namespace ProjectExpedition
 
             switch (currentState)
             {
+                case RunState.TitleScreen: UpdateTitleScreen(); break;
                 case RunState.MainMenu: UpdateMainMenu(); break;
                 case RunState.CharacterSelect: UpdateCharacterSelect(); break;
                 case RunState.MapSelect: UpdateMapSelect(); break;
@@ -181,6 +184,22 @@ namespace ProjectExpedition
                 case RunState.GameOver:
                 case RunState.Victory: UpdateEndRun(); break;
             }
+        }
+
+        private void UpdateTitleScreen()
+        {
+            GameHudTitleScreen.Update(
+                ref _titleSelection,
+                () =>
+                {
+                    ConfirmCue();
+                    _director.EnterCamp();
+                },
+                () =>
+                {
+                    ConfirmCue();
+                    _director.OpenSettings();
+                });
         }
 
         private void UpdateMainMenu()
@@ -547,20 +566,20 @@ namespace ProjectExpedition
                 _director.CloseSettings();
                 return;
             }
-            const int itemCount = 18;
+            const int itemCount = 19;
             var vertical = LocalInputRouter.AnyMenuVerticalPressed();
             if (vertical != 0) { _settingsSelection = Wrap(_settingsSelection + vertical, itemCount); NavigateCue(); }
             var horizontal = LocalInputRouter.AnyMenuHorizontalPressed();
-            if (horizontal != 0 && _settingsSelection < 7) AdjustSetting(_settingsSelection, horizontal);
+            if (horizontal != 0 && _settingsSelection < 8) AdjustSetting(_settingsSelection, horizontal);
             if (!LocalInputRouter.AnyMenuSubmitPressed()) return;
-            if (_settingsSelection >= 7 && _settingsSelection < 16)
-                LocalInputRouter.BeginRebind(RebindableActions[_settingsSelection - 7]);
-            else if (_settingsSelection == 16)
+            if (_settingsSelection >= 8 && _settingsSelection < 17)
+                LocalInputRouter.BeginRebind(RebindableActions[_settingsSelection - 8]);
+            else if (_settingsSelection == 17)
             {
                 PresentationPreferences.ResetToDefaults();
                 ConfirmCue();
             }
-            else if (_settingsSelection == 17) _director.CloseSettings();
+            else if (_settingsSelection == 18) _director.CloseSettings();
         }
 
         private static void AdjustSetting(int index, int direction)
@@ -575,6 +594,12 @@ namespace ProjectExpedition
                 case 4: data.MasterVolume = Mathf.Clamp01(data.MasterVolume + direction * 0.1f); break;
                 case 5: data.MusicVolume = Mathf.Clamp01(data.MusicVolume + direction * 0.1f); break;
                 case 6: data.SfxVolume = Mathf.Clamp01(data.SfxVolume + direction * 0.1f); break;
+                case 7:
+                    var nextTouch = (int)data.TouchControls + direction;
+                    if (nextTouch < 0) nextTouch = 2;
+                    if (nextTouch > 2) nextTouch = 0;
+                    data.TouchControls = (TouchControlsMode)nextTouch;
+                    break;
             }
             PresentationPreferences.Save();
         }
@@ -621,6 +646,7 @@ namespace ProjectExpedition
 
             switch (_director.State)
             {
+                case RunState.TitleScreen: DrawTitleScreen(); break;
                 case RunState.MainMenu: DrawMainMenu(); break;
                 case RunState.CharacterSelect: DrawCharacterSelect(); break;
                 case RunState.MapSelect: DrawMapSelect(); break;
@@ -641,6 +667,20 @@ namespace ProjectExpedition
             }
             GUI.matrix = oldMatrix;
             GUI.color = Color.white;
+        }
+
+        private void DrawTitleScreen()
+        {
+            EnsureSurvivorsStyles();
+            GameHudTitleScreen.Draw(_survivorsHudStyles, _titleSelection, Prompt);
+        }
+
+        private void EnsureSurvivorsStyles()
+        {
+            if (_survivorsHudStyles == null || _styleRevision != PresentationPreferences.Revision)
+            {
+                _survivorsHudStyles = SurvivorsStylePresentation.CreateHudStyles();
+            }
         }
 
         private static readonly string[] KnownRelicIds =
@@ -666,18 +706,12 @@ namespace ProjectExpedition
 
             var campLeader = SaveService.ResolveCampLeader();
 
-            DrawCampAtmosphere();
+            EnsureSurvivorsStyles();
+            CampPresentation.DrawShell(new Rect(0f, 0f, 1920f, 1080f), _survivorsHudStyles,
+                $"RENOWN  {SaveService.AvailableRenown()}  —  SPEND AT CODEX");
 
-            GUI.Label(new Rect(80, 34, 1760, 78), "PROJECT EXPEDITION", _title);
-            GUI.Label(new Rect(84, 108, 1760, 38),
-                "FROSTBOUND CAMP — REST BY THE CONVERGENCE FIRE, THEN CHOOSE YOUR NEXT ROUTE", _small);
-
-            DrawCampLedger(new Rect(80, 156, 1760, 58));
-
-            var campPanel = new Rect(80, 232, 1760, 598);
-            DrawPanel(campPanel, new Color(0.045f, 0.085f, 0.115f, 0.94f));
-            DrawBorder(campPanel, new Color(0.22f, 0.48f, 0.58f, 0.55f), 3f);
-            DrawPanel(new Rect(campPanel.x, campPanel.y, campPanel.width, 6), new Color(0.92f, 0.58f, 0.18f, 0.85f));
+            var campPanel = new Rect(80, 200, 1760, 598);
+            SurvivorsStylePresentation.DrawFlatPanel(campPanel, SurvivorsStylePresentation.PanelNavy, 1f);
 
             DrawCampLeaderSpotlight(new Rect(campPanel.x + 30, campPanel.y + 34, 520, 530), campLeader);
 
@@ -924,15 +958,28 @@ namespace ProjectExpedition
 
         private void DrawCampRelicVault(Rect rect)
         {
-            DrawPanel(rect, new Color(0.018f, 0.048f, 0.068f, 1f));
-            DrawPanel(new Rect(rect.x, rect.y, rect.width, 4), PresentationTheme.Accent);
-            GUI.Label(new Rect(rect.x + 22, rect.y + 14, 140, 24), "RELIC VAULT", _campEyebrow);
+            SurvivorsStylePresentation.DrawInsetPanel(rect, PresentationTheme.Accent);
+            GUI.Label(new Rect(rect.x + 22, rect.y + 8, 140, 24), "RELIC VAULT", _campEyebrow);
 
             var collectedCount = SaveService.RelicCollectionCount();
             var summary = collectedCount == 0
                 ? "No relics yet — clear the Scout expedition and reach extraction."
                 : $"{collectedCount} of {KnownRelicIds.Length} relics secured.";
-            GUI.Label(new Rect(rect.x + 170, rect.y + 14, rect.width - 192, 24), summary, _microLeft);
+            GUI.Label(new Rect(rect.x + 170, rect.y + 8, rect.width - 192, 24), summary, _microLeft);
+
+            var iconX = rect.x + 22f;
+            for (var i = 0; i < KnownRelicIds.Length; i++)
+            {
+                var relicId = KnownRelicIds[i];
+                if (!SaveService.HasRelic(relicId))
+                {
+                    continue;
+                }
+
+                var iconRect = new Rect(iconX, rect.y + 26f, 20f, 20f);
+                ItemPresentation.DrawRelicIcon(iconRect, relicId);
+                iconX += 24f;
+            }
         }
 
         private static string CampBriefHeadline(CharacterDefinition leader)
@@ -2000,19 +2047,17 @@ namespace ProjectExpedition
 
         private void DrawMapSelect()
         {
-            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.025f, 0.06f, 0.09f, 1f));
-            GUI.Label(new Rect(430, 55, 1060, 80), "CHOOSE THE EXPEDITION", _title);
-            GUI.Label(new Rect(360, 135, 1200, 45),
-                "Select from the roster — locked expeditions can be viewed, but only unlocked ones can be started.",
-                _small);
+            EnsureSurvivorsStyles();
+            GameHudMapSelectScreen.DrawHeader(_survivorsHudStyles);
 
-            DrawMapSelectPanel(new Rect(120, 195, 1680, 725));
-            GUI.Label(new Rect(610, 955, 700, 40), $"{Prompt(BindingAction.Back)} — BACK", _small);
+            var content = MapSelectLayoutMetrics.ContentRect(new Rect(0f, 0f, 1920f, 1080f));
+            DrawMapSelectPanel(content);
+            GUI.Label(new Rect(610, 1000, 700, 40), $"{Prompt(BindingAction.Back)} — BACK", _survivorsHudStyles.Hint);
         }
 
         private void DrawMapSelectPanel(Rect panel)
         {
-            DrawPanel(panel, new Color(0.055f, 0.105f, 0.145f, 1f));
+            SurvivorsStylePresentation.DrawFlatPanel(panel, SurvivorsStylePresentation.PanelNavyInset, 1f);
 
             var gridRect = new Rect(panel.x + 24f, panel.y + 24f, 480f, 280f);
             var detailRect = new Rect(
@@ -2074,14 +2119,11 @@ namespace ProjectExpedition
                 var unlocked = SaveService.IsMapUnlocked(index);
                 var isSelected = index == _mapSelection;
                 var tileBackground = isSelected
-                    ? new Color(0.09f, 0.18f, 0.22f, 1f)
-                    : new Color(0.04f, 0.075f, 0.105f, 1f);
+                    ? SurvivorsStylePresentation.TileSelected
+                    : SurvivorsStylePresentation.TileBackground;
 
-                DrawPanel(tileRect, tileBackground);
-                if (isSelected)
-                {
-                    DrawBorder(tileRect, new Color(0.93f, 0.7f, 0.24f), 5f);
-                }
+                SurvivorsStylePresentation.DrawFlatPanel(tileRect, tileBackground, isSelected ? 2f : 1f,
+                    isSelected ? SurvivorsStylePresentation.BorderGoldBright : SurvivorsStylePresentation.BorderGoldDim);
 
                 DrawPanel(new Rect(tileRect.x, tileRect.y, tileRect.width, 4f),
                     unlocked ? map.GroundColor : new Color(0.25f, 0.28f, 0.32f));
@@ -2099,7 +2141,7 @@ namespace ProjectExpedition
                 }
 
                 var nameRect = new Rect(tileRect.x + 8f, tileRect.yMax - 26f, tileRect.width - 16f, 22f);
-                GUI.Label(nameRect, ShortMapName(map), unlocked ? _micro : _campLocked);
+                GUI.Label(nameRect, map.Name.ToUpperInvariant(), unlocked ? _micro : _campLocked);
 
                 if (GUI.Button(tileRect, GUIContent.none, GUIStyle.none))
                 {
@@ -2349,44 +2391,146 @@ namespace ProjectExpedition
         private void DrawRunHud()
         {
             if (_director.Player == null) return;
-            var playerPanelHeight = _director.Players.Count > 1 ? 270f : 175f;
-            DrawPanel(new Rect(28, 25, 660, playerPanelHeight), new Color(0.018f, 0.045f, 0.062f, 0.94f));
-            DrawPanel(new Rect(28, 25, 660, 5), new Color(0.28f, 0.68f, 0.82f));
-            GUI.Label(new Rect(510, 40, 150, 30), $"LEVEL {_director.Level}", _small);
+
+            EnsureSurvivorsStyles();
+
+            var stripWidth = 1920f - GameplayHudLayoutMetrics.ObjectiveRailWidth - GameplayHudLayoutMetrics.ScreenPadding * 3f;
+            var topStrip = new Rect(
+                GameplayHudLayoutMetrics.ScreenPadding,
+                GameplayHudLayoutMetrics.ScreenPadding,
+                stripWidth,
+                GameplayHudLayoutMetrics.TopStripHeight);
+            SurvivorsStylePresentation.DrawFlatPanel(topStrip, SurvivorsStylePresentation.PanelNavy, 1f);
+
+            var remainingBoss = Mathf.Max(0f, _director.Route.BossSpawnTime - _director.Elapsed);
+            var timerText = _director.BossSpawned ? "DEFEAT THE JOTUNN" : $"JOTUNN IN {FormatTime(remainingBoss)}";
+            GUI.Label(new Rect(topStrip.x + 12f, topStrip.y + 8f, topStrip.width * 0.55f, 20f),
+                $"{FormatTime(_director.Elapsed)} / {FormatTime(_director.SelectedMap.Duration)}  •  {timerText}", _vsMicro);
+            GUI.Label(new Rect(topStrip.x + topStrip.width * 0.5f, topStrip.y + 8f, topStrip.width * 0.48f, 20f),
+                $"KILLS {_director.Kills}  •  RENOWN {_director.RunRenown}  •  ENEMIES {_director.Enemies.Count}", _vsMicro);
+
+            var playerStripTop = topStrip.yMax + 8f;
             for (var i = 0; i < _director.Players.Count; i++)
             {
                 var player = _director.Players[i];
                 if (player == null) continue;
-                var y = 42f + i * 96f;
-                GUI.Label(new Rect(50, y, 420, 30), $"P{i + 1}  {player.HeroName.ToUpperInvariant()}", _cardTitle);
+
+                var row = new Rect(
+                    GameplayHudLayoutMetrics.ScreenPadding,
+                    playerStripTop + i * (GameplayHudLayoutMetrics.PlayerStripHeight + 4f),
+                    stripWidth,
+                    GameplayHudLayoutMetrics.PlayerStripHeight);
+                SurvivorsStylePresentation.DrawFlatPanel(row, SurvivorsStylePresentation.PanelNavyInset, 1f);
+                GUI.Label(new Rect(row.x + 10f, row.y + 4f, 260f, 18f),
+                    $"P{i + 1}  {player.HeroName.ToUpperInvariant()}  L{_director.Level}", _vsCaption);
+
                 var healthLabel = player.IsDowned
                     ? $"DOWN — REVIVE {Mathf.RoundToInt(player.ReviveProgress * 100f)}%"
                     : $"{Mathf.CeilToInt(player.Health)} / {Mathf.CeilToInt(player.MaxHealth)}";
-                DrawBar(new Rect(50, y + 35, 610, 22), player.Health / player.MaxHealth,
+                DrawBar(new Rect(row.x + 10f, row.y + 24f, row.width - 20f, GameplayHudLayoutMetrics.BarHeight),
+                    player.Health / player.MaxHealth,
                     i == 0 ? new Color(0.28f, 0.68f, 0.88f) : new Color(0.9f, 0.48f, 0.2f), healthLabel, _micro);
+
                 var ultimateFill = player.UltimateReady ? 1f : 1f - player.UltimateRemaining / Mathf.Max(1f, player.UltimateCooldown);
                 var ultimateLabel = player.UltimateReady ? $"{player.UltimateName.ToUpperInvariant()} — READY"
                     : $"{player.UltimateName.ToUpperInvariant()} — {player.UltimateRemaining:0}s";
-                DrawBar(new Rect(50, y + 64, 610, 20), ultimateFill, new Color(0.7f, 0.38f, 0.9f), ultimateLabel, _micro);
+                DrawBar(new Rect(row.x + 10f, row.y + 38f, row.width - 20f, GameplayHudLayoutMetrics.BarHeight - 2f),
+                    ultimateFill, new Color(0.7f, 0.38f, 0.9f), ultimateLabel, _micro);
             }
-            var xpY = _director.Players.Count > 1 ? 258f : 166f;
-            DrawBar(new Rect(50, xpY, 610, 17), _director.Experience / (float)_director.ExperienceToNext,
+
+            var bottomBar = new Rect(
+                GameplayHudLayoutMetrics.ScreenPadding,
+                1080f - GameplayHudLayoutMetrics.BottomBarHeight - GameplayHudLayoutMetrics.ScreenPadding,
+                1920f - GameplayHudLayoutMetrics.ScreenPadding * 2f,
+                GameplayHudLayoutMetrics.BottomBarHeight);
+            SurvivorsStylePresentation.DrawFlatPanel(bottomBar, SurvivorsStylePresentation.PanelNavy, 1f);
+            DrawBar(new Rect(bottomBar.x + 8f, bottomBar.y + 6f, bottomBar.width - 16f, 10f),
+                _director.Experience / (float)_director.ExperienceToNext,
                 new Color(0.22f, 0.72f, 0.9f), $"XP {_director.Experience} / {_director.ExperienceToNext}", _micro);
 
-            DrawPanel(new Rect(735, 26, 450, 88), new Color(0.025f, 0.055f, 0.075f, 0.9f));
-            var remainingBoss = Mathf.Max(0f, _director.Route.BossSpawnTime - _director.Elapsed);
-            var timerText = _director.BossSpawned ? "DEFEAT THE JOTUNN" : $"JOTUNN IN {FormatTime(remainingBoss)}";
-            GUI.Label(new Rect(750, 39, 420, 34), $"{FormatTime(_director.Elapsed)} / {FormatTime(_director.SelectedMap.Duration)}", _center);
-            GUI.Label(new Rect(750, 78, 420, 24), timerText, _small);
-
-            DrawPanel(new Rect(1245, 26, 645, 100), new Color(0.025f, 0.055f, 0.075f, 0.9f));
-            GUI.Label(new Rect(1270, 42, 590, 32), $"KILLS  {_director.Kills}     RENOWN  {_director.RunRenown}     ENEMIES  {_director.Enemies.Count}", _body);
-            GUI.Label(new Rect(1270, 79, 590, 28),
-                $"ULTIMATE {Prompt(BindingAction.Ultimate)}   •   PAUSE {Prompt(BindingAction.Pause)}", _micro);
-            DrawBuildTray();
-            DrawObjectivePanel();
+            DrawBuildTrayBottomBar(bottomBar);
+            DrawObjectivePanelVs();
             DrawFirstRunHints();
             if (_director.ShowPerformanceMetrics) DrawPerformancePanel();
+            TouchControlsPresentation.Draw(_director);
+        }
+
+        private void DrawBuildTrayBottomBar(Rect bottomBar)
+        {
+            var iconY = bottomBar.y + 22f;
+            for (var playerIndex = 0; playerIndex < _director.Players.Count; playerIndex++)
+            {
+                var player = _director.Players[playerIndex];
+                var startX = bottomBar.x + 12f + playerIndex * 420f;
+                GUI.Label(new Rect(startX, iconY - 16f, 80f, 14f), $"P{playerIndex + 1}", _micro);
+
+                var items = player.Build.Items;
+                var visibleIndex = 0;
+                for (var i = 0; i < items.Count && visibleIndex < 10; i++)
+                {
+                    var state = items[i];
+                    var definition = ItemCatalog.Find(state.ItemId);
+                    if (definition == null || definition.Category == ItemCategory.Boon) continue;
+
+                    var rect = new Rect(startX + visibleIndex * (GameplayHudLayoutMetrics.BuildIconSize + 4f), iconY,
+                        GameplayHudLayoutMetrics.BuildIconSize, GameplayHudLayoutMetrics.BuildIconSize);
+                    var itemId = state.IsEvolved && !string.IsNullOrEmpty(state.EvolutionId) ? state.EvolutionId : state.ItemId;
+                    ItemPresentation.DrawItemIcon(rect, itemId, ItemIconSize.Small, state.IsEvolved, definition.Color);
+                    GUI.Label(new Rect(rect.x, rect.yMax - 12f, rect.width, 12f),
+                        state.IsEvolved ? "E" : $"L{state.Level}", _micro);
+                    visibleIndex++;
+                }
+            }
+
+            GUI.Label(new Rect(bottomBar.x + 8f, bottomBar.yMax - 16f, bottomBar.width - 16f, 14f),
+                $"{Prompt(BindingAction.BuildDetails)} — BUILD DETAILS", _micro);
+        }
+
+        private void DrawObjectivePanelVs()
+        {
+            var route = _director.Route;
+            if (route == null) return;
+
+            const float panelX = 1920f - GameplayHudLayoutMetrics.ObjectiveRailWidth - GameplayHudLayoutMetrics.ScreenPadding;
+            const float panelY = GameplayHudLayoutMetrics.ScreenPadding + GameplayHudLayoutMetrics.TopStripHeight + 8f;
+            const float panelWidth = GameplayHudLayoutMetrics.ObjectiveRailWidth;
+            var extractingAtBeacon = route.BossKilled &&
+                route.CurrentPhase == ExpeditionPhase.Extraction &&
+                route.PartyAtExtractionBeacon;
+            var panelHeight = extractingAtBeacon ? 148f : 118f;
+
+            SurvivorsStylePresentation.DrawFlatPanel(new Rect(panelX, panelY, panelWidth, panelHeight),
+                SurvivorsStylePresentation.PanelNavy, 1f);
+            GUI.Label(new Rect(panelX + 12f, panelY + 8f, panelWidth - 24f, 22f), "EXPEDITION OBJECTIVES", _statSection);
+
+            var map = _director.SelectedMap;
+            var killLine = $"{map.KillObjectiveLabel}  {route.DraugrKills} / {route.RequiredKillObjective}";
+            var shardLine = route.OptionalShardObjective > 0
+                ? $"{map.OptionalPickupLabel}  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
+                : string.Empty;
+            var objectiveBody = killLine;
+            if (shardLine.Length > 0) objectiveBody += $"\n{shardLine}";
+
+            if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+            {
+                objectiveBody += route.PartyAtExtractionBeacon
+                    ? $"\nEXTRACTING — {route.ExtractionHoldRemaining:0.0}s"
+                    : $"\nREACH THE BEACON — {FormatTime(Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed))} REMAINING";
+            }
+            else if (route.CanSpawnBoss() && !route.BossSpawned)
+            {
+                objectiveBody += "\nOBJECTIVES MET — JOTUNN ELIGIBLE";
+            }
+
+            GUI.Label(new Rect(panelX + 12f, panelY + 34f, panelWidth - 24f, panelHeight - 42f), objectiveBody, _microLeft);
+
+            if (extractingAtBeacon)
+            {
+                var barRect = new Rect(panelX + 12f, panelY + panelHeight - 24f, panelWidth - 24f, 10f);
+                DrawPanel(barRect, new Color(0.018f, 0.048f, 0.068f, 1f));
+                DrawPanel(new Rect(barRect.x, barRect.y, barRect.width * route.ExtractionHoldProgress, barRect.height),
+                    PresentationTheme.Accent);
+            }
         }
 
         private void DrawObjectivePanel()
@@ -2501,8 +2645,9 @@ namespace ProjectExpedition
 
         private void DrawLevelUp()
         {
-            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.008f, 0.022f, 0.032f, 1f));
-            GUI.Label(new Rect(500, 85, 920, 75), "CHOOSE THE NEXT VERSE", _title);
+            RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
+            EnsureSurvivorsStyles();
+            GUI.Label(new Rect(500, 85, 920, 75), "CHOOSE THE NEXT VERSE", _survivorsHudStyles.Title);
             var owner = _director.Players[Mathf.Clamp(_director.RewardTurnPlayerIndex, 0, _director.Players.Count - 1)];
             GUI.Label(new Rect(460, 165, 1000, 44), $"{owner.HeroName.ToUpperInvariant()} CHOOSES — ONLY P{owner.PlayerIndex + 1}'S DEVICE IS ACTIVE", _center);
 
@@ -2526,6 +2671,10 @@ namespace ProjectExpedition
 
                 DrawPanel(rect, hovered ? new Color(0.075f, 0.145f, 0.19f, 1f) : new Color(0.045f, 0.095f, 0.13f, 1f));
                 DrawPanel(new Rect(rect.x, rect.y, rect.width, 14), option.Item.Color);
+
+                var iconRect = new Rect(rect.x + innerPad, rect.y + 20f, 48f, 48f);
+                ItemPresentation.DrawItemIcon(iconRect, option.Item.Id, ItemIconSize.Medium,
+                    option.Item.Category == ItemCategory.Evolution, option.Item.Color);
 
                 if (i == _levelSelection)
                 {
@@ -2645,8 +2794,9 @@ namespace ProjectExpedition
 
         private void DrawBuildDetails()
         {
-            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.008f, 0.022f, 0.032f, 1f));
-            GUI.Label(new Rect(480, 24, 960, 75), "EXPEDITION BUILD", _title);
+            RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
+            EnsureSurvivorsStyles();
+            GUI.Label(new Rect(480, 24, 960, 75), "EXPEDITION BUILD", _survivorsHudStyles.Title);
             GUI.Label(new Rect(460, 95, 1000, 38), "LIVE STATISTICS AND EVERY ITEM CURRENTLY SHAPING THIS RUN", _small);
 
             for (var playerIndex = 0; playerIndex < _director.Players.Count; playerIndex++)
@@ -2802,12 +2952,16 @@ namespace ProjectExpedition
 
         private void DrawBuildItemCard(Rect itemRect, ItemState state, ItemDefinition item, ItemDefinition evolved)
         {
-            DrawPanel(itemRect, new Color(0.018f, 0.05f, 0.07f, 1f));
-            DrawBorder(itemRect, state.IsEvolved ? new Color(0.98f, 0.68f, 0.22f) : item.Color, 3f);
+            SurvivorsStylePresentation.DrawFlatPanel(itemRect, SurvivorsStylePresentation.PanelNavyInset, 1f,
+                state.IsEvolved ? SurvivorsStylePresentation.BorderGoldBright : item.Color);
             GetItemEffectLines(state, item, evolved, out var header, out var current, out var next);
 
-            GUI.Label(new Rect(itemRect.x + 12, itemRect.y + 8, itemRect.width - 24, 22), header, _itemTitle);
-            GUI.Label(new Rect(itemRect.x + 12, itemRect.y + 32, itemRect.width - 24, 34), current, _itemProgress);
+            var iconRect = new Rect(itemRect.x + 12f, itemRect.y + 10f, 40f, 40f);
+            var iconId = state.IsEvolved && evolved != null ? evolved.Id : item.Id;
+            ItemPresentation.DrawItemIcon(iconRect, iconId, ItemIconSize.Small, state.IsEvolved, item.Color);
+
+            GUI.Label(new Rect(itemRect.x + 60, itemRect.y + 8, itemRect.width - 72, 22), header, _itemTitle);
+            GUI.Label(new Rect(itemRect.x + 12, itemRect.y + 52, itemRect.width - 24, 34), current, _itemProgress);
 
             if (!string.IsNullOrEmpty(next))
             {
@@ -3028,23 +3182,38 @@ namespace ProjectExpedition
 
         private void DrawPause()
         {
-            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.01f, 0.025f, 0.04f, 0.78f));
-            DrawPanel(new Rect(630, 265, 660, 560), new Color(0.055f, 0.105f, 0.14f, 1f));
-            GUI.Label(new Rect(700, 310, 520, 70), "EXPEDITION PAUSED", _heading);
+            RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
+            EnsureSurvivorsStyles();
+            var panel = new Rect(630f, 265f, 660f, 560f);
+            RunModalPresentation.DrawPauseShell(panel, _survivorsHudStyles);
+
             DrawSelection(new Rect(710, 420, 500, 95), _pauseSelection == 0);
-            if (GUI.Button(new Rect(720, 430, 480, 75), "CONTINUE", _button)) _director.TogglePause();
+            if (SurvivorsStylePresentation.DrawVsFooterButton(new Rect(720, 430, 480, 75), "CONTINUE", SurvivorsButtonKind.Green))
+            {
+                _director.TogglePause();
+            }
+
             DrawSelection(new Rect(710, 525, 500, 95), _pauseSelection == 1);
-            if (GUI.Button(new Rect(720, 535, 480, 75), "SETTINGS", _button)) _director.OpenSettings();
+            if (SurvivorsStylePresentation.DrawVsFooterButton(new Rect(720, 535, 480, 75), "SETTINGS", SurvivorsButtonKind.Blue))
+            {
+                _director.OpenSettings();
+            }
+
             DrawSelection(new Rect(710, 630, 500, 95), _pauseSelection == 2);
-            if (GUI.Button(new Rect(720, 640, 480, 75), "RETURN TO CAMP", _button)) _director.ReturnToMenu();
+            if (SurvivorsStylePresentation.DrawVsFooterButton(new Rect(720, 640, 480, 75), "RETURN TO CAMP", SurvivorsButtonKind.Red))
+            {
+                _director.ReturnToMenu();
+            }
         }
 
         private void DrawSettings()
         {
-            DrawPanel(new Rect(0, 0, 1920, 1080), new Color(0.008f, 0.022f, 0.032f, 1f));
-            GUI.Label(new Rect(460, 35, 1000, 75), "PRESENTATION & CONTROLS", _title);
-            GUI.Label(new Rect(410, 105, 1100, 40),
-                "ACCESSIBILITY, AUDIO AND P1 KEYBOARD BINDINGS — GAMEPAD GLYPHS FOLLOW THE ACTIVE DEVICE", _small);
+            RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
+            EnsureSurvivorsStyles();
+            var panel = new Rect(120f, 80f, 1680f, 880f);
+            RunModalPresentation.DrawSettingsShell(panel, _survivorsHudStyles, "PRESENTATION & CONTROLS");
+            GUI.Label(new Rect(410, 145, 1100, 40),
+                "ACCESSIBILITY, AUDIO, TOUCH CONTROLS AND P1 KEYBOARD BINDINGS", _small);
 
             var data = PresentationPreferences.Data;
             DrawPanel(new Rect(120, 175, 790, 710), new Color(0.035f, 0.08f, 0.108f, 1f));
@@ -3052,13 +3221,13 @@ namespace ProjectExpedition
             GUI.Label(new Rect(160, 195, 710, 45), "ACCESSIBILITY & AUDIO", _heading);
             GUI.Label(new Rect(1050, 195, 710, 45), "KEYBOARD — PLAYER 1", _heading);
 
-            var labels = new[] { "UI SCALE", "HIGH CONTRAST", "REDUCED FLASHES", "SCREEN SHAKE", "MASTER", "MUSIC", "SFX" };
+            var labels = new[] { "UI SCALE", "HIGH CONTRAST", "REDUCED FLASHES", "SCREEN SHAKE", "MASTER", "MUSIC", "SFX", "TOUCH CONTROLS" };
             var values = new[]
             {
                 $"{data.UiScale * 100f:0}%", data.HighContrast ? "ON" : "OFF",
                 data.ReducedFlashes ? "ON" : "OFF", $"{data.ScreenShake * 100f:0}%",
                 $"{data.MasterVolume * 100f:0}%", $"{data.MusicVolume * 100f:0}%",
-                $"{data.SfxVolume * 100f:0}%"
+                $"{data.SfxVolume * 100f:0}%", data.TouchControls.ToString().ToUpperInvariant()
             };
             for (var i = 0; i < labels.Length; i++)
             {
@@ -3073,7 +3242,7 @@ namespace ProjectExpedition
 
             for (var i = 0; i < RebindableActions.Length; i++)
             {
-                var selection = i + 7;
+                var selection = i + 8;
                 var rect = new Rect(1045, 255 + i * 62, 720, 48);
                 DrawSelection(new Rect(rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10), _settingsSelection == selection);
                 DrawPanel(rect, new Color(0.018f, 0.05f, 0.07f, 1f));
@@ -3087,13 +3256,13 @@ namespace ProjectExpedition
                 }
             }
 
-            DrawSelection(new Rect(580, 925, 350, 85), _settingsSelection == 16);
+            DrawSelection(new Rect(580, 925, 350, 85), _settingsSelection == 17);
             if (GUI.Button(new Rect(590, 935, 330, 65), "RESTORE DEFAULTS", _button))
             {
-                _settingsSelection = 16;
+                _settingsSelection = 17;
                 PresentationPreferences.ResetToDefaults();
             }
-            DrawSelection(new Rect(990, 925, 350, 85), _settingsSelection == 17);
+            DrawSelection(new Rect(990, 925, 350, 85), _settingsSelection == 18);
             if (GUI.Button(new Rect(1000, 935, 330, 65), "BACK", _button)) _director.CloseSettings();
             GUI.Label(new Rect(520, 1010, 880, 35),
                 $"{Prompt(BindingAction.MoveUp)} {Prompt(BindingAction.MoveDown)} NAVIGATE   •   LEFT/RIGHT ADJUST   •   {Prompt(BindingAction.Back)} BACK", _micro);
@@ -3188,22 +3357,18 @@ namespace ProjectExpedition
 
         private void DrawResults(bool victory)
         {
+            EnsureSurvivorsStyles();
             var accent = victory
                 ? PresentationTheme.Accent
                 : new Color(0.65f, 0.2f, 0.22f);
-            var backdrop = victory
-                ? new Color(0.01f, 0.025f, 0.04f, 0.82f)
-                : new Color(0.05f, 0.015f, 0.02f, 0.86f);
-            DrawPanel(new Rect(0, 0, 1920, 1080), backdrop);
+            RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
             var panel = new Rect(460, 120, 1000, 820);
-            DrawPanel(panel, new Color(0.055f, 0.105f, 0.14f, 1f));
-            DrawPanel(new Rect(panel.x, panel.y, panel.width, 7), accent);
+            RunModalPresentation.DrawResultsShell(panel, _survivorsHudStyles,
+                victory ? "A SAGA IS BORN" : "THE ICE CLAIMS THE EXPEDITION");
 
             var titleY = panel.y + 32f;
             GUI.Label(new Rect(panel.x + 60, titleY, panel.width - 120, 34),
                 victory ? "VICTORY" : "DEFEAT", _campEyebrow);
-            GUI.Label(new Rect(panel.x + 60, titleY + 38f, panel.width - 120, 96),
-                victory ? "A SAGA IS BORN" : "THE ICE CLAIMS THE EXPEDITION", _resultTitle);
 
             var summaryTop = titleY + 108f;
             var summary = new Rect(panel.x + 70, summaryTop, panel.width - 140, 168);
@@ -3226,7 +3391,8 @@ namespace ProjectExpedition
                     DrawPanel(relicRect, new Color(0.018f, 0.048f, 0.068f, 1f));
                     DrawPanel(new Rect(relicRect.x, relicRect.y, relicRect.width, 4), PresentationTheme.Accent);
                     GUI.Label(new Rect(relicRect.x + 22, relicRect.y + 12, relicRect.width - 44, 24), "RELIC EARNED", _micro);
-                    GUI.Label(new Rect(relicRect.x + 22, relicRect.y + 34, relicRect.width - 44, 34),
+                    ItemPresentation.DrawRelicIcon(new Rect(relicRect.x + 22, relicRect.y + 36, 40, 40), relicId);
+                    GUI.Label(new Rect(relicRect.x + 70, relicRect.y + 34, relicRect.width - 92, 34),
                         RelicDisplayName(relicId).ToUpperInvariant(), _center);
                     GUI.Label(new Rect(relicRect.x + 22, relicRect.y + 68, relicRect.width - 44, 52),
                         RelicExplanation(relicId), _resultBody);
@@ -4067,6 +4233,7 @@ namespace ProjectExpedition
                 11, FontStyle.Bold, SurvivorsStylePresentation.TextLight, TextAnchor.UpperLeft);
             _vsFilterActive.wordWrap = true;
             _vsFilterActive.clipping = TextClipping.Overflow;
+            _survivorsHudStyles = SurvivorsStylePresentation.CreateHudStyles();
         }
 
         private static GUIStyle MakeCompactStyle(

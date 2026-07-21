@@ -1,6 +1,6 @@
 # Testing 0.12.0 — MVP Content
 
-The automated gate is **97 EditMode + 14 PlayMode tests**. GitHub Actions must also pass static validation, WebGL compilation, GitHub Pages deployment and the Windows milestone build before owner validation.
+The automated gate is **104 EditMode + 14 PlayMode tests** (includes UI migration catalog, touch prompts and Title Screen routing).
 
 ## Automated contracts
 
@@ -25,7 +25,11 @@ Run **Expedition → Validate Production Content** after editing `ProductionCont
 
 ## Final owner matrix
 
-Use the GitHub Pages preview first, then the Windows artifact for native validation.
+### Input parity (required)
+
+1. **Keyboard-only:** Title → Camp → Solo run → Level Up → Pause → Settings → Camp.
+2. **Gamepad-only:** Same flow with D-pad/stick navigation and visible focus.
+3. **Touch-only:** Title taps, Camp taps, virtual stick + ULT/PAUSE/BLD during gameplay, tap Level Up cards.
 
 ### Three-biome loop
 

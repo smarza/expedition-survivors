@@ -24,7 +24,7 @@ namespace ProjectExpedition.Tests
             yield return ClearDirectors();
             var director = CreateDirector();
 
-            Assert.That(director.State, Is.EqualTo(RunState.MainMenu));
+            Assert.That(director.State, Is.EqualTo(RunState.TitleScreen));
             Assert.That(director.SimulationPhase, Is.EqualTo(RunSimulationPhase.Idle));
             Assert.That(director.FoundationStatus, Does.StartWith("READY"));
             Assert.That(director.CreatedPooledObjects, Is.GreaterThan(0));
@@ -63,7 +63,7 @@ namespace ProjectExpedition.Tests
             Assert.That(director.State, Is.EqualTo(RunState.Settings));
             Assert.That(Time.timeScale, Is.Zero);
             director.CloseSettings();
-            Assert.That(director.State, Is.EqualTo(RunState.MainMenu));
+            Assert.That(director.State, Is.EqualTo(RunState.TitleScreen));
             Assert.That(Time.timeScale, Is.EqualTo(1f));
 
             director.Present(PresentationCue.Impact, Vector2.zero, Color.cyan);

@@ -74,6 +74,13 @@ namespace ProjectExpedition
                     move += gamepadMove;
                 }
             }
+
+            var touchMove = TouchInputRouter.ReadTouchMovement(playerIndex, playerCount);
+            if (touchMove.sqrMagnitude > move.sqrMagnitude)
+            {
+                move = touchMove;
+            }
+
             if (move.sqrMagnitude > 0f && ReadKeyboard(playerIndex, playerCount).sqrMagnitude > 0f) MarkKeyboard();
             return Vector2.ClampMagnitude(move, 1f);
         }
@@ -86,6 +93,7 @@ namespace ProjectExpedition
                 ? KeyPressed(PresentationPreferences.Data.Keyboard.Ultimate)
                 : keyboard.enterKey.wasPressedThisFrame || keyboard.rightCtrlKey.wasPressedThisFrame);
             if (keyboardPressed) { MarkKeyboard(); return true; }
+            if (TouchInputRouter.TouchUltimatePressed(playerIndex, playerCount)) return true;
             if (playerCount <= 1) return AnyGamepadUltimatePressed();
             RefreshAssignments(playerCount);
             return GamepadUltimatePressed(AssignedGamepad(playerIndex));
@@ -96,6 +104,7 @@ namespace ProjectExpedition
         public static bool PausePressed()
         {
             if (KeyPressed(PresentationPreferences.Data.Keyboard.Pause)) { MarkKeyboard(); return true; }
+            if (TouchInputRouter.TouchPausePressed()) return true;
             for (var i = 0; i < Gamepad.all.Count; i++)
                 if (Gamepad.all[i].startButton.wasPressedThisFrame) { MarkGamepad(Gamepad.all[i]); return true; }
             return false;
@@ -104,6 +113,7 @@ namespace ProjectExpedition
         public static bool DetailsPressed()
         {
             if (KeyPressed(PresentationPreferences.Data.Keyboard.BuildDetails)) { MarkKeyboard(); return true; }
+            if (TouchInputRouter.TouchDetailsPressed()) return true;
             for (var i = 0; i < Gamepad.all.Count; i++)
                 if (Gamepad.all[i].selectButton.wasPressedThisFrame) { MarkGamepad(Gamepad.all[i]); return true; }
             return false;
@@ -171,6 +181,7 @@ namespace ProjectExpedition
                 if (playerIndex == 0 && (KeyPressed(PresentationPreferences.Data.Keyboard.Submit) || playerCount == 1 && keyboard.enterKey.wasPressedThisFrame)) { MarkKeyboard(); return true; }
                 if (playerIndex == 1 && (keyboard.enterKey.wasPressedThisFrame || keyboard.rightCtrlKey.wasPressedThisFrame)) return true;
             }
+            if (TouchInputRouter.TouchSubmitPressed(playerIndex, playerCount)) return true;
             if (playerCount <= 1) return AnyGamepadSubmitPressed();
             RefreshAssignments(playerCount);
             var gamepad = AssignedGamepad(playerIndex);
@@ -428,6 +439,8 @@ namespace ProjectExpedition
             Keyboard.current != null && key != Key.None && Keyboard.current[key].isPressed;
 
         private static void MarkKeyboard() => _currentPromptDevice = InputPromptDevice.Keyboard;
+
+        public static void MarkTouch() => _currentPromptDevice = InputPromptDevice.Touch;
 
         private static void MarkGamepad(Gamepad gamepad) => _currentPromptDevice = InputGlyphs.Detect(gamepad);
     }

@@ -5,7 +5,7 @@ namespace ProjectExpedition
 {
     public sealed class GameDirector : MonoBehaviour
     {
-        public RunState State { get; private set; } = RunState.MainMenu;
+        public RunState State { get; private set; } = RunState.TitleScreen;
         public readonly List<PlayerController> Players = new List<PlayerController>(2);
         public PlayerController Player => Players.Count > 0 ? Players[0] : null;
         public readonly List<Enemy> Enemies = new List<Enemy>(384);
@@ -44,7 +44,7 @@ namespace ProjectExpedition
         private CameraFollow _cameraFollow;
         private GameHUD _hud;
         private PresentationDirector _presentation;
-        private RunState _settingsReturnState = RunState.MainMenu;
+        private RunState _settingsReturnState = RunState.TitleScreen;
         private readonly List<RewardOption> _currentRewards = new List<RewardOption>(4);
         private readonly List<Enemy> _spatialScratch = new List<Enemy>(192);
         private bool _runRecorded;
@@ -1016,6 +1016,12 @@ namespace ProjectExpedition
             }
         }
 
+        public void EnterCamp()
+        {
+            State = RunState.MainMenu;
+            Time.timeScale = 1f;
+        }
+
         public void ReturnToMenu()
         {
             Time.timeScale = 1f;
@@ -1062,7 +1068,7 @@ namespace ProjectExpedition
 
         public void OpenSettings()
         {
-            if (State != RunState.MainMenu && State != RunState.Paused) return;
+            if (State != RunState.MainMenu && State != RunState.Paused && State != RunState.TitleScreen) return;
             _settingsReturnState = State;
             State = RunState.Settings;
             Time.timeScale = 0f;
@@ -1073,7 +1079,7 @@ namespace ProjectExpedition
             if (State != RunState.Settings) return;
             LocalInputRouter.CancelRebind();
             State = _settingsReturnState;
-            Time.timeScale = State == RunState.MainMenu ? 1f : 0f;
+            Time.timeScale = State == RunState.MainMenu || State == RunState.TitleScreen ? 1f : 0f;
         }
 
         public void ShowPulse(Vector2 position, int playerIndex)

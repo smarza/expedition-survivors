@@ -269,7 +269,9 @@ Use this when porting **Camp**, **Map Select**, **Codex**, **Main Menu**, etc.
 
 - [ ] 1920×1080 and 1280×800 — no clipped text
 - [ ] Ui scale 90%, 100%, 120%
-- [ ] Keyboard, gamepad and mouse unchanged
+- [ ] **Keyboard-only** — complete flow without mouse
+- [ ] **Gamepad-only** — focus ring visible on all selectable controls
+- [ ] **Touch-only** — all targets ≥ 44×44 px; gameplay overlay move/ult/pause/details
 - [ ] High contrast preference still respected where `PresentationTheme` applies
 
 ### UI Toolkit pass (optional, later)

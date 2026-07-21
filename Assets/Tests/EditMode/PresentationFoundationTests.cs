@@ -204,5 +204,62 @@ namespace ProjectExpedition.Tests
 
             Assert.That(height, Is.GreaterThan(18f));
         }
+
+        [Test]
+        public void UiArtCatalog_SanitizesStableIdsForResourcePaths()
+        {
+            Assert.That(UiArtCatalog.SanitizeId("weapon.frost_axe"), Is.EqualTo("weapon_frost_axe"));
+            Assert.That(UiArtCatalog.SanitizeId("relic.jotunn_echo_warden"), Is.EqualTo("relic_jotunn_echo_warden"));
+        }
+
+        [Test]
+        public void UiArtCatalog_FallsBackWithoutThrowingForMissingAssets()
+        {
+            Assert.That(UiArtCatalog.TryGetItemIcon("weapon.frost_axe", out var itemIcon), Is.False);
+            Assert.That(itemIcon, Is.Null);
+            Assert.That(UiArtCatalog.TryGetTitleArt(out var titleArt), Is.True);
+            Assert.That(titleArt, Is.Not.Null);
+        }
+
+        [Test]
+        public void MapSelectLayoutMetrics_ReserveHeaderFooterSpace()
+        {
+            var content = MapSelectLayoutMetrics.ContentRect(new Rect(0f, 0f, 1920f, 1080f));
+            Assert.That(content.y, Is.EqualTo(MapSelectLayoutMetrics.HeaderHeight));
+            Assert.That(content.height, Is.LessThan(1080f - MapSelectLayoutMetrics.HeaderHeight));
+        }
+
+        [Test]
+        public void Glyphs_ExposeTouchPromptFamily()
+        {
+            Assert.That(InputGlyphs.Prompt(BindingAction.Submit, InputPromptDevice.Touch), Is.EqualTo("[TAP]"));
+            Assert.That(InputGlyphs.Prompt(BindingAction.MoveUp, InputPromptDevice.Touch), Is.EqualTo("[DRAG]"));
+        }
+
+        [Test]
+        public void MusicRouting_IncludesTitleScreenInMenuMusic()
+        {
+            Assert.That(PresentationDirector.MusicFor(RunState.TitleScreen, false), Is.EqualTo(PresentationMusicState.Menu));
+        }
+
+        [Test]
+        public void SurvivorsHudStyles_CreateAllTypographySlots()
+        {
+            var styles = SurvivorsHudStyles.Create();
+            Assert.That(styles.Display, Is.Not.Null);
+            Assert.That(styles.Title, Is.Not.Null);
+            Assert.That(styles.Hint, Is.Not.Null);
+        }
+
+        [Test]
+        public void ItemCatalog_AllEntriesResolveThroughItemPresentationFallback()
+        {
+            for (var i = 0; i < ItemCatalog.All.Length; i++)
+            {
+                var item = ItemCatalog.All[i];
+                Assert.That(item, Is.Not.Null);
+                Assert.That(string.IsNullOrWhiteSpace(item.Id), Is.False);
+            }
+        }
     }
 }

@@ -44,13 +44,14 @@ namespace ProjectExpedition
                 return;
             }
 
-            var useKeyArt = unlocked && size == CharacterPortraitSize.Large && definition.Id == "ravenbound.haldor";
+            Texture2D portrait = null;
+            var useKeyArt = unlocked && UiArtCatalog.TryGetCharacterPortrait(definition.Id, out portrait);
 
-            if (useKeyArt)
+            if (useKeyArt && portrait != null)
             {
-                GUI.DrawTexture(rect, RuntimeAssets.Portrait, ScaleMode.ScaleAndCrop);
+                GUI.DrawTexture(rect, portrait, ScaleMode.ScaleAndCrop);
                 DrawPanel(new Rect(rect.x, rect.y, rect.width, rect.height),
-                    new Color(0.02f, 0.05f, 0.08f, 0.12f));
+                    new Color(0.02f, 0.05f, 0.08f, unlocked ? 0.12f : 0.55f));
                 return;
             }
 

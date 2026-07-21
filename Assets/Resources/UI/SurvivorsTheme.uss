@@ -1,0 +1,67 @@
+/* Survivors-style UI tokens shared by IMGUI and UI Toolkit screens. */
+:root {
+    --survivors-bg-deep: rgb(10, 20, 31);
+    --survivors-bg-mid: rgb(15, 28, 41);
+    --survivors-panel-navy: rgb(13, 26, 46);
+    --survivors-border-gold: rgb(219, 168, 46);
+    --survivors-border-gold-dim: rgb(89, 107, 122);
+    --survivors-text-light: rgb(235, 240, 245);
+    --survivors-text-gold: rgb(250, 209, 71);
+    --survivors-text-muted: rgb(158, 179, 194);
+    --survivors-btn-green: rgb(71, 184, 92);
+    --survivors-btn-red: rgb(184, 46, 36);
+    --survivors-btn-blue: rgb(46, 87, 184);
+    --survivors-btn-gold: rgb(245, 194, 46);
+    --survivors-touch-min: 44px;
+}
+
+.survivors-screen {
+    flex-grow: 1;
+    background-color: var(--survivors-bg-deep);
+    color: var(--survivors-text-light);
+}
+
+.survivors-title {
+    font-size: 42px;
+    color: var(--survivors-text-gold);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.survivors-footer-button {
+    min-height: var(--survivors-touch-min);
+    min-width: 160px;
+    margin-left: 8px;
+    margin-right: 8px;
+    padding: 8px 16px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+}
+
+.survivors-footer-button--green {
+    background-color: var(--survivors-btn-green);
+}
+
+.survivors-footer-button--blue {
+    background-color: var(--survivors-btn-blue);
+}
+
+.survivors-footer-button--red {
+    background-color: var(--survivors-btn-red);
+}
+
+.survivors-footer-button--gold {
+    background-color: var(--survivors-btn-gold);
+}
+
+.survivors-tile {
+    background-color: var(--survivors-panel-navy);
+    border-width: 1px;
+    border-color: var(--survivors-border-gold-dim);
+    min-height: var(--survivors-touch-min);
+}
+
+.survivors-tile--selected {
+    border-color: var(--survivors-border-gold);
+    border-width: 2px;
+}

@@ -5,6 +5,7 @@ namespace ProjectExpedition
 {
     public enum RunState
     {
+        TitleScreen,
         MainMenu,
         CharacterSelect,
         MapSelect,
