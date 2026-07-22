@@ -6,6 +6,7 @@ namespace ProjectExpedition
     public static class SharedMovementCollision
     {
         private const float MinimumDistanceSquared = 0.0001f;
+        private const float MinimumWorthwhileDetourProgressFraction = 0.12f;
         private const int DetourSampleCount = 12;
 
         public static bool OverlapsCircle(ObstacleDefinition obstacle, Vector2 position, float radius)
@@ -78,9 +79,11 @@ namespace ProjectExpedition
                 ? toTarget
                 : toTarget.normalized * maxStep;
             var desired = currentPosition + travel;
+            var forwardPathBlocked = false;
 
             if (SegmentBlockedByObstacles(currentPosition, desired, radius, obstacles))
             {
+                forwardPathBlocked = true;
                 var maximumDistance = travel.magnitude;
                 var safeDistance = 0f;
 
@@ -103,18 +106,38 @@ namespace ProjectExpedition
                 desired = currentPosition + travel;
             }
 
+            var minimumWorthwhileProgress = maxStep * MinimumWorthwhileDetourProgressFraction;
             var resolved = ResolveCircleMovement(currentPosition, radius, desired, obstacles);
+            var resolvedMovement = resolved - currentPosition;
 
-            if ((resolved - currentPosition).sqrMagnitude > MinimumDistanceSquared)
+            if (resolvedMovement.sqrMagnitude > MinimumDistanceSquared)
             {
-                return resolved;
+                var forwardProgress = Vector2.Dot(resolvedMovement, toTarget.normalized);
+
+                if (!forwardPathBlocked || forwardProgress >= minimumWorthwhileProgress)
+                {
+                    return resolved;
+                }
             }
 
-            var bestDetour = TrySelectBestDetour(currentPosition, radius, targetPosition, maxStep, toTarget, obstacles);
-
-            if (bestDetour.HasValue)
+            if (forwardPathBlocked)
             {
-                return bestDetour.Value;
+                var sidestep = TrySelectSidestepFallback(currentPosition, radius, maxStep, toTarget, obstacles);
+
+                if (sidestep.HasValue)
+                {
+                    return sidestep.Value;
+                }
+            }
+            else
+            {
+                var bestDetour = TrySelectBestDetour(currentPosition, radius, targetPosition, maxStep, toTarget,
+                    obstacles);
+
+                if (bestDetour.HasValue)
+                {
+                    return bestDetour.Value;
+                }
             }
 
             var pushed = PushOutFromObstacles(currentPosition, radius, obstacles);
@@ -143,10 +166,9 @@ namespace ProjectExpedition
         {
             Vector2? bestPosition = null;
             var bestProgress = float.MinValue;
-            Vector2? fallbackPosition = null;
-            var fallbackMovement = 0f;
             var baseAngle = Mathf.Atan2(toTarget.y, toTarget.x);
             var perpendicular = new Vector2(-toTarget.y, toTarget.x).normalized;
+            var minimumWorthwhileProgress = maxStep * MinimumWorthwhileDetourProgressFraction;
 
             for (var attempt = 1; attempt <= DetourSampleCount; attempt++)
             {
@@ -155,35 +177,91 @@ namespace ProjectExpedition
                 var detourDirection = new Vector2(Mathf.Cos(baseAngle + angleOffset),
                     Mathf.Sin(baseAngle + angleOffset));
                 ConsiderDetour(currentPosition, radius, toTarget, obstacles,
-                    currentPosition + detourDirection * maxStep, ref bestPosition, ref bestProgress,
-                    ref fallbackPosition, ref fallbackMovement);
+                    currentPosition + detourDirection * maxStep, ref bestPosition, ref bestProgress);
             }
 
-            for (var side = -1; side <= 1; side += 2)
+            for (var side = 1; side >= -1; side -= 2)
             {
                 ConsiderDetour(currentPosition, radius, toTarget, obstacles,
-                    currentPosition + perpendicular * (side * maxStep), ref bestPosition, ref bestProgress,
-                    ref fallbackPosition, ref fallbackMovement);
+                    currentPosition + perpendicular * (side * maxStep), ref bestPosition, ref bestProgress);
                 ConsiderDetour(currentPosition, radius, toTarget, obstacles,
                     currentPosition + toTarget.normalized * (maxStep * 0.5f) +
-                    perpendicular * (side * maxStep * 0.75f), ref bestPosition, ref bestProgress,
-                    ref fallbackPosition, ref fallbackMovement);
+                    perpendicular * (side * maxStep * 0.75f), ref bestPosition, ref bestProgress);
             }
 
             ConsiderAxisAlignedDetours(currentPosition, radius, targetPosition, maxStep, toTarget, obstacles,
-                ref bestPosition, ref bestProgress, ref fallbackPosition, ref fallbackMovement);
+                ref bestPosition, ref bestProgress);
 
-            if (bestPosition.HasValue)
+            if (bestPosition.HasValue && bestProgress >= minimumWorthwhileProgress)
             {
                 return bestPosition;
             }
 
-            return fallbackPosition;
+            return TrySelectSidestepFallback(currentPosition, radius, maxStep, toTarget, obstacles);
+        }
+
+        private static Vector2? TrySelectSidestepFallback(Vector2 currentPosition, float radius, float maxStep,
+            Vector2 toTarget, IReadOnlyList<ObstacleDefinition> obstacles)
+        {
+            var delta = toTarget;
+            var lateralStep = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+                ? new Vector2(0f, maxStep)
+                : new Vector2(maxStep, 0f);
+            var lateralDirections = new[]
+            {
+                lateralStep,
+                -lateralStep
+            };
+
+            for (var i = 0; i < lateralDirections.Length; i++)
+            {
+                var sidestep = TryResolveDetour(currentPosition, radius, obstacles,
+                    currentPosition + lateralDirections[i]);
+
+                if (sidestep.HasValue)
+                {
+                    return sidestep;
+                }
+            }
+
+            var perpendicular = new Vector2(-toTarget.y, toTarget.x).normalized;
+
+            for (var side = 1; side >= -1; side -= 2)
+            {
+                var sidestep = TryResolveDetour(currentPosition, radius, obstacles,
+                    currentPosition + perpendicular * (side * maxStep));
+
+                if (sidestep.HasValue)
+                {
+                    return sidestep;
+                }
+            }
+
+            return null;
+        }
+
+        private static Vector2? TryResolveDetour(Vector2 currentPosition, float radius,
+            IReadOnlyList<ObstacleDefinition> obstacles, Vector2 detourDesired)
+        {
+            if (SegmentBlockedByObstacles(currentPosition, detourDesired, radius, obstacles))
+            {
+                return null;
+            }
+
+            var detourResolved = ResolveCircleMovement(currentPosition, radius, detourDesired, obstacles);
+            var movement = detourResolved - currentPosition;
+
+            if (movement.sqrMagnitude <= MinimumDistanceSquared)
+            {
+                return null;
+            }
+
+            return detourResolved;
         }
 
         private static void ConsiderDetour(Vector2 currentPosition, float radius, Vector2 toTarget,
             IReadOnlyList<ObstacleDefinition> obstacles, Vector2 detourDesired, ref Vector2? bestPosition,
-            ref float bestProgress, ref Vector2? fallbackPosition, ref float fallbackMovement)
+            ref float bestProgress)
         {
             if (SegmentBlockedByObstacles(currentPosition, detourDesired, radius, obstacles))
             {
@@ -196,14 +274,6 @@ namespace ProjectExpedition
             if (movement.sqrMagnitude <= MinimumDistanceSquared)
             {
                 return;
-            }
-
-            var movementMagnitude = movement.magnitude;
-
-            if (movementMagnitude > fallbackMovement)
-            {
-                fallbackMovement = movementMagnitude;
-                fallbackPosition = detourResolved;
             }
 
             var progress = Vector2.Dot(movement, toTarget.normalized);
@@ -219,8 +289,7 @@ namespace ProjectExpedition
 
         private static void ConsiderAxisAlignedDetours(Vector2 currentPosition, float radius,
             Vector2 targetPosition, float maxStep, Vector2 toTarget, IReadOnlyList<ObstacleDefinition> obstacles,
-            ref Vector2? bestPosition, ref float bestProgress, ref Vector2? fallbackPosition,
-            ref float fallbackMovement)
+            ref Vector2? bestPosition, ref float bestProgress)
         {
             var delta = targetPosition - currentPosition;
             var stepX = new Vector2(Mathf.Sign(delta.x) * maxStep, 0f);
@@ -229,16 +298,16 @@ namespace ProjectExpedition
             if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
             {
                 ConsiderDetour(currentPosition, radius, toTarget, obstacles, currentPosition + stepX,
-                    ref bestPosition, ref bestProgress, ref fallbackPosition, ref fallbackMovement);
+                    ref bestPosition, ref bestProgress);
                 ConsiderDetour(currentPosition, radius, toTarget, obstacles, currentPosition + stepY,
-                    ref bestPosition, ref bestProgress, ref fallbackPosition, ref fallbackMovement);
+                    ref bestPosition, ref bestProgress);
             }
             else
             {
                 ConsiderDetour(currentPosition, radius, toTarget, obstacles, currentPosition + stepY,
-                    ref bestPosition, ref bestProgress, ref fallbackPosition, ref fallbackMovement);
+                    ref bestPosition, ref bestProgress);
                 ConsiderDetour(currentPosition, radius, toTarget, obstacles, currentPosition + stepX,
-                    ref bestPosition, ref bestProgress, ref fallbackPosition, ref fallbackMovement);
+                    ref bestPosition, ref bestProgress);
             }
         }
 
