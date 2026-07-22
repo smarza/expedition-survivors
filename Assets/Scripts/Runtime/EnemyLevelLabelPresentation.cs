@@ -8,7 +8,7 @@ namespace ProjectExpedition
     public sealed class EnemyLevelLabelPresentation : MonoBehaviour
     {
         private TextMesh _textMesh;
-        private float _verticalOffset = 0.55f;
+        private MeshRenderer _meshRenderer;
 
         public void Initialize(float enemyRadius)
         {
@@ -17,13 +17,12 @@ namespace ProjectExpedition
                 _textMesh = gameObject.AddComponent<TextMesh>();
                 _textMesh.anchor = TextAnchor.MiddleCenter;
                 _textMesh.alignment = TextAlignment.Center;
-                _textMesh.characterSize = 0.12f;
                 _textMesh.fontSize = 48;
                 _textMesh.fontStyle = FontStyle.Bold;
+                _meshRenderer = gameObject.GetComponent<MeshRenderer>();
             }
 
-            _verticalOffset = enemyRadius + 0.28f;
-            transform.localPosition = Vector3.up * _verticalOffset;
+            ApplyLayout(enemyRadius);
         }
 
         public void SetLevel(int enemyLevel, int playerLevel, bool visible)
@@ -38,10 +37,20 @@ namespace ProjectExpedition
             _textMesh.color = ResolveLabelColor(enemyLevel, playerLevel);
         }
 
-        public void RefreshVerticalOffset(float enemyRadius)
+        public void RefreshForEnemyRadius(float enemyRadius)
         {
-            _verticalOffset = enemyRadius + 0.28f;
-            transform.localPosition = Vector3.up * _verticalOffset;
+            ApplyLayout(enemyRadius);
+        }
+
+        private void ApplyLayout(float enemyRadius)
+        {
+            transform.localPosition = Vector3.zero;
+            _textMesh.characterSize = Mathf.Clamp(enemyRadius * 0.17f, 0.065f, 0.15f);
+
+            if (_meshRenderer != null)
+            {
+                _meshRenderer.sortingOrder = 12;
+            }
         }
 
         private static Color ResolveLabelColor(int enemyLevel, int playerLevel)

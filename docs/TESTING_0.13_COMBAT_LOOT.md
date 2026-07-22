@@ -8,7 +8,8 @@ EditMode adds coverage for:
 
 - `SharedEnemyLevelTests` — spawn level offsets, `Max(time, level)` difficulty, XP scaling;
 - `SharedObstacleModelTests` — movement blocking, spawn rejection, simple enemy steering;
-- `SharedLootProgressTests` — rarity curve floor, party counter activation, discard-while-active rule.
+- `SharedLootProgressTests` — rarity curve floor, per-color counters, discard-while-active rule;
+- `SharedTemporaryEffectTests` — stackable multi-color buffs and independent expiration.
 
 Existing 0.8–0.12 suites remain required.
 
@@ -26,16 +27,28 @@ Existing 0.8–0.12 suites remain required.
 2. Kite enemies around a wall cluster and confirm they path around rather than clipping through.
 3. Repeat in Local Co-op and confirm tethering still works near obstacles.
 
-### Loot and healing effect
+### Loot and party effects
 
-1. Defeat enemies until blue loot pickups appear (Healing Embers).
-2. Confirm the objective rail shows **PARTY** progress as `N/10`.
-3. Collect ten units and confirm:
+1. Defeat enemies until colored loot pickups appear (blue, orange, green, red, purple).
+2. Confirm the objective rail shows:
+   - the leading color summary as `N/10` in **PARTY LOOT**;
+   - all five colors simultaneously in **ALL COLORS** with per-color `N/10`, mini bars and active timers.
+3. Collect ten units of one color and confirm:
    - announcement activation toast;
-   - blue glow on party members;
-   - health bar pulse during regeneration;
-   - counter resets after activation.
-4. In co-op, confirm either player can increment the shared counter.
+   - glow on party members;
+   - effect-specific HUD hint (regen, crit, speed, damage, shield);
+   - counter resets for that color only.
+4. While one color is active, confirm other colors can still be collected toward their own counters.
+5. Activate two different colors and confirm both buffs run simultaneously until each timer expires.
+6. In co-op, confirm either player can increment the shared counter for any color.
+
+| Color | Loot | Expected effect |
+|-------|------|-----------------|
+| Blue | Healing Embers | Party regeneration |
+| Orange | Critical Flare | Increased crit chance |
+| Green | Swift Trail | Increased move speed |
+| Red | Wrath Embers | Increased weapon damage |
+| Purple | Aegis Veil | Party invulnerability |
 
 ### Regression carryover
 

@@ -26,9 +26,12 @@ namespace ProjectExpedition
         public RunRandom Rng { get; private set; } = new RunRandom(1);
         public PerformanceMetrics Metrics { get; } = new PerformanceMetrics();
         public bool ShowPerformanceMetrics { get; private set; }
+        public bool ShowDevelopmentTuning { get; private set; }
         public string FoundationStatus { get; private set; } = "NOT CHECKED";
         public int PendingPlayerCount { get; private set; } = 1;
         public MapDefinition SelectedMap { get; private set; } = ContentCatalog.Maps[0];
+
+        public MapDefinition ActiveMap => DevelopmentTuningResolver.ResolveMap(SelectedMap);
         public ChallengeProfile SelectedChallenge { get; private set; } =
             new ChallengeProfile(ChallengeTier.Standard, ChallengeMutator.None, ChallengeMutator.None);
         public readonly CharacterDefinition[] SelectedCharacters =
@@ -70,9 +73,14 @@ namespace ProjectExpedition
         private bool _warlordEliteSpawned;
         private GameObject _extractionBeacon;
         private GameObject _extractionBeaconPlaceholder;
+        private const float UltimateGemBurstDuration = 0.95f;
+
+        private const float TwinBossSpawnChance = 0.03f;
+
         private Vector2 _gemRepulsionOrigin;
-        private float _gemRepulsionStrength;
+        private float _gemRepulsionRadius;
         private float _gemRepulsionUntil;
+        private float _developmentTuningPreviousTimeScale = 1f;
 
         public int ActiveProjectiles => _projectilePool?.ActiveCount ?? 0;
         public int ActiveGems => _gemPool?.ActiveCount ?? 0;
@@ -94,6 +102,7 @@ namespace ProjectExpedition
             SelectedCharacters[1] = ContentCatalog.Character(Mathf.Min(1, ContentCatalog.Characters.Length - 1));
             SaveService.Load();
             PresentationPreferences.Load();
+            DevelopmentTuningService.Load();
             InitializeProductionFoundation();
             CreateCamera();
             _presentation = gameObject.AddComponent<PresentationDirector>();
@@ -149,6 +158,7 @@ namespace ProjectExpedition
         {
             Metrics.Tick(Time.unscaledDeltaTime, _enemyGrid?.QueryCount ?? 0);
             if (LocalInputRouter.MetricsPressed()) ShowPerformanceMetrics = !ShowPerformanceMetrics;
+            if (LocalInputRouter.DevelopmentTuningPressed()) ToggleDevelopmentTuning();
             if (LocalInputRouter.DetailsPressed()) ToggleBuildDetails();
             if (LocalInputRouter.PausePressed()) TogglePause();
             if (State != RunState.Playing) return;
@@ -178,7 +188,7 @@ namespace ProjectExpedition
                     _runModel.TryTriggerBoss(_routeModel.BossSpawnTime);
                 }
 
-                var spawn = _spawnModel.Advance(Time.deltaTime, Elapsed, SelectedMap, Enemies.Count,
+                var spawn = _spawnModel.Advance(Time.deltaTime, Elapsed, ActiveMap, Enemies.Count,
                     _routeModel.CanSpawnBoss() && !_routeModel.BossSpawned, SelectedChallenge);
                 TrySpawnWarlordElite(spawn.Difficulty);
 
@@ -187,8 +197,9 @@ namespace ProjectExpedition
 
                 if (spawn.SpawnBoss && !_routeModel.BossSpawned)
                 {
-                    SpawnBossWithEntrance(spawn.Difficulty);
-                    _routeModel.MarkBossSpawned();
+                    var expectedBossCount = Rng.Chance(TwinBossSpawnChance) ? 2 : 1;
+                    SpawnBossWaveWithEntrance(spawn.Difficulty, expectedBossCount);
+                    _routeModel.MarkBossSpawned(expectedBossCount);
                 }
             }
         }
@@ -215,8 +226,21 @@ namespace ProjectExpedition
             SelectedChallenge = challenge;
         }
 
-        public float ApplyWeaponDamage(float damage) =>
-            SharedChallengeProfileModel.ApplyWeaponDamageMultiplier(damage, SelectedChallenge);
+        public float ApplyWeaponDamage(float damage, int ownerPlayerIndex = -1)
+        {
+            var scaled = SharedChallengeProfileModel.ApplyWeaponDamageMultiplier(damage, SelectedChallenge);
+
+            if (ownerPlayerIndex >= 0 && ownerPlayerIndex < Players.Count)
+            {
+                var owner = Players[ownerPlayerIndex];
+                if (owner != null)
+                {
+                    scaled *= owner.TemporaryDamageMultiplier;
+                }
+            }
+
+            return scaled;
+        }
 
         public void SelectMapAndStart(int mapIndex)
         {
@@ -258,7 +282,8 @@ namespace ProjectExpedition
             playerCount = Mathf.Clamp(playerCount, 1, 2);
             for (var i = 0; i < playerCount; i++)
             {
-                var definition = SelectedCharacters[Mathf.Clamp(i, 0, SelectedCharacters.Length - 1)];
+                var definition = DevelopmentTuningResolver.ResolveCharacter(
+                    SelectedCharacters[Mathf.Clamp(i, 0, SelectedCharacters.Length - 1)]);
                 var playerObject = new GameObject(definition.Name);
                 playerObject.transform.SetParent(_runRoot, false);
                 playerObject.transform.position = new Vector3((i - (playerCount - 1) * 0.5f) * 1.5f, 0f, 0f);
@@ -271,8 +296,8 @@ namespace ProjectExpedition
             Kills = 0;
             RunRenown = 0;
             _spawnModel.Begin();
-            _lootProgress.Begin(LootEffectCatalog.DefaultRunLoot);
-            _temporaryEffect.Clear();
+            _lootProgress.Begin();
+            _temporaryEffect.Clear(Players);
             _persistentZones.Clear();
             _runRecorded = false;
             _warlordEliteSpawned = false;
@@ -592,7 +617,21 @@ namespace ProjectExpedition
             _enemyGrid.Add(enemy);
         }
 
-        private void SpawnBossWithEntrance(float timeDifficulty)
+        private void SpawnBossWaveWithEntrance(float timeDifficulty, int bossCount)
+        {
+            SpawnBossWithEntrance(timeDifficulty, true);
+            if (bossCount <= 1)
+            {
+                return;
+            }
+
+            SpawnBossWithEntrance(timeDifficulty, false);
+            Present(PresentationCue.BossSpawn, GroupCenter, new Color(1f, 0.18f, 0.08f), 4.4f);
+            _cameraFollow.AddTrauma(0.42f);
+            _hud.SetAnnouncement(BiomeCatalog.ResolveTwinBossEntranceAnnouncement(SelectedMap.BiomeId), 5.4f);
+        }
+
+        private void SpawnBossWithEntrance(float timeDifficulty, bool announceEntrance)
         {
             if (Players.Count == 0)
             {
@@ -608,8 +647,12 @@ namespace ProjectExpedition
             _enemyGrid.Add(enemy);
 
             Present(PresentationCue.BossSpawn, position, new Color(1f, 0.34f, 0.16f), 3.2f);
-            _cameraFollow.AddTrauma(0.62f);
-            _hud.SetAnnouncement(SelectedMap.BossEntranceAnnouncement, 4.8f);
+            _cameraFollow.AddTrauma(announceEntrance ? 0.62f : 0.38f);
+
+            if (announceEntrance)
+            {
+                _hud.SetAnnouncement(SelectedMap.BossEntranceAnnouncement, 4.8f);
+            }
         }
 
         private void TrySpawnWarlordElite(float timeDifficulty)
@@ -733,7 +776,8 @@ namespace ProjectExpedition
                 : otherCenter + offset.normalized * maximumSeparation;
         }
 
-        public int ResolveAreaEffect(Vector2 center, SharedEffectRequest effect, bool repelExperienceGems = false)
+        public int ResolveAreaEffect(Vector2 center, SharedEffectRequest effect, bool repelExperienceGems = false,
+            int ownerPlayerIndex = -1)
         {
             if (effect.Kind != SharedEffectKind.AreaDamage &&
                 effect.Kind != SharedEffectKind.PersistentZone)
@@ -749,8 +793,8 @@ namespace ProjectExpedition
             if (repelExperienceGems)
             {
                 _gemRepulsionOrigin = center;
-                _gemRepulsionStrength = 4.5f;
-                _gemRepulsionUntil = Time.time + 0.55f;
+                _gemRepulsionRadius = effect.Radius;
+                _gemRepulsionUntil = Time.time + UltimateGemBurstDuration;
             }
 
             var hitCount = 0;
@@ -766,7 +810,7 @@ namespace ProjectExpedition
                 if ((enemy.Position - center).sqrMagnitude <=
                     (effect.Radius + enemy.Radius) * (effect.Radius + enemy.Radius))
                 {
-                    enemy.TakeDamage(ApplyWeaponDamage(effect.Damage), effect.Knockback, center);
+                    enemy.TakeDamage(ApplyWeaponDamage(effect.Damage, ownerPlayerIndex), effect.Knockback, center);
                     hitCount++;
                 }
             }
@@ -806,7 +850,8 @@ namespace ProjectExpedition
                     continue;
                 }
 
-                ResolveAreaEffect(center, effect);
+                var ownerPlayerIndex = _persistentZones.ActiveZones[i].OwnerPlayerIndex;
+                ResolveAreaEffect(center, effect, false, ownerPlayerIndex);
                 Present(PresentationCue.ProjectileTrail, center, new Color(0.55f, 0.82f, 0.42f), 0.22f);
             }
         }
@@ -832,17 +877,20 @@ namespace ProjectExpedition
 
             if (Time.time <= _gemRepulsionUntil)
             {
-                gem.ApplyUltimateRepulsion(_gemRepulsionOrigin, _gemRepulsionStrength, _gemRepulsionUntil - Time.time);
+                gem.ApplyUltimateRepulsion(
+                    _gemRepulsionOrigin,
+                    _gemRepulsionRadius,
+                    _gemRepulsionUntil - Time.time);
             }
 
             Present(PresentationCue.EnemyDefeated, position,
                 boss ? new Color(1f, 0.45f, 0.22f) : new Color(0.5f, 0.82f, 0.9f),
                 boss ? 2.4f : 0.7f);
 
-            if (!boss && _lootProgress.TryRollDrop(Level, Kills, Players.Count, Rng))
+            if (!boss && _lootProgress.TryRollDrop(Level, Kills, Players.Count, Rng, out var droppedDefinition))
             {
                 var pickup = _lootPool.Get(position);
-                pickup.Initialize(this, _lootProgress.TrackedDefinition);
+                pickup.Initialize(this, droppedDefinition);
             }
 
             ReleaseEnemy(enemy);
@@ -852,14 +900,16 @@ namespace ProjectExpedition
             if (!string.IsNullOrEmpty(routeAnnouncement))
                 _hud.SetAnnouncement(routeAnnouncement, 3.6f);
 
-            if (boss)
+            if (boss && _routeModel.BossKilled)
+            {
                 SpawnExtractionBeacon();
+            }
         }
 
         public void OnLootCollected(LootEffectDefinition definition, int collectorPlayerIndex)
         {
             var tracked = definition ?? LootEffectCatalog.DefaultRunLoot;
-            var result = _lootProgress.OnCollected(_temporaryEffect.HasActiveEffect);
+            var result = _lootProgress.OnCollected(tracked, _temporaryEffect.IsActive);
             Present(PresentationCue.LootCollected, ResolvePlayerPosition(collectorPlayerIndex),
                 tracked.ThemeColor, 0.45f);
 
@@ -871,8 +921,10 @@ namespace ProjectExpedition
 
             if (result == LootCollectResult.Incremented)
             {
+                var currentCount = _lootProgress.GetCount(tracked);
+                var requiredCount = _lootProgress.GetRequiredCount(tracked);
                 _hud.SetAnnouncement(
-                    $"+1 {tracked.DisplayName.ToUpperInvariant()}  ({_lootProgress.CurrentCount}/{_lootProgress.RequiredCount})",
+                    $"+1 {tracked.DisplayName.ToUpperInvariant()}  ({currentCount}/{requiredCount})",
                     1.8f);
                 return;
             }
@@ -882,7 +934,7 @@ namespace ProjectExpedition
                 return;
             }
 
-            _temporaryEffect.Activate(tracked, collectorPlayerIndex);
+            _temporaryEffect.Activate(tracked, collectorPlayerIndex, Players);
             Present(PresentationCue.LootActivated, GroupCenter, tracked.ThemeColor, 1.6f);
             _hud.SetAnnouncement($"{tracked.DisplayName.ToUpperInvariant()} ACTIVATED", 2.4f);
         }
@@ -1170,6 +1222,47 @@ namespace ProjectExpedition
             Time.timeScale = State == RunState.MainMenu || State == RunState.TitleScreen ? 1f : 0f;
         }
 
+        public void ToggleDevelopmentTuning()
+        {
+            if (ShowDevelopmentTuning)
+            {
+                ShowDevelopmentTuning = false;
+                Time.timeScale = _developmentTuningPreviousTimeScale;
+                return;
+            }
+
+            _developmentTuningPreviousTimeScale = Time.timeScale;
+            ShowDevelopmentTuning = true;
+            Time.timeScale = 0f;
+        }
+
+        public void CloseDevelopmentTuning()
+        {
+            if (!ShowDevelopmentTuning)
+            {
+                return;
+            }
+
+            ShowDevelopmentTuning = false;
+            Time.timeScale = _developmentTuningPreviousTimeScale;
+        }
+
+        public void ApplyDevelopmentTuningToActiveRun()
+        {
+            if (State != RunState.Playing)
+            {
+                return;
+            }
+
+            _lootProgress.Begin();
+
+            for (var i = 0; i < Players.Count; i++)
+            {
+                var resolved = DevelopmentTuningResolver.ResolveCharacter(Players[i].Definition);
+                Players[i].ReinitializeFromDefinition(resolved);
+            }
+        }
+
         public void ShowPulse(Vector2 position, int playerIndex)
         {
             _pulsePool.Get(position).Initialize(this, playerIndex);
@@ -1189,6 +1282,83 @@ namespace ProjectExpedition
 
         public void Present(PresentationCue cue, Vector2 position, Color color, float scale = 1f) =>
             _presentation?.Notify(cue, position, color, scale);
+
+        public void AddCameraTrauma(float amount) => _cameraFollow?.AddTrauma(amount);
+
+        public float DistanceToNearestLivingPlayer(Vector2 position)
+        {
+            var nearestDistance = float.MaxValue;
+            for (var i = 0; i < Players.Count; i++)
+            {
+                var player = Players[i];
+                if (player == null || !player.IsAlive)
+                {
+                    continue;
+                }
+
+                var distance = Vector2.Distance(position, player.transform.position);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                }
+            }
+
+            return nearestDistance == float.MaxValue ? 999f : nearestDistance;
+        }
+
+        public float ResolveBossProximityPressure()
+        {
+            if (Enemies.Count == 0)
+            {
+                return 0f;
+            }
+
+            var partyCenter = GroupCenter;
+            var nearestBossDistance = float.MaxValue;
+            for (var i = 0; i < Enemies.Count; i++)
+            {
+                var enemy = Enemies[i];
+                if (enemy == null || !enemy.Alive || !enemy.Boss)
+                {
+                    continue;
+                }
+
+                nearestBossDistance = Mathf.Min(nearestBossDistance,
+                    Vector2.Distance(partyCenter, enemy.Position));
+            }
+
+            if (nearestBossDistance > 10f)
+            {
+                return 0f;
+            }
+
+            return 1f - nearestBossDistance / 10f;
+        }
+
+        public void ResolveBossSlam(Vector2 center, float radius, float damage, float visualScale)
+        {
+            Present(PresentationCue.BossSpawn, center, new Color(1f, 0.22f, 0.1f), visualScale * 1.35f);
+            AddCameraTrauma(0.3f);
+
+            for (var i = 0; i < Players.Count; i++)
+            {
+                var player = Players[i];
+                if (player == null || !player.IsAlive)
+                {
+                    continue;
+                }
+
+                var playerPosition = (Vector2)player.transform.position;
+                var hitRadius = radius + BalanceRules.PlayerCollisionRadius;
+                if ((playerPosition - center).sqrMagnitude > hitRadius * hitRadius)
+                {
+                    continue;
+                }
+
+                player.TakeDamage(damage);
+                Present(PresentationCue.Impact, playerPosition, new Color(1f, 0.28f, 0.14f), 1.1f);
+            }
+        }
 
         private void CleanupEnemyList()
         {
@@ -1298,6 +1468,8 @@ namespace ProjectExpedition
                 if (player == null) continue;
                 maximumDistance = Mathf.Max(maximumDistance, Vector2.Distance(center, player.transform.position));
             }
+
+            var bossPressure = ResolveBossMenacePressure(center);
             var desired = new Vector3(center.x, center.y, -10f);
             var basePosition = Vector3.Lerp(transform.position, desired, 1f - Mathf.Exp(-10f * Time.unscaledDeltaTime));
             _trauma = Mathf.Max(0f, _trauma - Time.unscaledDeltaTime * 1.8f);
@@ -1305,8 +1477,36 @@ namespace ProjectExpedition
             var offset = new Vector3(Mathf.Sin(Time.unscaledTime * 73f), Mathf.Cos(Time.unscaledTime * 61f), 0f) * shake * 0.22f;
             transform.position = basePosition + offset;
             var camera = GetComponent<Camera>();
-            var targetSize = Mathf.Clamp(6f + maximumDistance * 0.62f, 6f, 9.5f);
+            var targetSize = Mathf.Clamp(6f + maximumDistance * 0.62f - bossPressure * 1.35f, 5.4f, 9.5f);
             camera.orthographicSize = Mathf.Lerp(camera.orthographicSize, targetSize, 1f - Mathf.Exp(-5f * Time.unscaledDeltaTime));
+        }
+
+        private float ResolveBossMenacePressure(Vector2 center)
+        {
+            if (Director == null)
+            {
+                return 0f;
+            }
+
+            var nearestBossDistance = float.MaxValue;
+            for (var i = 0; i < Director.Enemies.Count; i++)
+            {
+                var enemy = Director.Enemies[i];
+                if (enemy == null || !enemy.Alive || !enemy.Boss)
+                {
+                    continue;
+                }
+
+                nearestBossDistance = Mathf.Min(nearestBossDistance,
+                    Vector2.Distance(center, enemy.Position));
+            }
+
+            if (nearestBossDistance > 11f)
+            {
+                return 0f;
+            }
+
+            return 1f - nearestBossDistance / 11f;
         }
     }
 

@@ -41,6 +41,8 @@ namespace ProjectExpedition
         public ExtractionCompletionKind ExtractionCompletion { get; private set; }
         public bool BossSpawned { get; private set; }
         public bool BossKilled { get; private set; }
+        public int ExpectedBossCount { get; private set; } = 1;
+        public int BossesDefeatedCount { get; private set; }
         public string PendingAnnouncement { get; private set; }
 
         public float ExtractionHoldRemaining =>
@@ -83,6 +85,8 @@ namespace ProjectExpedition
             ExtractionCompletion = ExtractionCompletionKind.None;
             BossSpawned = false;
             BossKilled = false;
+            ExpectedBossCount = 1;
+            BossesDefeatedCount = 0;
             _elapsed = 0f;
             CurrentPhase = ExpeditionPhase.Shoreline;
             QueueAnnouncement(PhaseAnnouncement(ExpeditionPhase.Shoreline));
@@ -159,13 +163,22 @@ namespace ProjectExpedition
         {
             if (isBoss)
             {
-                BossKilled = true;
-                CurrentPhase = ExpeditionPhase.Extraction;
-                ExtractionElapsed = 0f;
-                ExtractionHoldElapsed = 0f;
-                PartyAtExtractionBeacon = false;
-                ExtractionCompletion = ExtractionCompletionKind.None;
-                QueueAnnouncement(PhaseAnnouncement(ExpeditionPhase.Extraction));
+                BossesDefeatedCount++;
+                if (BossesDefeatedCount >= ExpectedBossCount)
+                {
+                    BossKilled = true;
+                    CurrentPhase = ExpeditionPhase.Extraction;
+                    ExtractionElapsed = 0f;
+                    ExtractionHoldElapsed = 0f;
+                    PartyAtExtractionBeacon = false;
+                    ExtractionCompletion = ExtractionCompletionKind.None;
+                    QueueAnnouncement(PhaseAnnouncement(ExpeditionPhase.Extraction));
+                }
+                else
+                {
+                    QueueAnnouncement(ResolveTwinBossRemainingAnnouncement());
+                }
+
                 return;
             }
 
@@ -196,9 +209,11 @@ namespace ProjectExpedition
             OptionalPickupsCollected = Mathf.Min(OptionalShardObjective, OptionalPickupsCollected + 1);
         }
 
-        public void MarkBossSpawned()
+        public void MarkBossSpawned(int expectedBossCount = 1)
         {
             BossSpawned = true;
+            ExpectedBossCount = Mathf.Max(1, expectedBossCount);
+            BossesDefeatedCount = 0;
             CurrentPhase = ExpeditionPhase.Boss;
         }
 
@@ -207,6 +222,11 @@ namespace ProjectExpedition
             if (BossSpawned || BossKilled)
             {
                 return false;
+            }
+
+            if (DevelopmentTuningResolver.ShouldSkipBossGate())
+            {
+                return true;
             }
 
             return PrimaryKillCount >= RequiredKillObjective || _elapsed >= BossSpawnTime;
@@ -261,21 +281,8 @@ namespace ProjectExpedition
             return ExpeditionPhase.Shoreline;
         }
 
-        private static MapDefinition ResolveMap(string mapId)
-        {
-            if (!string.IsNullOrWhiteSpace(mapId))
-            {
-                for (var i = 0; i < ContentCatalog.Maps.Length; i++)
-                {
-                    if (ContentCatalog.Maps[i].Id == mapId)
-                    {
-                        return ContentCatalog.Maps[i];
-                    }
-                }
-            }
-
-            return ContentCatalog.Maps[0];
-        }
+        private static MapDefinition ResolveMap(string mapId) =>
+            DevelopmentTuningResolver.ResolveMap(mapId) ?? ContentCatalog.Maps[0];
 
         private string PhaseAnnouncement(ExpeditionPhase phase)
         {
@@ -305,6 +312,16 @@ namespace ProjectExpedition
                 default:
                     return string.Empty;
             }
+        }
+
+        private string ResolveTwinBossRemainingAnnouncement()
+        {
+            if (_activeMap == null)
+            {
+                return "ONE GUARDIAN FALLS — ANOTHER STILL HUNTS";
+            }
+
+            return BiomeCatalog.ResolveTwinBossRemainingAnnouncement(_activeMap.BiomeId);
         }
 
         private string ResolveExtractionUnderwayAnnouncement()

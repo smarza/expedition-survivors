@@ -43,14 +43,14 @@ namespace ProjectExpedition
     /// </summary>
     public static class SharedChallengeProfileModel
     {
-        public const float VeteranHealthMultiplier = 1.25f;
-        public const float VeteranSpawnRateMultiplier = 0.85f;
-        public const float SwarmSurgeGroupBonus = 1f;
-        public const int SwarmSurgeMaximumGroupSize = 8;
-        public const float GlassCannonDamageTakenMultiplier = 1.4f;
-        public const float GlassCannonWeaponDamageMultiplier = 1.25f;
-        public const float RelentlessClockBossTimeMultiplier = 0.85f;
-        public const float RelentlessClockKillObjectiveMultiplier = 0.9f;
+        public const float DefaultVeteranHealthMultiplier = 1.25f;
+        public const float DefaultVeteranSpawnRateMultiplier = 0.85f;
+        public const float DefaultSwarmSurgeGroupBonus = 1f;
+        public const int DefaultSwarmSurgeMaximumGroupSize = 8;
+        public const float DefaultGlassCannonDamageTakenMultiplier = 1.4f;
+        public const float DefaultGlassCannonWeaponDamageMultiplier = 1.25f;
+        public const float DefaultRelentlessClockBossTimeMultiplier = 0.85f;
+        public const float DefaultRelentlessClockKillObjectiveMultiplier = 0.9f;
 
         public static float ResolveRenownMultiplier(ChallengeProfile profile)
         {
@@ -81,7 +81,9 @@ namespace ProjectExpedition
 
         public static float ApplyEnemyHealthMultiplier(float baseHealth, ChallengeProfile profile)
         {
-            var multiplier = profile.Tier == ChallengeTier.Veteran ? VeteranHealthMultiplier : 1f;
+            var multiplier = profile.Tier == ChallengeTier.Veteran
+                ? DevelopmentTuningResolver.VeteranHealthMultiplier
+                : 1f;
             return baseHealth * multiplier;
         }
 
@@ -89,7 +91,7 @@ namespace ProjectExpedition
         {
             if (profile.Tier == ChallengeTier.Veteran)
             {
-                interval *= VeteranSpawnRateMultiplier;
+                interval *= DevelopmentTuningResolver.VeteranSpawnRateMultiplier;
             }
 
             return interval;
@@ -99,17 +101,17 @@ namespace ProjectExpedition
         {
             if (profile.HasMutator(ChallengeMutator.SwarmSurge))
             {
-                groupSize += 1;
+                groupSize += Mathf.RoundToInt(DevelopmentTuningResolver.SwarmSurgeGroupBonus);
             }
 
-            return Mathf.Clamp(groupSize, 1, SwarmSurgeMaximumGroupSize);
+            return Mathf.Clamp(groupSize, 1, DevelopmentTuningResolver.SwarmSurgeMaximumGroupSize);
         }
 
         public static float ApplyPlayerDamageTakenMultiplier(float damage, ChallengeProfile profile)
         {
             if (profile.HasMutator(ChallengeMutator.GlassCannon))
             {
-                return damage * GlassCannonDamageTakenMultiplier;
+                return damage * DevelopmentTuningResolver.GlassCannonDamageTakenMultiplier;
             }
 
             return damage;
@@ -119,7 +121,7 @@ namespace ProjectExpedition
         {
             if (profile.HasMutator(ChallengeMutator.GlassCannon))
             {
-                return damage * GlassCannonWeaponDamageMultiplier;
+                return damage * DevelopmentTuningResolver.GlassCannonWeaponDamageMultiplier;
             }
 
             return damage;
@@ -129,7 +131,8 @@ namespace ProjectExpedition
         {
             if (profile.HasMutator(ChallengeMutator.RelentlessClock))
             {
-                return Mathf.Max(1, Mathf.RoundToInt(requiredKills * RelentlessClockKillObjectiveMultiplier));
+                return Mathf.Max(1, Mathf.RoundToInt(requiredKills *
+                    DevelopmentTuningResolver.RelentlessClockKillObjectiveMultiplier));
             }
 
             return requiredKills;
@@ -139,7 +142,7 @@ namespace ProjectExpedition
         {
             if (profile.HasMutator(ChallengeMutator.RelentlessClock))
             {
-                return bossSpawnTime * RelentlessClockBossTimeMultiplier;
+                return bossSpawnTime * DevelopmentTuningResolver.RelentlessClockBossTimeMultiplier;
             }
 
             return bossSpawnTime;

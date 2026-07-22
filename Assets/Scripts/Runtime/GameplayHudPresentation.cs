@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ProjectExpedition
@@ -10,6 +11,10 @@ namespace ProjectExpedition
         public const float BottomBarHeight = 88f;
         public const float ObjectiveRailWidth = 220f;
         public const float LootStripHeight = 64f;
+        public const float LootColorTrackerHeight = 84f;
+        public const float LootPanelInnerGap = 4f;
+        public const float LootPanelTotalHeight = LootStripHeight + LootPanelInnerGap + LootColorTrackerHeight;
+        public const float LootColorTrackerRowHeight = 15f;
         public const float ObjectivePanelGap = 6f;
         public const float ScreenPadding = 12f;
         public const float BuildIconSize = 32f;
@@ -54,6 +59,31 @@ namespace ProjectExpedition
         }
     }
 
+    public static class GameplayHudLabels
+    {
+        public static string ResolveBossObjective(SharedExpeditionRouteModel route, float remainingBossSeconds)
+        {
+            if (!route.BossSpawned)
+            {
+                return $"JOTUNN IN {FormatTime(remainingBossSeconds)}";
+            }
+
+            if (route.ExpectedBossCount > 1)
+            {
+                var remainingBosses = route.ExpectedBossCount - route.BossesDefeatedCount;
+                return $"TWIN JOTUNN — {remainingBosses} REMAIN";
+            }
+
+            return "DEFEAT THE JOTUNN";
+        }
+
+        private static string FormatTime(float seconds)
+        {
+            var total = Mathf.Max(0, Mathf.FloorToInt(seconds));
+            return $"{total / 60:00}:{total % 60:00}";
+        }
+    }
+
     public static class GameplayHudPresentation
     {
         public static void Draw(
@@ -84,6 +114,40 @@ namespace ProjectExpedition
             }
 
             TouchControlsPresentation.Draw(director);
+            DrawBossProximityVignette(screen, director);
+        }
+
+        public static void DrawBossProximityVignette(Rect screen, GameDirector director)
+        {
+            if (director == null)
+            {
+                return;
+            }
+
+            var pressure = director.ResolveBossProximityPressure();
+            if (pressure <= 0.01f)
+            {
+                return;
+            }
+
+            if (PresentationPreferences.Data.ReducedFlashes)
+            {
+                pressure *= 0.5f;
+            }
+
+            var pulse = 0.82f + 0.18f * Mathf.Sin(Time.unscaledTime * 4.8f);
+            var alpha = pressure * pulse * 0.46f;
+            var color = new Color(0.36f, 0.03f, 0.02f, alpha);
+            var edgeThickness = Mathf.Lerp(32f, 104f, pressure);
+
+            SurvivorsStylePresentation.DrawPanel(new Rect(screen.x, screen.y, screen.width, edgeThickness), color);
+            SurvivorsStylePresentation.DrawPanel(
+                new Rect(screen.x, screen.yMax - edgeThickness, screen.width, edgeThickness),
+                color);
+            SurvivorsStylePresentation.DrawPanel(new Rect(screen.x, screen.y, edgeThickness, screen.height), color);
+            SurvivorsStylePresentation.DrawPanel(
+                new Rect(screen.xMax - edgeThickness, screen.y, edgeThickness, screen.height),
+                color);
         }
 
         private static void DrawTopStrip(Rect screen, GameDirector director, SurvivorsHudStyles styles, Func<BindingAction, string> prompt)
@@ -97,7 +161,7 @@ namespace ProjectExpedition
             SurvivorsStylePresentation.DrawFlatPanel(strip, SurvivorsStylePresentation.PanelNavy, 1f);
 
             var remainingBoss = Mathf.Max(0f, director.Route.BossSpawnTime - director.Elapsed);
-            var timerText = director.BossSpawned ? "DEFEAT THE JOTUNN" : $"JOTUNN IN {FormatTime(remainingBoss)}";
+            var timerText = GameplayHudLabels.ResolveBossObjective(director.Route, remainingBoss);
             var timerLine = $"{FormatTime(director.Elapsed)} / {FormatTime(director.SelectedMap.Duration)}  •  {timerText}";
 
             GUI.Label(new Rect(strip.x + 12f, strip.y + 6f, strip.width * 0.55f, 24f), timerLine, styles.Micro);
@@ -232,29 +296,60 @@ namespace ProjectExpedition
             }
 
             var loot = director.LootProgress;
-            var definition = loot.TrackedDefinition ?? LootEffectCatalog.DefaultRunLoot;
-            var required = loot.RequiredCount;
-            if (required <= 0)
+            var definition = loot.GetLeadingProgressDefinition();
+            var required = loot.GetRequiredCount(definition);
+            if (required <= 0 || definition == null)
             {
                 return;
             }
 
             var effect = director.TemporaryEffect;
-            var effectActive = effect != null && effect.HasActiveEffect && effect.ActiveDefinition != null;
+            var activeEffects = effect?.ActiveEffects;
+            var hasActiveEffects = activeEffects != null && activeEffects.Count > 0;
             var stripLeft = screen.width - GameplayHudLayoutMetrics.ObjectiveRailWidth - GameplayHudLayoutMetrics.ScreenPadding;
             var stripTop = GameplayHudLayoutMetrics.ResolveLootStripTop(director);
             var strip = new Rect(
                 stripLeft,
                 stripTop,
                 GameplayHudLayoutMetrics.ObjectiveRailWidth,
+                GameplayHudLayoutMetrics.LootPanelTotalHeight);
+
+            var summaryRect = new Rect(
+                strip.x,
+                strip.y,
+                strip.width,
                 GameplayHudLayoutMetrics.LootStripHeight);
 
+            var trackerRect = new Rect(
+                strip.x,
+                strip.y + GameplayHudLayoutMetrics.LootStripHeight + GameplayHudLayoutMetrics.LootPanelInnerGap,
+                strip.width,
+                GameplayHudLayoutMetrics.LootColorTrackerHeight);
+
+            SurvivorsStylePresentation.DrawFlatPanel(strip, SurvivorsStylePresentation.PanelNavyInset, 1f,
+                new Color(0.18f, 0.24f, 0.32f, 0.85f));
+
+            DrawLootSummaryStrip(summaryRect, loot, definition, required, activeEffects,
+                hasActiveEffects, styles);
+
+            DrawLootColorTracker(trackerRect, loot, effect, styles);
+        }
+
+        private static void DrawLootSummaryStrip(
+            Rect strip,
+            SharedLootProgressModel loot,
+            LootEffectDefinition definition,
+            int required,
+            IReadOnlyList<ActiveTemporaryEffect> activeEffects,
+            bool hasActiveEffects,
+            SurvivorsHudStyles styles)
+        {
             var theme = definition.ThemeColor;
-            var nearActivation = loot.IsNearActivation && !effectActive;
-            var panelColor = effectActive || nearActivation
+            var nearActivation = loot.IsNearActivation(definition) && !hasActiveEffects;
+            var panelColor = hasActiveEffects || nearActivation
                 ? new Color(theme.r * 0.22f, theme.g * 0.22f, theme.b * 0.22f, 0.96f)
                 : SurvivorsStylePresentation.PanelNavyInset;
-            var borderColor = effectActive
+            var borderColor = hasActiveEffects
                 ? theme
                 : nearActivation
                     ? Color.Lerp(theme, SurvivorsStylePresentation.BorderGoldBright,
@@ -270,23 +365,273 @@ namespace ProjectExpedition
 
             var counterStyle = styles.Caption;
             counterStyle.normal.textColor = theme;
-            var counter = effectActive
-                ? "ACTIVE"
-                : $"{loot.CurrentCount}/{required}";
+            var currentCount = loot.GetCount(definition);
+            var counter = hasActiveEffects
+                ? BuildActiveEffectCounter(activeEffects)
+                : $"{currentCount}/{required}";
             GUI.Label(new Rect(strip.x + 30f, strip.y + 18f, strip.width - 38f, 16f), counter, counterStyle);
 
             var progressRect = new Rect(strip.x + 8f, strip.y + 36f, strip.width - 16f, 10f);
-            var progressFill = effectActive
-                ? effect.Remaining / Mathf.Max(0.01f, effect.ActiveDefinition.EffectDuration)
-                : loot.CurrentCount / (float)required;
-            DrawLootProgressBar(progressRect, progressFill, theme, effectActive);
+            var progressFill = hasActiveEffects
+                ? ResolveActiveEffectProgressFill(activeEffects)
+                : currentCount / (float)required;
+            DrawLootProgressBar(progressRect, progressFill, theme, hasActiveEffects);
 
-            var hint = effectActive
-                ? $"REGEN {effect.Remaining:0.0}s"
+            var hint = hasActiveEffects
+                ? BuildActiveEffectHint(activeEffects)
                 : nearActivation
                     ? "NEAR ACTIVATION"
-                    : $"COLLECT {required} FOR PARTY REGEN";
+                    : BuildCollectionHint(definition, required);
             GUI.Label(new Rect(strip.x + 8f, strip.y + 48f, strip.width - 16f, 12f), hint, styles.Hint);
+        }
+
+        private static void DrawLootColorTracker(
+            Rect trackerRect,
+            SharedLootProgressModel loot,
+            SharedTemporaryEffectModel effect,
+            SurvivorsHudStyles styles)
+        {
+            SurvivorsStylePresentation.DrawFlatPanel(trackerRect, new Color(0.03f, 0.06f, 0.10f, 0.98f), 1f);
+
+            GUI.Label(
+                new Rect(trackerRect.x + 8f, trackerRect.y + 3f, trackerRect.width - 16f, 11f),
+                "ALL COLORS",
+                styles.Micro);
+
+            var rowTop = trackerRect.y + 14f;
+            var definitions = DevelopmentTuningResolver.ResolveAllLootDefinitions();
+
+            for (var i = 0; i < definitions.Count; i++)
+            {
+                var definition = definitions[i];
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var rowRect = new Rect(
+                    trackerRect.x + 6f,
+                    rowTop + i * GameplayHudLayoutMetrics.LootColorTrackerRowHeight,
+                    trackerRect.width - 12f,
+                    GameplayHudLayoutMetrics.LootColorTrackerRowHeight - 1f);
+
+                DrawLootColorTrackerRow(rowRect, loot, effect, definition, styles);
+            }
+        }
+
+        private static void DrawLootColorTrackerRow(
+            Rect rowRect,
+            SharedLootProgressModel loot,
+            SharedTemporaryEffectModel effect,
+            LootEffectDefinition definition,
+            SurvivorsHudStyles styles)
+        {
+            var theme = definition.ThemeColor;
+            var required = loot.GetRequiredCount(definition);
+            var currentCount = loot.GetCount(definition);
+            var isActive = effect != null && effect.IsActive(definition.Id);
+            var isNearActivation = !isActive && loot.IsNearActivation(definition);
+            var hasProgress = currentCount > 0 || isActive;
+
+            if (isNearActivation)
+            {
+                var pulse = 0.35f + Mathf.Abs(Mathf.Sin(Time.time * 6f)) * 0.35f;
+                var highlightBorder = Color.Lerp(theme, SurvivorsStylePresentation.BorderGoldBright, pulse);
+                SurvivorsStylePresentation.DrawFlatPanel(rowRect, new Color(0.04f, 0.08f, 0.12f, 0.95f), 1f,
+                    highlightBorder);
+            }
+            else if (hasProgress)
+            {
+                SurvivorsStylePresentation.DrawFlatPanel(rowRect,
+                    new Color(theme.r * 0.12f, theme.g * 0.12f, theme.b * 0.12f, 0.92f), 1f,
+                    new Color(theme.r * 0.45f, theme.g * 0.45f, theme.b * 0.45f, 0.75f));
+            }
+
+            var iconRect = new Rect(rowRect.x + 3f, rowRect.y + 1f, 12f, 12f);
+            ItemPresentation.DrawItemIcon(iconRect, definition.Id, ItemIconSize.Small, false, theme);
+
+            var labelStyle = styles.Micro;
+            labelStyle.normal.textColor = hasProgress
+                ? Color.Lerp(SurvivorsStylePresentation.TextLight, theme, 0.35f)
+                : SurvivorsStylePresentation.TextMuted;
+            GUI.Label(new Rect(rowRect.x + 18f, rowRect.y + 1f, 52f, 12f), ResolveLootTrackerLabel(definition),
+                labelStyle);
+
+            var counterStyle = styles.Caption;
+            counterStyle.normal.textColor = isActive ? theme : labelStyle.normal.textColor;
+            var counterText = isActive
+                ? ResolveActiveTimerLabel(effect, definition.Id)
+                : $"{currentCount}/{required}";
+            GUI.Label(new Rect(rowRect.x + 72f, rowRect.y + 1f, 38f, 12f), counterText, counterStyle);
+
+            var barRect = new Rect(rowRect.x + 112f, rowRect.y + 4f, rowRect.width - 116f, 6f);
+            var barFill = isActive
+                ? ResolveActiveEffectProgressFillForDefinition(effect, definition.Id)
+                : required > 0
+                    ? currentCount / (float)required
+                    : 0f;
+            DrawLootProgressBar(barRect, barFill, theme, isActive);
+        }
+
+        private static string ResolveLootTrackerLabel(LootEffectDefinition definition)
+        {
+            switch (definition.EffectType)
+            {
+                case TemporaryEffectType.Regeneration:
+                    return "HEAL";
+                case TemporaryEffectType.CriticalChance:
+                    return "CRIT";
+                case TemporaryEffectType.MoveSpeed:
+                    return "SPEED";
+                case TemporaryEffectType.DamageBoost:
+                    return "DMG";
+                case TemporaryEffectType.Invincibility:
+                    return "SHLD";
+                default:
+                    return "LOOT";
+            }
+        }
+
+        private static string ResolveActiveTimerLabel(SharedTemporaryEffectModel effect, string definitionId)
+        {
+            if (effect == null)
+            {
+                return "ACTIVE";
+            }
+
+            for (var i = 0; i < effect.ActiveEffects.Count; i++)
+            {
+                var activeEffect = effect.ActiveEffects[i];
+                if (activeEffect.Definition.Id != definitionId)
+                {
+                    continue;
+                }
+
+                return $"{activeEffect.Remaining:0.0}s";
+            }
+
+            return "ACTIVE";
+        }
+
+        private static float ResolveActiveEffectProgressFillForDefinition(
+            SharedTemporaryEffectModel effect,
+            string definitionId)
+        {
+            if (effect == null)
+            {
+                return 0f;
+            }
+
+            for (var i = 0; i < effect.ActiveEffects.Count; i++)
+            {
+                var activeEffect = effect.ActiveEffects[i];
+                if (activeEffect.Definition.Id != definitionId)
+                {
+                    continue;
+                }
+
+                return activeEffect.Remaining /
+                    Mathf.Max(0.01f, activeEffect.Definition.EffectDuration);
+            }
+
+            return 0f;
+        }
+
+        private static string BuildActiveEffectCounter(IReadOnlyList<ActiveTemporaryEffect> activeEffects)
+        {
+            if (activeEffects.Count == 1)
+            {
+                return "ACTIVE";
+            }
+
+            return $"ACTIVE x{activeEffects.Count}";
+        }
+
+        private static float ResolveActiveEffectProgressFill(IReadOnlyList<ActiveTemporaryEffect> activeEffects)
+        {
+            var longestRemaining = 0f;
+            var longestDuration = 0.01f;
+
+            for (var i = 0; i < activeEffects.Count; i++)
+            {
+                var activeEffect = activeEffects[i];
+                if (activeEffect.Remaining > longestRemaining)
+                {
+                    longestRemaining = activeEffect.Remaining;
+                    longestDuration = Mathf.Max(0.01f, activeEffect.Definition.EffectDuration);
+                }
+            }
+
+            return longestRemaining / longestDuration;
+        }
+
+        private static string BuildActiveEffectHint(IReadOnlyList<ActiveTemporaryEffect> activeEffects)
+        {
+            if (activeEffects.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            if (activeEffects.Count == 1)
+            {
+                return BuildEffectTimerHint(activeEffects[0]);
+            }
+
+            var hintParts = new System.Text.StringBuilder();
+            for (var i = 0; i < activeEffects.Count && i < 2; i++)
+            {
+                if (i > 0)
+                {
+                    hintParts.Append("  ");
+                }
+
+                hintParts.Append(BuildEffectTimerHint(activeEffects[i]));
+            }
+
+            if (activeEffects.Count > 2)
+            {
+                hintParts.Append($" +{activeEffects.Count - 2}");
+            }
+
+            return hintParts.ToString();
+        }
+
+        private static string BuildCollectionHint(LootEffectDefinition definition, int required)
+        {
+            switch (definition.EffectType)
+            {
+                case TemporaryEffectType.Regeneration:
+                    return $"COLLECT {required} FOR PARTY REGEN";
+                case TemporaryEffectType.CriticalChance:
+                    return $"COLLECT {required} FOR PARTY CRIT";
+                case TemporaryEffectType.MoveSpeed:
+                    return $"COLLECT {required} FOR PARTY SPEED";
+                case TemporaryEffectType.DamageBoost:
+                    return $"COLLECT {required} FOR PARTY DAMAGE";
+                case TemporaryEffectType.Invincibility:
+                    return $"COLLECT {required} FOR PARTY SHIELD";
+                default:
+                    return $"COLLECT {required} TO ACTIVATE";
+            }
+        }
+
+        private static string BuildEffectTimerHint(ActiveTemporaryEffect activeEffect)
+        {
+            switch (activeEffect.Definition.EffectType)
+            {
+                case TemporaryEffectType.Regeneration:
+                    return $"REGEN {activeEffect.Remaining:0.0}s";
+                case TemporaryEffectType.CriticalChance:
+                    return $"CRIT {activeEffect.Remaining:0.0}s";
+                case TemporaryEffectType.MoveSpeed:
+                    return $"SPEED {activeEffect.Remaining:0.0}s";
+                case TemporaryEffectType.DamageBoost:
+                    return $"DAMAGE {activeEffect.Remaining:0.0}s";
+                case TemporaryEffectType.Invincibility:
+                    return $"SHIELD {activeEffect.Remaining:0.0}s";
+                default:
+                    return $"{activeEffect.Remaining:0.0}s";
+            }
         }
 
         private static void DrawLootProgressBar(Rect rect, float fill, Color fillColor, bool pulsing)
@@ -317,14 +662,37 @@ namespace ProjectExpedition
         public static Color ResolveHealthBarColor(int playerIndex, GameDirector director, Color defaultColor)
         {
             var effect = director?.TemporaryEffect;
-            if (effect == null || !effect.HasActiveEffect || effect.ActiveDefinition == null)
+            if (effect == null || !effect.HasActiveEffect)
             {
                 return defaultColor;
             }
 
-            var applies = effect.ActiveDefinition.EffectTarget == TemporaryEffectTarget.WholeParty ||
-                effect.ActivatorPlayerIndex == playerIndex;
-            if (!applies || effect.ActiveDefinition.EffectType != TemporaryEffectType.Regeneration)
+            ActiveTemporaryEffect regenEffect = null;
+            ActiveTemporaryEffect shieldEffect = null;
+
+            for (var i = 0; i < effect.ActiveEffects.Count; i++)
+            {
+                var activeEffect = effect.ActiveEffects[i];
+                if (activeEffect.Definition.EffectType == TemporaryEffectType.Regeneration)
+                {
+                    regenEffect = activeEffect;
+                }
+
+                if (activeEffect.Definition.EffectType == TemporaryEffectType.Invincibility)
+                {
+                    shieldEffect = activeEffect;
+                }
+            }
+
+            var pulseTarget = regenEffect ?? shieldEffect;
+            if (pulseTarget == null)
+            {
+                return defaultColor;
+            }
+
+            var applies = pulseTarget.Definition.EffectTarget == TemporaryEffectTarget.WholeParty ||
+                pulseTarget.ActivatorPlayerIndex == playerIndex;
+            if (!applies)
             {
                 return defaultColor;
             }
@@ -335,8 +703,9 @@ namespace ProjectExpedition
                 pulse = 0.75f;
             }
 
-            var theme = effect.ActiveDefinition.ThemeColor;
-            return Color.Lerp(defaultColor, theme, pulse);
+            var theme = pulseTarget.Definition.ThemeColor;
+            var blendStrength = regenEffect != null ? pulse : pulse * 0.55f;
+            return Color.Lerp(defaultColor, theme, blendStrength);
         }
     }
 }

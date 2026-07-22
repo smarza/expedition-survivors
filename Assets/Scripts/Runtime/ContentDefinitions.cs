@@ -383,43 +383,30 @@ namespace ProjectExpedition
 
     public static class BalanceRules
     {
-        public const float PlayerCollisionRadius = 0.38f;
-        public const int RegularEnemyLevelOffset = 1;
-        public const int EliteEnemyLevelOffset = 2;
-        public const int BossEnemyLevelOffset = 3;
-        public const float ExperiencePerEnemyLevel = 0.12f;
-        public const float EliteExperienceMultiplier = 1.35f;
+        public const float DefaultPlayerCollisionRadius = 0.38f;
+        public const int DefaultRegularEnemyLevelOffset = 1;
+        public const int DefaultEliteEnemyLevelOffset = 2;
+        public const int DefaultBossEnemyLevelOffset = 3;
+        public const float DefaultExperiencePerEnemyLevel = 0.12f;
+        public const float DefaultEliteExperienceMultiplier = 1.35f;
+        public const float DefaultXpBase = 48f;
+        public const float DefaultXpLinear = 8f;
+        public const float DefaultXpPower = 1.35f;
+        public const float DefaultXpPowerScale = 2f;
+        public const float DefaultCoopXpMultiplier = 1.35f;
+        public const float DefaultUltimateCooldownFloor = 28f;
+        public const float DefaultUltimateCooldownUpgradeMultiplier = 0.9f;
 
-        public static int ExperienceToNext(int currentLevel, int playerCount)
-        {
-            var level = Mathf.Max(1, currentLevel);
-            var soloRequirement = 48f + level * 8f + Mathf.Pow(level, 1.35f) * 2f;
-            var partyMultiplier = playerCount > 1 ? 1.35f : 1f;
-            return Mathf.RoundToInt(soloRequirement * partyMultiplier);
-        }
+        public static float PlayerCollisionRadius => DevelopmentTuningResolver.PlayerCollisionRadius;
 
-        public static float UltimateCooldown(float baseCooldown, int cooldownUpgrades)
-        {
-            var multiplier = Mathf.Pow(0.9f, Mathf.Max(0, cooldownUpgrades));
-            return Mathf.Max(28f, baseCooldown * multiplier);
-        }
+        public static int ExperienceToNext(int currentLevel, int playerCount) =>
+            DevelopmentTuningResolver.ExperienceToNext(currentLevel, playerCount);
 
-        public static int ComputeEnemyLevel(int playerLevel, bool boss, bool elite)
-        {
-            var safePlayerLevel = Mathf.Max(1, playerLevel);
+        public static float UltimateCooldown(float baseCooldown, int cooldownUpgrades) =>
+            DevelopmentTuningResolver.UltimateCooldown(baseCooldown, cooldownUpgrades);
 
-            if (boss)
-            {
-                return safePlayerLevel + BossEnemyLevelOffset;
-            }
-
-            if (elite)
-            {
-                return safePlayerLevel + EliteEnemyLevelOffset;
-            }
-
-            return safePlayerLevel + RegularEnemyLevelOffset;
-        }
+        public static int ComputeEnemyLevel(int playerLevel, bool boss, bool elite) =>
+            DevelopmentTuningResolver.ComputeEnemyLevel(playerLevel, boss, elite);
 
         public static float LevelToDifficulty(int enemyLevel) => Mathf.Max(1f, enemyLevel);
 
@@ -428,22 +415,7 @@ namespace ProjectExpedition
             return Mathf.Max(timeDifficulty, LevelToDifficulty(enemyLevel));
         }
 
-        public static int ExperienceForEnemy(int baseExperienceRoll, int enemyLevel, bool elite, bool boss)
-        {
-            var safeLevel = Mathf.Max(1, enemyLevel);
-            var multiplier = 1f + (safeLevel - 1) * ExperiencePerEnemyLevel;
-
-            if (elite)
-            {
-                multiplier *= EliteExperienceMultiplier;
-            }
-
-            if (boss)
-            {
-                multiplier *= 1f;
-            }
-
-            return Mathf.Max(1, Mathf.RoundToInt(baseExperienceRoll * multiplier));
-        }
+        public static int ExperienceForEnemy(int baseExperienceRoll, int enemyLevel, bool elite, bool boss) =>
+            DevelopmentTuningResolver.ExperienceForEnemy(baseExperienceRoll, enemyLevel, elite, boss);
     }
 }

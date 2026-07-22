@@ -117,6 +117,27 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void TwinBoss_RequiresBothDefeatedBeforeExtraction()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("frostbound.scout");
+            route.MarkBossSpawned(2);
+
+            route.OnEnemyKilled(true, false);
+
+            Assert.That(route.BossesDefeatedCount, Is.EqualTo(1));
+            Assert.That(route.BossKilled, Is.False);
+            Assert.That(route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Boss));
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("ONE JOTUNN FALLS — THE OTHER STILL HUNTS"));
+
+            route.OnEnemyKilled(true, false);
+
+            Assert.That(route.BossesDefeatedCount, Is.EqualTo(2));
+            Assert.That(route.BossKilled, Is.True);
+            Assert.That(route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Extraction));
+        }
+
+        [Test]
         public void ResolveVictoryRelicId_GrantsWardenWhenOptionalObjectiveComplete()
         {
             var route = new SharedExpeditionRouteModel();

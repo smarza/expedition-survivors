@@ -40,13 +40,14 @@ namespace ProjectExpedition
         {
             _director = director;
             PlayerIndex = playerIndex;
-            Definition = definition ?? ContentCatalog.Character(playerIndex);
+            Definition = DevelopmentTuningResolver.ResolveCharacter(definition ?? ContentCatalog.Character(playerIndex));
             HeroName = Definition.Name;
             _heroColor = Definition.Color;
             _model.Begin(Definition.MaxHealth, Definition.MoveSpeed, Definition.Armor,
                 Definition.UltimateCooldown, Definition.UltimateDamage, Definition.UltimateRadius,
-                BalanceRules.UltimateCooldown);
-            Build.Initialize(director.SelectedMap.WeaponSlots, director.SelectedMap.GearSlots,
+                BalanceRules.UltimateCooldown, DevelopmentTuningResolver.DefaultMagnetRadius);
+            var resolvedMap = DevelopmentTuningResolver.ResolveMap(director.SelectedMap);
+            Build.Initialize(resolvedMap.WeaponSlots, resolvedMap.GearSlots,
                 Definition.StarterWeaponIds);
             _body = gameObject.AddComponent<SpriteRenderer>();
             _body.sprite = RuntimeAssets.Circle;
@@ -92,6 +93,20 @@ namespace ProjectExpedition
             Weapons.ApplyHeroMastery(Definition.Id, mastery);
         }
 
+        public void ReinitializeFromDefinition(CharacterDefinition definition)
+        {
+            if (definition == null || _director == null)
+            {
+                return;
+            }
+
+            Definition = definition;
+            HeroName = Definition.Name;
+            _model.Begin(Definition.MaxHealth, Definition.MoveSpeed, Definition.Armor,
+                Definition.UltimateCooldown, Definition.UltimateDamage, Definition.UltimateRadius,
+                BalanceRules.UltimateCooldown, DevelopmentTuningResolver.DefaultMagnetRadius);
+        }
+
         private void Update()
         {
             if (_director == null || _director.State != RunState.Playing) return;
@@ -117,7 +132,7 @@ namespace ProjectExpedition
             if (Definition == null || !_model.TryActivateUltimate()) return;
             _presentation.ShowUltimate();
             var effect = SharedEffectPipeline.CreateUltimate(_model);
-            _director.ResolveAreaEffect(transform.position, effect, true);
+            _director.ResolveAreaEffect(transform.position, effect, true, PlayerIndex);
             _director.ShowUltimate(transform.position, PlayerIndex, effect.Radius);
             _director.Announce($"{HeroName.ToUpperInvariant()} — {UltimateName.ToUpperInvariant()}", 2.2f);
         }
@@ -175,6 +190,25 @@ namespace ProjectExpedition
         public void ApplyTemporaryArmorAura(float amount, float durationSeconds) =>
             _model.ApplyTemporaryArmorAura(amount, durationSeconds);
 
+        public void ApplyTemporaryLootMoveSpeed(string instanceKey, float amount) =>
+            _model.ApplyTemporaryLootMoveSpeed(instanceKey, amount);
+
+        public void ApplyTemporaryLootCriticalBonus(string instanceKey, float amount) =>
+            _model.ApplyTemporaryLootCriticalBonus(instanceKey, amount);
+
+        public void ApplyTemporaryLootDamageMultiplier(string instanceKey, float multiplier) =>
+            _model.ApplyTemporaryLootDamageMultiplier(instanceKey, multiplier);
+
+        public void RemoveTemporaryLootBonus(string instanceKey) =>
+            _model.RemoveTemporaryLootBonus(instanceKey);
+
+        public void RefreshTemporaryInvulnerability(float remaining) =>
+            _model.RefreshTemporaryInvulnerability(remaining);
+
+        public float TemporaryCriticalBonus => _model.TemporaryCriticalBonus;
+
+        public float TemporaryDamageMultiplier => _model.TemporaryDamageMultiplier;
+
         public void ApplyBuildResult(BuildApplyResult result)
         {
             if (result == null || result.Item == null) return;
@@ -205,15 +239,16 @@ namespace ProjectExpedition
                 return;
             }
 
-            if (!effect.HasActiveEffect || effect.ActiveDefinition == null)
+            var recent = effect.GetMostRecentActiveEffect();
+            if (recent == null || recent.Definition == null)
             {
                 _effectGlow.SetEffect(Color.clear, false);
                 return;
             }
 
-            var appliesToPlayer = effect.ActiveDefinition.EffectTarget == TemporaryEffectTarget.WholeParty ||
-                effect.ActivatorPlayerIndex == PlayerIndex;
-            _effectGlow.SetEffect(effect.ActiveDefinition.ThemeColor, appliesToPlayer);
+            var appliesToPlayer = recent.Definition.EffectTarget == TemporaryEffectTarget.WholeParty ||
+                recent.ActivatorPlayerIndex == PlayerIndex;
+            _effectGlow.SetEffect(recent.Definition.ThemeColor, appliesToPlayer);
         }
     }
 }

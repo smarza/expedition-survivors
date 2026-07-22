@@ -6,7 +6,9 @@ namespace ProjectExpedition
     {
         Regeneration,
         MoveSpeed,
-        CriticalChance
+        CriticalChance,
+        DamageBoost,
+        Invincibility
     }
 
     public enum LootCollectWhileActive : byte
@@ -90,16 +92,105 @@ namespace ProjectExpedition
             LootCollectWhileActive.Discard,
             TemporaryEffectTarget.WholeParty);
 
+        public static readonly LootEffectDefinition CriticalFlare = new LootEffectDefinition(
+            "loot.critical_flare",
+            "Critical Flare",
+            new Color(1f, 0.55f, 0.12f),
+            0.04f,
+            0.005f,
+            0.08f,
+            10,
+            8f,
+            0.25f,
+            TemporaryEffectType.CriticalChance,
+            LootCollectWhileActive.Discard,
+            TemporaryEffectTarget.WholeParty);
+
+        public static readonly LootEffectDefinition SwiftTrail = new LootEffectDefinition(
+            "loot.swift_trail",
+            "Swift Trail",
+            new Color(0.35f, 0.92f, 0.38f),
+            0.04f,
+            0.005f,
+            0.08f,
+            10,
+            8f,
+            0.46f,
+            TemporaryEffectType.MoveSpeed,
+            LootCollectWhileActive.Discard,
+            TemporaryEffectTarget.WholeParty);
+
+        public static readonly LootEffectDefinition WrathEmbers = new LootEffectDefinition(
+            "loot.wrath_embers",
+            "Wrath Embers",
+            new Color(0.95f, 0.22f, 0.18f),
+            0.04f,
+            0.005f,
+            0.08f,
+            10,
+            8f,
+            1.25f,
+            TemporaryEffectType.DamageBoost,
+            LootCollectWhileActive.Discard,
+            TemporaryEffectTarget.WholeParty);
+
+        public static readonly LootEffectDefinition AegisVeil = new LootEffectDefinition(
+            "loot.aegis_veil",
+            "Aegis Veil",
+            new Color(0.72f, 0.32f, 0.95f),
+            0.04f,
+            0.005f,
+            0.08f,
+            10,
+            6f,
+            1f,
+            TemporaryEffectType.Invincibility,
+            LootCollectWhileActive.Discard,
+            TemporaryEffectTarget.WholeParty);
+
+        public static readonly LootEffectDefinition[] All =
+        {
+            HealingEmbers,
+            CriticalFlare,
+            SwiftTrail,
+            WrathEmbers,
+            AegisVeil
+        };
+
         public static LootEffectDefinition FindById(string id)
         {
-            if (HealingEmbers.Id == id)
+            for (var i = 0; i < All.Length; i++)
             {
-                return HealingEmbers;
+                if (All[i].Id == id)
+                {
+                    return All[i];
+                }
             }
 
             return null;
         }
 
         public static LootEffectDefinition DefaultRunLoot => HealingEmbers;
+
+        public static float EvaluateAnyDropChance(int playerLevel, int kills, int playerCount)
+        {
+            if (All.Length == 0)
+            {
+                return 0f;
+            }
+
+            return All[0].EvaluateDropChance(playerLevel, kills, playerCount);
+        }
+
+        public static LootEffectDefinition RollDropDefinition(RunRandom random)
+        {
+            if (random == null || All.Length == 0)
+            {
+                return DefaultRunLoot;
+            }
+
+            var index = random.Range(0, All.Length);
+            return All[index];
+        }
     }
 }

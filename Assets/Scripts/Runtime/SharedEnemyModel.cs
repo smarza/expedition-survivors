@@ -62,7 +62,7 @@ namespace ProjectExpedition
         }
 
         public EnemyAdvanceResult AdvanceTowards(Vector2 targetPosition, float targetRadius,
-            float deltaTime, IReadOnlyList<ObstacleDefinition> obstacles = null)
+            float deltaTime, IReadOnlyList<ObstacleDefinition> obstacles = null, float speedMultiplier = 1f)
         {
             if (!Alive || deltaTime <= 0f) return EnemyAdvanceResult.None;
 
@@ -70,7 +70,7 @@ namespace ProjectExpedition
             var delta = targetPosition - Position;
             if (delta.sqrMagnitude > MinimumMovementDistanceSquared)
             {
-                var maxStep = Speed * deltaTime;
+                var maxStep = Speed * deltaTime * Mathf.Max(0f, speedMultiplier);
                 Position = SharedMovementCollision.AdvanceCircleTowardsTarget(
                     Position, Radius, targetPosition, maxStep, obstacles);
                 result |= EnemyAdvanceResult.Moved;

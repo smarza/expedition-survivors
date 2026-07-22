@@ -130,6 +130,16 @@ namespace ProjectExpedition
             return false;
         }
 
+        public static bool DevelopmentTuningPressed()
+        {
+            if (Keyboard.current != null && Keyboard.current.f4Key.wasPressedThisFrame)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public static int MenuHorizontalPressed(int playerIndex, int playerCount)
         {
             EnsureSession(playerCount);

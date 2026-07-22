@@ -89,7 +89,10 @@ namespace ProjectExpedition
             StartsActive = startsActive;
         }
 
-        public static bool TryGet(string weaponId, out WeaponProfile profile)
+        public static bool TryGet(string weaponId, out WeaponProfile profile) =>
+            DevelopmentTuningResolver.TryResolveWeapon(weaponId, out profile);
+
+        public static bool TryGetBase(string weaponId, out WeaponProfile profile)
         {
             for (var i = 0; i < All.Length; i++)
             {
@@ -105,6 +108,8 @@ namespace ProjectExpedition
             profile = default;
             return false;
         }
+
+        public static WeaponProfile[] AllWeapons => All;
 
         private static readonly WeaponProfile[] All =
         {

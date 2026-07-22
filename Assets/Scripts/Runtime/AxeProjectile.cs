@@ -161,7 +161,10 @@ namespace ProjectExpedition
 
                 _hits.Add(enemy);
                 var knockback = _flight.Critical ? _criticalKnockback : _knockback;
-                enemy.TakeDamage(_flight.Damage, knockback, transform.position);
+                var damage = _owner != null
+                    ? _director.ApplyWeaponDamage(_flight.Damage, _owner.PlayerIndex)
+                    : _flight.Damage;
+                enemy.TakeDamage(damage, knockback, transform.position);
                 _director.Present(PresentationCue.Impact, enemy.Position, _renderer.color,
                     _flight.Critical ? 0.8f : 0.45f);
                 ApplyEvolvedHitEffects(enemy);
@@ -192,7 +195,9 @@ namespace ProjectExpedition
             {
                 _director.ResolveAreaEffect(
                     enemy.Position,
-                    SharedEffectPipeline.CreateNorthGaleCritExplosion(_flight.Damage));
+                    SharedEffectPipeline.CreateNorthGaleCritExplosion(_flight.Damage),
+                    false,
+                    _owner != null ? _owner.PlayerIndex : -1);
                 return;
             }
 
@@ -203,7 +208,9 @@ namespace ProjectExpedition
 
             _director.ResolveAreaEffect(
                 enemy.Position,
-                SharedEffectPipeline.CreateJotunnCleaverExplosion(_flight.Damage));
+                SharedEffectPipeline.CreateJotunnCleaverExplosion(_flight.Damage),
+                false,
+                _owner != null ? _owner.PlayerIndex : -1);
         }
 
         private void TryChainToNearbyEnemies(Enemy sourceEnemy)
@@ -230,7 +237,10 @@ namespace ProjectExpedition
 
                 _hits.Add(enemy);
                 var chainEffect = SharedEffectPipeline.CreateSignalStormChain(_flight.Damage);
-                enemy.TakeDamage(chainEffect.Damage, chainEffect.Knockback, sourceEnemy.Position);
+                var chainDamage = _owner != null
+                    ? _director.ApplyWeaponDamage(chainEffect.Damage, _owner.PlayerIndex)
+                    : chainEffect.Damage;
+                enemy.TakeDamage(chainDamage, chainEffect.Knockback, sourceEnemy.Position);
                 _director.Present(PresentationCue.Impact, enemy.Position, _renderer.color, 0.55f);
                 _remainingChainHits--;
             }

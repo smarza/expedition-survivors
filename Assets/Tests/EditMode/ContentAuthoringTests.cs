@@ -42,6 +42,20 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void LootEffectCatalog_ContainsFiveColorLootEffects()
+        {
+            Assert.That(LootEffectCatalog.All.Length, Is.EqualTo(5));
+            Assert.That(LootEffectCatalog.FindById("loot.critical_flare"), Is.Not.Null);
+            Assert.That(LootEffectCatalog.FindById("loot.swift_trail"), Is.Not.Null);
+            Assert.That(LootEffectCatalog.FindById("loot.wrath_embers"), Is.Not.Null);
+            Assert.That(LootEffectCatalog.FindById("loot.aegis_veil"), Is.Not.Null);
+            Assert.That(LootEffectCatalog.CriticalFlare.EffectType, Is.EqualTo(TemporaryEffectType.CriticalChance));
+            Assert.That(LootEffectCatalog.SwiftTrail.EffectType, Is.EqualTo(TemporaryEffectType.MoveSpeed));
+            Assert.That(LootEffectCatalog.WrathEmbers.EffectType, Is.EqualTo(TemporaryEffectType.DamageBoost));
+            Assert.That(LootEffectCatalog.AegisVeil.EffectType, Is.EqualTo(TemporaryEffectType.Invincibility));
+        }
+
+        [Test]
         public void ItemCatalog_ContainsTwelveEvolutionsAndThirtySlotItems()
         {
             var evolutionCount = 0;

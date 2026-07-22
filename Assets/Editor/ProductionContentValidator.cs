@@ -71,30 +71,39 @@ namespace ProjectExpedition.Editor
             report =
                 $"{database.characters.Length} characters, {database.maps.Length} maps, " +
                 $"{database.items.Length} items, {database.enemies.Length} enemies, " +
-                $"1 loot effect.";
+                $"{LootEffectCatalog.All.Length} loot effects.";
             return true;
         }
 
         private static bool ValidateLootDefinitions(StringBuilder messages)
         {
-            var healing = LootEffectCatalog.HealingEmbers;
-
-            if (healing == null || string.IsNullOrWhiteSpace(healing.Id))
+            for (var i = 0; i < LootEffectCatalog.All.Length; i++)
             {
-                messages.AppendLine("Default loot effect is missing a stable id.");
-                return false;
-            }
+                var loot = LootEffectCatalog.All[i];
 
-            if (healing.RequiredCount <= 0 || healing.EffectDuration <= 0f || healing.EffectIntensity <= 0f)
-            {
-                messages.AppendLine("Default loot effect has invalid activation or duration values.");
-                return false;
-            }
+                if (loot == null || string.IsNullOrWhiteSpace(loot.Id))
+                {
+                    messages.AppendLine($"Loot effect at index {i} is missing a stable id.");
+                    return false;
+                }
 
-            if (healing.MinimumDropChance <= 0f || healing.BaseDropChance < healing.MinimumDropChance)
-            {
-                messages.AppendLine("Default loot effect has invalid drop chance bounds.");
-                return false;
+                if (loot.RequiredCount <= 0 || loot.EffectDuration <= 0f)
+                {
+                    messages.AppendLine($"Loot effect '{loot.Id}' has invalid activation or duration values.");
+                    return false;
+                }
+
+                if (loot.EffectType != TemporaryEffectType.Invincibility && loot.EffectIntensity <= 0f)
+                {
+                    messages.AppendLine($"Loot effect '{loot.Id}' has invalid intensity.");
+                    return false;
+                }
+
+                if (loot.MinimumDropChance <= 0f || loot.BaseDropChance < loot.MinimumDropChance)
+                {
+                    messages.AppendLine($"Loot effect '{loot.Id}' has invalid drop chance bounds.");
+                    return false;
+                }
             }
 
             return true;

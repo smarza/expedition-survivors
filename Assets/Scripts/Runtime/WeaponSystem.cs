@@ -106,6 +106,7 @@ namespace ProjectExpedition
                 var usesCritical = weapon.WeaponId == ItemCatalog.FrostAxe.Id
                     ? Model.CriticalChance
                     : weapon.CriticalChance;
+                usesCritical = Mathf.Min(0.55f, usesCritical + _owner.TemporaryCriticalBonus);
                 var critical = usesCritical > 0f && _director.Rng.Chance(usesCritical);
                 var effect = weapon.WeaponId == ItemCatalog.FrostAxe.Id
                     ? Model.CreateAxeEffect(critical)
@@ -131,7 +132,7 @@ namespace ProjectExpedition
             var effect = weapon.WeaponId == ItemCatalog.RavenGuard.Id
                 ? Model.CreateRavenGuardEffect()
                 : CreateOwnerPulseEffect(weapon);
-            var hits = _director.ResolveAreaEffect(_owner.transform.position, effect);
+            var hits = _director.ResolveAreaEffect(_owner.transform.position, effect, false, _owner.PlayerIndex);
             var healing = weapon.WeaponId == ItemCatalog.RavenGuard.Id
                 ? Model.CalculateRavenGuardHealing(hits)
                 : weapon.CalculatePulseHealing(hits);
@@ -259,7 +260,7 @@ namespace ProjectExpedition
             {
                 var bladePosition = weapon.CalculateOrbitPosition(ownerPosition, bladeIndex);
                 var effect = weapon.CreateOrbitEffect();
-                _director.ResolveAreaEffect(bladePosition, effect);
+                _director.ResolveAreaEffect(bladePosition, effect, false, _owner.PlayerIndex);
                 _director.Present(PresentationCue.ProjectileTrail, bladePosition, _owner.Definition.Color, 0.12f);
             }
         }

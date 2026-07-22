@@ -65,6 +65,36 @@ namespace ProjectExpedition
             return "THE JOTUNN WARLORD CRASHES THROUGH THE SHORE — HOLD THE LINE";
         }
 
+        public static string ResolveTwinBossEntranceAnnouncement(string biomeId)
+        {
+            if (biomeId == CanopyId)
+            {
+                return "TWIN HEARTWOODS — THE CANOPY SPLITS OPEN";
+            }
+
+            if (biomeId == RelayId)
+            {
+                return "TWIN SIEGE AUTOMATA — THE RELAY BUCKLES";
+            }
+
+            return "TWIN JOTUNN — THE SHORE SPLITS OPEN";
+        }
+
+        public static string ResolveTwinBossRemainingAnnouncement(string biomeId)
+        {
+            if (biomeId == CanopyId)
+            {
+                return "ONE COLOSSUS FALLS — THE OTHER STILL HUNTS";
+            }
+
+            if (biomeId == RelayId)
+            {
+                return "ONE AUTOMATON FALLS — THE OTHER STILL HUNTS";
+            }
+
+            return "ONE JOTUNN FALLS — THE OTHER STILL HUNTS";
+        }
+
         public static string ResolveEliteSpawnAnnouncement(string biomeId)
         {
             if (biomeId == CanopyId)

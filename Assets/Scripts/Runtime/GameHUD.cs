@@ -97,6 +97,7 @@ namespace ProjectExpedition
         private CharacterSelectUiToolkitScreen _characterSelectUiToolkit;
         private SurvivorsHudStyles _survivorsHudStyles;
         private int _titleSelection;
+        private readonly DevelopmentTuningUiState _developmentTuningState = new DevelopmentTuningUiState();
         private const int MainMenuButtonCount = 4;
         private static readonly BindingAction[] RebindableActions =
         {
@@ -171,6 +172,11 @@ namespace ProjectExpedition
             }
 
             _previousRunState = currentState;
+
+            if (_director.ShowDevelopmentTuning)
+            {
+                DevelopmentTuningPresentation.Update(_director, _developmentTuningState);
+            }
 
             switch (currentState)
             {
@@ -665,6 +671,22 @@ namespace ProjectExpedition
                 DrawBorder(new Rect(440, 925, 1040, 78), new Color(0.32f, 0.68f, 0.78f, 0.9f), 3f);
                 GUI.Label(new Rect(470, 939, 980, 50), _announcement, _center);
             }
+
+            if (_director.ShowDevelopmentTuning)
+            {
+                EnsureSurvivorsStyles();
+                DevelopmentTuningPresentation.Draw(
+                    _director,
+                    _developmentTuningState,
+                    _survivorsHudStyles,
+                    _button,
+                    _cardTitle,
+                    _center,
+                    _micro,
+                    DrawPanel,
+                    DrawSelection);
+            }
+
             GUI.matrix = oldMatrix;
             GUI.color = Color.white;
         }
@@ -2403,7 +2425,7 @@ namespace ProjectExpedition
             SurvivorsStylePresentation.DrawFlatPanel(topStrip, SurvivorsStylePresentation.PanelNavy, 1f);
 
             var remainingBoss = Mathf.Max(0f, _director.Route.BossSpawnTime - _director.Elapsed);
-            var timerText = _director.BossSpawned ? "DEFEAT THE JOTUNN" : $"JOTUNN IN {FormatTime(remainingBoss)}";
+            var timerText = GameplayHudLabels.ResolveBossObjective(_director.Route, remainingBoss);
             GUI.Label(new Rect(topStrip.x + 12f, topStrip.y + 8f, topStrip.width * 0.55f, 20f),
                 $"{FormatTime(_director.Elapsed)} / {FormatTime(_director.SelectedMap.Duration)}  •  {timerText}", _vsMicro);
             GUI.Label(new Rect(topStrip.x + topStrip.width * 0.5f, topStrip.y + 8f, topStrip.width * 0.48f, 20f),
@@ -2460,6 +2482,7 @@ namespace ProjectExpedition
             DrawFirstRunHints();
             if (_director.ShowPerformanceMetrics) DrawPerformancePanel();
             TouchControlsPresentation.Draw(_director);
+            GameplayHudPresentation.DrawBossProximityVignette(new Rect(0f, 0f, 1920f, 1080f), _director);
         }
 
         private void DrawBuildTrayBottomBar(Rect bottomBar)
