@@ -271,6 +271,25 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void ItemCatalog_AllGearItemsResolveGearStatIconKind()
+        {
+            for (var i = 0; i < ItemCatalog.All.Length; i++)
+            {
+                var item = ItemCatalog.All[i];
+
+                if (item == null || item.Category != ItemCategory.Gear)
+                {
+                    continue;
+                }
+
+                Assert.That(
+                    ItemPresentation.TryResolveGearStatIconKind(item.EffectAtLevel(1), out _),
+                    Is.True,
+                    item.Id);
+            }
+        }
+
+        [Test]
         public void ItemCatalog_AllEntriesResolveThroughItemPresentationFallback()
         {
             for (var i = 0; i < ItemCatalog.All.Length; i++)

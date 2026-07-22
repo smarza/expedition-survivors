@@ -109,13 +109,24 @@ namespace ProjectExpedition
 
         private void Update()
         {
-            if (_director == null || _director.State != RunState.Playing) return;
+            if (_director == null || _director.State != RunState.Playing)
+            {
+                return;
+            }
+
             if (IsDowned)
             {
                 UpdateRevival();
                 return;
             }
+
             _model.Advance(Time.deltaTime);
+
+            if (!_director.IsExpeditionCombatActive)
+            {
+                _presentation.Tick(Vector2.zero, _model.InvulnerabilityRemaining > 0f, false, Time.deltaTime);
+                return;
+            }
 
             var move = LocalInputRouter.ReadMovement(PlayerIndex, _director.Players.Count);
             var nextPosition = _model.CalculateRequestedPosition((Vector2)transform.position, move,
@@ -123,7 +134,11 @@ namespace ProjectExpedition
             transform.position = _director.ConstrainToCoopRange(this, nextPosition);
             _presentation.Tick(move, _model.InvulnerabilityRemaining > 0f, false, Time.deltaTime);
 
-            if (LocalInputRouter.UltimatePressed(PlayerIndex, _director.Players.Count)) ActivateUltimate();
+            if (LocalInputRouter.UltimatePressed(PlayerIndex, _director.Players.Count))
+            {
+                ActivateUltimate();
+            }
+
             Weapons.Tick(Time.deltaTime);
         }
 

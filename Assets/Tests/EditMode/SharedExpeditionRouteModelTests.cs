@@ -13,11 +13,47 @@ namespace ProjectExpedition.Tests
 
             Assert.That(route.MapId, Is.EqualTo("frostbound.scout"));
             Assert.That(route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Shoreline));
+            Assert.That(route.IsDeploying, Is.True);
             Assert.That(route.RequiredKillObjective, Is.EqualTo(150));
             Assert.That(route.OptionalShardObjective, Is.EqualTo(5));
             Assert.That(route.ExtractionBeaconX, Is.Zero.Within(0.0001f));
             Assert.That(route.ExtractionBeaconY, Is.EqualTo(14f).Within(0.0001f));
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("RAISING SHORE CAMP — THE EXPEDITION BEGINS"));
+        }
+
+        [Test]
+        public void Deployment_CompletesAndQueuesShorelineAnnouncement()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("frostbound.scout");
+            route.ConsumeAnnouncement();
+
+            route.AdvanceDeployment(1.5f);
+
+            Assert.That(route.IsDeploying, Is.True);
+            Assert.That(route.DeploymentRemaining, Is.EqualTo(1.5f).Within(0.0001f));
+            Assert.That(route.DeploymentProgress, Is.EqualTo(0.5f).Within(0.0001f));
+
+            route.AdvanceDeployment(1.5f);
+
+            Assert.That(route.IsDeploying, Is.False);
             Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("THE SHORE AWAKENS"));
+        }
+
+        [Test]
+        public void Deployment_FreezesExpeditionTimerUntilComplete()
+        {
+            var route = new SharedExpeditionRouteModel();
+            route.Begin("frostbound.scout");
+
+            route.Advance(5f, Vector2.zero);
+
+            Assert.That(route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Shoreline));
+
+            route.AdvanceDeployment(SharedExpeditionRouteModel.DeploymentDuration);
+            route.Advance(5f, Vector2.zero);
+
+            Assert.That(route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Shoreline));
         }
 
         [Test]
@@ -160,7 +196,7 @@ namespace ProjectExpedition.Tests
             Assert.That(route.MapId, Is.EqualTo("oathbound.scout"));
             Assert.That(route.RequiredKillObjective, Is.EqualTo(140));
             Assert.That(route.OptionalShardObjective, Is.EqualTo(5));
-            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("THE CANOPY STIRS"));
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("RAISING CANOPY CAMP — THE EXPEDITION BEGINS"));
         }
 
         [Test]
@@ -172,7 +208,7 @@ namespace ProjectExpedition.Tests
             Assert.That(route.MapId, Is.EqualTo("ironway.scout"));
             Assert.That(route.RequiredKillObjective, Is.EqualTo(155));
             Assert.That(route.OptionalShardObjective, Is.EqualTo(4));
-            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("THE RELAY STIRS"));
+            Assert.That(route.ConsumeAnnouncement(), Is.EqualTo("RAISING RELAY CAMP — THE EXPEDITION BEGINS"));
         }
 
         [Test]

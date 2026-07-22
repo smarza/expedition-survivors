@@ -105,6 +105,41 @@ namespace ProjectExpedition.Tests
         }
 
         [UnityTest]
+        public IEnumerator SoloRun_StartsWithDeploymentPhaseBeforeCombat()
+        {
+            yield return ClearDirectors();
+            var director = CreateDirector();
+            director.BeginRunSetup(1);
+            director.ConfirmCharacters(0, 1);
+            director.SelectMapAndStart(0);
+
+            Assert.That(director.State, Is.EqualTo(RunState.Playing));
+            Assert.That(director.Route.IsDeploying, Is.True);
+            Assert.That(director.Elapsed, Is.Zero.Within(0.0001f));
+            Assert.That(director.Enemies.Count, Is.Zero);
+            var startPosition = director.Player.transform.position;
+
+            yield return null;
+
+            Assert.That(director.Route.IsDeploying, Is.True);
+            Assert.That(director.Route.DeploymentRemaining, Is.GreaterThan(0f));
+            Assert.That(director.Enemies.Count, Is.Zero);
+            Assert.That(director.Player.transform.position, Is.EqualTo(startPosition));
+
+            var safetyFrames = 0;
+            while (director.Route.IsDeploying && safetyFrames < 600)
+            {
+                yield return null;
+                safetyFrames++;
+            }
+
+            Assert.That(director.Route.IsDeploying, Is.False);
+            Assert.That(director.Elapsed, Is.Zero.Within(0.0001f));
+
+            yield return DestroyDirector(director);
+        }
+
+        [UnityTest]
         public IEnumerator PlayerController_ProjectsSharedPlayerStateAndUpgrades()
         {
             yield return ClearDirectors();

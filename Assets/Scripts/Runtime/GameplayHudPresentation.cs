@@ -9,13 +9,13 @@ namespace ProjectExpedition
         public const float TopStripHeight = 36f;
         public const float PlayerStripHeight = 72f;
         public const float BottomBarHeight = 88f;
-        public const float ObjectiveRailWidth = 220f;
+        public const float ObjectiveRailWidth = 252f;
         public const float LootStripHeight = 64f;
-        public const float LootColorTrackerHeight = 84f;
-        public const float LootPanelInnerGap = 4f;
-        public const float LootPanelTotalHeight = LootStripHeight + LootPanelInnerGap + LootColorTrackerHeight;
-        public const float LootColorTrackerRowHeight = 15f;
-        public const float ObjectivePanelGap = 6f;
+        public const float LootColorTrackerHeaderHeight = 38f;
+        public const float LootColorTrackerRowHeight = 20f;
+        public const float LootColorTrackerBottomPadding = 8f;
+        public const float LootPanelInnerGap = 6f;
+        public const float ObjectivePanelGap = 8f;
         public const float ScreenPadding = 12f;
         public const float BuildIconSize = 32f;
         public const float BarHeight = 20f;
@@ -38,19 +38,53 @@ namespace ProjectExpedition
 
         public static float ObjectivePanelTop => ScreenPadding + TopStripHeight + 8f;
 
+        public static float ResolveLootColorTrackerHeight(int trackedEffectCount)
+        {
+            var safeCount = Mathf.Max(0, trackedEffectCount);
+            return LootColorTrackerHeaderHeight +
+                safeCount * LootColorTrackerRowHeight +
+                LootColorTrackerBottomPadding;
+        }
+
+        public static float ResolveLootPanelTotalHeight(int trackedEffectCount)
+        {
+            return LootStripHeight + LootPanelInnerGap + ResolveLootColorTrackerHeight(trackedEffectCount);
+        }
+
         public static float ResolveObjectivePanelHeight(GameDirector director)
         {
             var route = director?.Route;
             if (route == null)
             {
-                return 118f;
+                return 132f;
+            }
+
+            var height = 132f;
+
+            if (route.OptionalShardObjective > 0)
+            {
+                height += 16f;
             }
 
             var extractingAtBeacon = route.BossKilled &&
                 route.CurrentPhase == ExpeditionPhase.Extraction &&
                 route.PartyAtExtractionBeacon;
 
-            return extractingAtBeacon ? 148f : 118f;
+            if (route.IsDeploying || extractingAtBeacon)
+            {
+                return Mathf.Max(height, 162f);
+            }
+
+            if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+            {
+                height += 18f;
+            }
+            else if (route.CanSpawnBoss() && !route.BossSpawned)
+            {
+                height += 16f;
+            }
+
+            return height;
         }
 
         public static float ResolveLootStripTop(GameDirector director)
@@ -360,14 +394,16 @@ namespace ProjectExpedition
             GUI.Label(new Rect(rail.x + 10f, rail.y + 8f, rail.width - 20f, 20f), "OBJECTIVES", styles.Caption);
 
             var map = director.SelectedMap;
-            var body = $"{map.KillObjectiveLabel}  {route.DraugrKills}/{route.RequiredKillObjective}";
+            var body = route.IsDeploying
+                ? BiomeCatalog.ResolveDeploymentCountdownLine(route.DeploymentRemaining)
+                : $"{map.KillObjectiveLabel}  {route.DraugrKills}/{route.RequiredKillObjective}";
 
-            if (route.OptionalShardObjective > 0)
+            if (!route.IsDeploying && route.OptionalShardObjective > 0)
             {
                 body += $"\n{map.OptionalPickupLabel}  {route.RuneShardsCollected}/{route.OptionalShardObjective}";
             }
 
-            if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+            if (!route.IsDeploying && route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
             {
                 body += route.PartyAtExtractionBeacon
                     ? $"\nEXTRACTING {route.ExtractionHoldRemaining:0.0}s"
@@ -375,6 +411,56 @@ namespace ProjectExpedition
             }
 
             GUI.Label(new Rect(rail.x + 10f, rail.y + 32f, rail.width - 20f, rail.height - 40f), body, styles.Body);
+
+            if (route.IsDeploying)
+            {
+                var barRect = new Rect(rail.x + 10f, rail.y + rail.height - 28f, rail.width - 20f, 10f);
+                SurvivorsStylePresentation.DrawFlatPanel(barRect, new Color(0.018f, 0.048f, 0.068f, 1f), 1f);
+                var fillRect = new Rect(barRect.x, barRect.y, barRect.width * route.DeploymentProgress, barRect.height);
+                SurvivorsStylePresentation.DrawFlatPanel(fillRect, PresentationTheme.Accent, 1f);
+            }
+        }
+
+        public static void DrawDeploymentOverlay(Rect screen, GameDirector director, SurvivorsHudStyles styles)
+        {
+            var route = director?.Route;
+            if (route == null || !route.IsDeploying)
+            {
+                return;
+            }
+
+            var map = director.SelectedMap;
+            var dim = new Rect(0f, 0f, screen.width, screen.height);
+            SurvivorsStylePresentation.DrawFlatPanel(dim, new Color(0.01f, 0.03f, 0.05f, 0.42f), 1f);
+
+            var bannerWidth = 980f;
+            var bannerHeight = 168f;
+            var banner = new Rect(
+                (screen.width - bannerWidth) * 0.5f,
+                screen.height * 0.5f - bannerHeight * 0.5f,
+                bannerWidth,
+                bannerHeight);
+
+            SurvivorsStylePresentation.DrawFlatPanel(banner, new Color(0.018f, 0.045f, 0.062f, 0.97f), 1f);
+            SurvivorsStylePresentation.DrawBorder(banner, new Color(0.32f, 0.68f, 0.78f, 0.9f), 3f);
+
+            GUI.Label(
+                new Rect(banner.x + 28f, banner.y + 18f, banner.width - 56f, 30f),
+                BiomeCatalog.ResolveDeploymentHeadline(map.BiomeId),
+                styles.SectionTitle);
+            GUI.Label(
+                new Rect(banner.x + 28f, banner.y + 52f, banner.width - 56f, 44f),
+                BiomeCatalog.ResolveDeploymentDetail(map.BiomeId),
+                styles.Caption);
+            GUI.Label(
+                new Rect(banner.x + 28f, banner.y + 98f, banner.width - 56f, 36f),
+                BiomeCatalog.ResolveDeploymentCountdownLine(route.DeploymentRemaining),
+                styles.Display);
+
+            var barRect = new Rect(banner.x + 28f, banner.y + bannerHeight - 24f, banner.width - 56f, 12f);
+            SurvivorsStylePresentation.DrawFlatPanel(barRect, new Color(0.018f, 0.048f, 0.068f, 1f), 1f);
+            var fillRect = new Rect(barRect.x, barRect.y, barRect.width * route.DeploymentProgress, barRect.height);
+            SurvivorsStylePresentation.DrawFlatPanel(fillRect, PresentationTheme.Accent, 1f);
         }
 
         private static string FormatTime(float seconds)
@@ -401,13 +487,15 @@ namespace ProjectExpedition
             var effect = director.TemporaryEffect;
             var activeEffects = effect?.ActiveEffects;
             var hasActiveEffects = activeEffects != null && activeEffects.Count > 0;
+            var definitions = DevelopmentTuningResolver.ResolveAllLootDefinitions();
             var stripLeft = screen.width - GameplayHudLayoutMetrics.ObjectiveRailWidth - GameplayHudLayoutMetrics.ScreenPadding;
             var stripTop = GameplayHudLayoutMetrics.ResolveLootStripTop(director);
+            var panelHeight = GameplayHudLayoutMetrics.ResolveLootPanelTotalHeight(definitions.Count);
             var strip = new Rect(
                 stripLeft,
                 stripTop,
                 GameplayHudLayoutMetrics.ObjectiveRailWidth,
-                GameplayHudLayoutMetrics.LootPanelTotalHeight);
+                panelHeight);
 
             var summaryRect = new Rect(
                 strip.x,
@@ -415,11 +503,12 @@ namespace ProjectExpedition
                 strip.width,
                 GameplayHudLayoutMetrics.LootStripHeight);
 
+            var trackerHeight = GameplayHudLayoutMetrics.ResolveLootColorTrackerHeight(definitions.Count);
             var trackerRect = new Rect(
                 strip.x,
                 strip.y + GameplayHudLayoutMetrics.LootStripHeight + GameplayHudLayoutMetrics.LootPanelInnerGap,
                 strip.width,
-                GameplayHudLayoutMetrics.LootColorTrackerHeight);
+                trackerHeight);
 
             SurvivorsStylePresentation.DrawFlatPanel(strip, SurvivorsStylePresentation.PanelNavyInset, 1f,
                 new Color(0.18f, 0.24f, 0.32f, 0.85f));
@@ -427,7 +516,7 @@ namespace ProjectExpedition
             DrawLootSummaryStrip(summaryRect, loot, definition, required, activeEffects,
                 hasActiveEffects, styles);
 
-            DrawLootColorTracker(trackerRect, loot, effect, styles);
+            DrawLootColorTracker(trackerRect, loot, effect, definitions, styles);
         }
 
         private static void DrawLootSummaryStrip(
@@ -484,17 +573,21 @@ namespace ProjectExpedition
             Rect trackerRect,
             SharedLootProgressModel loot,
             SharedTemporaryEffectModel effect,
+            IReadOnlyList<LootEffectDefinition> definitions,
             SurvivorsHudStyles styles)
         {
             SurvivorsStylePresentation.DrawFlatPanel(trackerRect, new Color(0.03f, 0.06f, 0.10f, 0.98f), 1f);
 
             GUI.Label(
-                new Rect(trackerRect.x + 8f, trackerRect.y + 3f, trackerRect.width - 16f, 11f),
-                "ALL COLORS",
+                new Rect(trackerRect.x + 8f, trackerRect.y + 8f, trackerRect.width - 16f, 14f),
+                "TIMED BUFFS",
+                styles.Micro);
+            GUI.Label(
+                new Rect(trackerRect.x + 8f, trackerRect.y + 22f, trackerRect.width - 16f, 12f),
+                "FILL ROWS FOR TIMED BONUSES",
                 styles.Micro);
 
-            var rowTop = trackerRect.y + 14f;
-            var definitions = DevelopmentTuningResolver.ResolveAllLootDefinitions();
+            var rowTop = trackerRect.y + GameplayHudLayoutMetrics.LootColorTrackerHeaderHeight;
 
             for (var i = 0; i < definitions.Count; i++)
             {
@@ -508,7 +601,7 @@ namespace ProjectExpedition
                     trackerRect.x + 6f,
                     rowTop + i * GameplayHudLayoutMetrics.LootColorTrackerRowHeight,
                     trackerRect.width - 12f,
-                    GameplayHudLayoutMetrics.LootColorTrackerRowHeight - 1f);
+                    GameplayHudLayoutMetrics.LootColorTrackerRowHeight);
 
                 DrawLootColorTrackerRow(rowRect, loot, effect, definition, styles);
             }
@@ -542,24 +635,33 @@ namespace ProjectExpedition
                     new Color(theme.r * 0.45f, theme.g * 0.45f, theme.b * 0.45f, 0.75f));
             }
 
-            var iconRect = new Rect(rowRect.x + 3f, rowRect.y + 1f, 12f, 12f);
+            var iconRect = new Rect(rowRect.x + 2f, rowRect.y + 5f, 12f, 12f);
             ItemPresentation.DrawItemIcon(iconRect, definition.Id, ItemIconSize.Small, false, theme);
 
-            var labelStyle = styles.Micro;
+            const float counterWidth = 44f;
+            const float labelWidth = 58f;
+            var counterRect = new Rect(rowRect.xMax - counterWidth, rowRect.y + 3f, counterWidth, 14f);
+            var labelRect = new Rect(rowRect.x + 16f, rowRect.y + 2f, labelWidth, 16f);
+
+            var labelStyle = styles.Caption;
+            labelStyle.wordWrap = false;
+            labelStyle.clipping = TextClipping.Overflow;
             labelStyle.normal.textColor = hasProgress
                 ? Color.Lerp(SurvivorsStylePresentation.TextLight, theme, 0.35f)
                 : SurvivorsStylePresentation.TextMuted;
-            GUI.Label(new Rect(rowRect.x + 18f, rowRect.y + 1f, 52f, 12f), ResolveLootTrackerLabel(definition),
-                labelStyle);
+            GUI.Label(labelRect, ResolveLootTrackerLabel(definition), labelStyle);
 
-            var counterStyle = styles.Caption;
+            var counterStyle = styles.StatValue;
             counterStyle.normal.textColor = isActive ? theme : labelStyle.normal.textColor;
             var counterText = isActive
                 ? ResolveActiveTimerLabel(effect, definition.Id)
                 : $"{currentCount}/{required}";
-            GUI.Label(new Rect(rowRect.x + 72f, rowRect.y + 1f, 38f, 12f), counterText, counterStyle);
+            GUI.Label(counterRect, counterText, counterStyle);
 
-            var barRect = new Rect(rowRect.x + 112f, rowRect.y + 4f, rowRect.width - 116f, 6f);
+            var barLeft = labelRect.xMax + 6f;
+            var barRight = counterRect.x - 4f;
+            var barWidth = Mathf.Max(20f, barRight - barLeft);
+            var barRect = new Rect(barLeft, rowRect.y + 9f, barWidth, 6f);
             var barFill = isActive
                 ? ResolveActiveEffectProgressFillForDefinition(effect, definition.Id)
                 : required > 0
@@ -581,7 +683,7 @@ namespace ProjectExpedition
                 case TemporaryEffectType.DamageBoost:
                     return "DMG";
                 case TemporaryEffectType.Invincibility:
-                    return "SHLD";
+                    return "SHIELD";
                 default:
                     return "LOOT";
             }

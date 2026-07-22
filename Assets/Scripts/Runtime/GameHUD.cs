@@ -124,7 +124,7 @@ namespace ProjectExpedition
             _characterSelectUiToolkit = gameObject.AddComponent<CharacterSelectUiToolkitScreen>();
             _characterSelectUiToolkit.Initialize(
                 _director,
-                () => _director.ReturnToMenu(),
+                HandleCharacterSelectBack,
                 HandleCharacterSelectUiConfirm,
                 filter => _characterSelectUnlockedFilter = filter);
         }
@@ -426,11 +426,74 @@ namespace ProjectExpedition
             return characterId == SaveService.Data.LastCoopPartnerId;
         }
 
+        private bool TryDeselectCharacterSelection(int playerCount)
+        {
+            for (var player = playerCount - 1; player >= 0; player--)
+            {
+                if (!_characterSelected[player])
+                {
+                    continue;
+                }
+
+                _characterSelected[player] = false;
+                _characterReady[player] = false;
+                NavigateCue();
+                return true;
+            }
+
+            return false;
+        }
+
+        private void HandleCharacterSelectBack()
+        {
+            var playerCount = _director.PendingPlayerCount;
+
+            if (TryDeselectCharacterSelection(playerCount))
+            {
+                return;
+            }
+
+            _director.ReturnToMenu();
+        }
+
+        private bool TryDeselectMapSelection()
+        {
+            if (_mapSelected)
+            {
+                _mapSelected = false;
+                _mapReady = false;
+                _mapChallengeEditing = false;
+                _challengeFocus = 0;
+                NavigateCue();
+                return true;
+            }
+
+            if (_mapChallengeEditing)
+            {
+                _mapChallengeEditing = false;
+                _challengeFocus = 0;
+                NavigateCue();
+                return true;
+            }
+
+            return false;
+        }
+
+        private void HandleMapSelectBack()
+        {
+            if (TryDeselectMapSelection())
+            {
+                return;
+            }
+
+            PrepareCharacterSelection(_director.PendingPlayerCount);
+        }
+
         private void UpdateCharacterSelect()
         {
             if (LocalInputRouter.MenuBackPressed())
             {
-                _director.ReturnToMenu();
+                HandleCharacterSelectBack();
                 return;
             }
 
@@ -478,7 +541,7 @@ namespace ProjectExpedition
         {
             if (LocalInputRouter.MenuBackPressed())
             {
-                PrepareCharacterSelection(_director.PendingPlayerCount);
+                HandleMapSelectBack();
                 return;
             }
 
@@ -717,9 +780,15 @@ namespace ProjectExpedition
 
             if (_announcementTimer > 0f && _director.State == RunState.Playing)
             {
-                DrawPanel(new Rect(440, 925, 1040, 78), new Color(0.018f, 0.045f, 0.062f, 0.97f));
-                DrawBorder(new Rect(440, 925, 1040, 78), new Color(0.32f, 0.68f, 0.78f, 0.9f), 3f);
-                GUI.Label(new Rect(470, 939, 980, 50), _announcement, _center);
+                var route = _director.Route;
+                var suppressAnnouncement = route != null && route.IsDeploying;
+
+                if (!suppressAnnouncement)
+                {
+                    DrawPanel(new Rect(440, 925, 1040, 78), new Color(0.018f, 0.045f, 0.062f, 0.97f));
+                    DrawBorder(new Rect(440, 925, 1040, 78), new Color(0.32f, 0.68f, 0.78f, 0.9f), 3f);
+                    GUI.Label(new Rect(470, 939, 980, 50), _announcement, _center);
+                }
             }
 
             DrawDevelopmentTuningTouchOpener();
@@ -1258,11 +1327,11 @@ namespace ProjectExpedition
             if (hasSelected)
             {
                 return
-                    $"P{player + 1}  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}";
+                    $"P{player + 1}  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {Prompt(BindingAction.Back)} DESELECT  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}";
             }
 
             return
-                $"P{player + 1}  •  ARROWS CHOOSE  •  {Prompt(BindingAction.Submit)} SELECT  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}";
+                $"P{player + 1}  •  ARROWS CHOOSE  •  {Prompt(BindingAction.Submit)} SELECT  •  {Prompt(BindingAction.Back)} BACK  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}";
         }
 
         private void DrawCharacterSelectSolo()
@@ -1363,7 +1432,7 @@ namespace ProjectExpedition
             var backRect = new Rect(1656f, headerY, 240f, headerHeight);
             if (SurvivorsStylePresentation.DrawButton(backRect, $"{Prompt(BindingAction.Back)} BACK", SurvivorsButtonKind.Red))
             {
-                _director.ReturnToMenu();
+                HandleCharacterSelectBack();
             }
         }
 
@@ -2205,7 +2274,7 @@ namespace ProjectExpedition
             var backRect = new Rect(1656f, headerY, 240f, headerHeight);
             if (SurvivorsStylePresentation.DrawButton(backRect, $"{Prompt(BindingAction.Back)} BACK", SurvivorsButtonKind.Red))
             {
-                PrepareCharacterSelection(_director.PendingPlayerCount);
+                HandleMapSelectBack();
             }
         }
 
@@ -2571,11 +2640,11 @@ namespace ProjectExpedition
             if (hasSelected)
             {
                 return
-                    $"P1  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(0, playerCount)}";
+                    $"P1  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {Prompt(BindingAction.Back)} DESELECT  •  {LocalInputRouter.AssignmentLabel(0, playerCount)}";
             }
 
             return
-                $"P1  •  ARROWS CHOOSE  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} SELECT  •  {LocalInputRouter.AssignmentLabel(0, playerCount)}";
+                $"P1  •  ARROWS CHOOSE  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} SELECT  •  {Prompt(BindingAction.Back)} BACK  •  {LocalInputRouter.AssignmentLabel(0, playerCount)}";
         }
 
         private static string ResolveMapDurationShort(MapDefinition map)
@@ -2759,11 +2828,25 @@ namespace ProjectExpedition
             SurvivorsStylePresentation.DrawFlatPanel(topStrip, SurvivorsStylePresentation.PanelNavy, 1f);
 
             var remainingBoss = Mathf.Max(0f, _director.Route.BossSpawnTime - _director.Elapsed);
-            var timerText = GameplayHudLabels.ResolveBossObjective(_director.Route, remainingBoss);
-            GUI.Label(new Rect(topStrip.x + 12f, topStrip.y + 8f, topStrip.width * 0.55f, 20f),
-                $"{FormatTime(_director.Elapsed)} / {FormatTime(_director.SelectedMap.Duration)}  •  {timerText}", _vsMicro);
-            GUI.Label(new Rect(topStrip.x + topStrip.width * 0.5f, topStrip.y + 8f, topStrip.width * 0.48f, 20f),
-                $"KILLS {_director.Kills}  •  RENOWN {_director.RunRenown}  •  ENEMIES {_director.Enemies.Count}", _vsMicro);
+            var route = _director.Route;
+            string timerText;
+
+            if (route != null && route.IsDeploying)
+            {
+                timerText = BiomeCatalog.ResolveDeploymentCountdownLine(route.DeploymentRemaining);
+                GUI.Label(new Rect(topStrip.x + 12f, topStrip.y + 8f, topStrip.width * 0.55f, 20f),
+                    timerText, _vsMicro);
+                GUI.Label(new Rect(topStrip.x + topStrip.width * 0.5f, topStrip.y + 8f, topStrip.width * 0.48f, 20f),
+                    BiomeCatalog.ResolveDeploymentDetail(_director.SelectedMap.BiomeId), _vsMicro);
+            }
+            else
+            {
+                timerText = GameplayHudLabels.ResolveBossObjective(_director.Route, remainingBoss);
+                GUI.Label(new Rect(topStrip.x + 12f, topStrip.y + 8f, topStrip.width * 0.55f, 20f),
+                    $"{FormatTime(_director.Elapsed)} / {FormatTime(_director.SelectedMap.Duration)}  •  {timerText}", _vsMicro);
+                GUI.Label(new Rect(topStrip.x + topStrip.width * 0.5f, topStrip.y + 8f, topStrip.width * 0.48f, 20f),
+                    $"KILLS {_director.Kills}  •  RENOWN {_director.RunRenown}  •  ENEMIES {_director.Enemies.Count}", _vsMicro);
+            }
 
             var playerStripTop = topStrip.yMax + 8f;
             for (var i = 0; i < _director.Players.Count; i++)
@@ -2822,14 +2905,29 @@ namespace ProjectExpedition
                 _director.Experience / (float)_director.ExperienceToNext,
                 new Color(0.88f, 0.92f, 0.98f), $"XP {_director.Experience} / {_director.ExperienceToNext}", _micro);
 
-            DrawBuildTrayBottomBar(bottomBar);
+            if (_director.IsExpeditionCombatActive)
+            {
+                DrawBuildTrayBottomBar(bottomBar);
+            }
+
             DrawObjectivePanelVs();
-            GameplayHudPresentation.DrawLootProgressStrip(new Rect(0f, 0f, 1920f, 1080f), _director, _survivorsHudStyles);
+
+            if (_director.IsExpeditionCombatActive)
+            {
+                GameplayHudPresentation.DrawLootProgressStrip(new Rect(0f, 0f, 1920f, 1080f), _director, _survivorsHudStyles);
+            }
+
             DrawFirstRunHints();
             if (_director.ShowPerformanceMetrics) DrawPerformancePanel();
-            TouchControlsPresentation.Draw(_director);
+
+            if (_director.IsExpeditionCombatActive)
+            {
+                TouchControlsPresentation.Draw(_director);
+            }
+
             GameplayHudPresentation.DrawDamageTakenVignette(new Rect(0f, 0f, 1920f, 1080f), _director);
             GameplayHudPresentation.DrawBossProximityVignette(new Rect(0f, 0f, 1920f, 1080f), _director);
+            GameplayHudPresentation.DrawDeploymentOverlay(new Rect(0f, 0f, 1920f, 1080f), _director, _survivorsHudStyles);
         }
 
         private void DrawBuildTrayBottomBar(Rect bottomBar)
@@ -2872,43 +2970,57 @@ namespace ProjectExpedition
             if (route == null) return;
 
             const float panelX = 1920f - GameplayHudLayoutMetrics.ObjectiveRailWidth - GameplayHudLayoutMetrics.ScreenPadding;
-            const float panelY = GameplayHudLayoutMetrics.ScreenPadding + GameplayHudLayoutMetrics.TopStripHeight + 8f;
+            var panelY = GameplayHudLayoutMetrics.ObjectivePanelTop;
             const float panelWidth = GameplayHudLayoutMetrics.ObjectiveRailWidth;
             var extractingAtBeacon = route.BossKilled &&
                 route.CurrentPhase == ExpeditionPhase.Extraction &&
                 route.PartyAtExtractionBeacon;
-            var panelHeight = extractingAtBeacon ? 148f : 118f;
+            var deploying = route.IsDeploying;
+            var panelHeight = GameplayHudLayoutMetrics.ResolveObjectivePanelHeight(_director);
 
             SurvivorsStylePresentation.DrawFlatPanel(new Rect(panelX, panelY, panelWidth, panelHeight),
                 SurvivorsStylePresentation.PanelNavy, 1f);
-            GUI.Label(new Rect(panelX + 12f, panelY + 8f, panelWidth - 24f, 22f), "EXPEDITION OBJECTIVES", _statSection);
+            GUI.Label(new Rect(panelX + 12f, panelY + 12f, panelWidth - 24f, 28f), "EXPEDITION OBJECTIVES", _statSection);
 
             var map = _director.SelectedMap;
-            var killLine = $"{map.KillObjectiveLabel}  {route.DraugrKills} / {route.RequiredKillObjective}";
-            var shardLine = route.OptionalShardObjective > 0
-                ? $"{map.OptionalPickupLabel}  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
-                : string.Empty;
-            var objectiveBody = killLine;
-            if (shardLine.Length > 0) objectiveBody += $"\n{shardLine}";
+            string objectiveBody;
 
-            if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+            if (deploying)
             {
-                objectiveBody += route.PartyAtExtractionBeacon
-                    ? $"\nEXTRACTING — {route.ExtractionHoldRemaining:0.0}s"
-                    : $"\nREACH THE BEACON — {FormatTime(Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed))} REMAINING";
+                objectiveBody = BiomeCatalog.ResolveDeploymentCountdownLine(route.DeploymentRemaining);
             }
-            else if (route.CanSpawnBoss() && !route.BossSpawned)
+            else
             {
-                objectiveBody += "\nOBJECTIVES MET — JOTUNN ELIGIBLE";
+                var killLine = $"{map.KillObjectiveLabel}  {route.DraugrKills} / {route.RequiredKillObjective}";
+                var shardLine = route.OptionalShardObjective > 0
+                    ? $"{map.OptionalPickupLabel}  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
+                    : string.Empty;
+                objectiveBody = killLine;
+                if (shardLine.Length > 0)
+                {
+                    objectiveBody += $"\n{shardLine}";
+                }
+
+                if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+                {
+                    objectiveBody += route.PartyAtExtractionBeacon
+                        ? $"\nEXTRACTING — {route.ExtractionHoldRemaining:0.0}s"
+                        : $"\nREACH THE BEACON — {FormatTime(Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed))} REMAINING";
+                }
+                else if (route.CanSpawnBoss() && !route.BossSpawned)
+                {
+                    objectiveBody += "\nOBJECTIVES MET — JOTUNN ELIGIBLE";
+                }
             }
 
-            GUI.Label(new Rect(panelX + 12f, panelY + 34f, panelWidth - 24f, panelHeight - 42f), objectiveBody, _microLeft);
+            GUI.Label(new Rect(panelX + 12f, panelY + 42f, panelWidth - 24f, panelHeight - 54f), objectiveBody, _microLeft);
 
-            if (extractingAtBeacon)
+            if (deploying || extractingAtBeacon)
             {
-                var barRect = new Rect(panelX + 12f, panelY + panelHeight - 24f, panelWidth - 24f, 10f);
+                var barRect = new Rect(panelX + 12f, panelY + panelHeight - 22f, panelWidth - 24f, 10f);
+                var progress = deploying ? route.DeploymentProgress : route.ExtractionHoldProgress;
                 DrawPanel(barRect, new Color(0.018f, 0.048f, 0.068f, 1f));
-                DrawPanel(new Rect(barRect.x, barRect.y, barRect.width * route.ExtractionHoldProgress, barRect.height),
+                DrawPanel(new Rect(barRect.x, barRect.y, barRect.width * progress, barRect.height),
                     PresentationTheme.Accent);
             }
         }
@@ -2927,47 +3039,58 @@ namespace ProjectExpedition
             var extractingAtBeacon = route.BossKilled &&
                 route.CurrentPhase == ExpeditionPhase.Extraction &&
                 route.PartyAtExtractionBeacon;
-            var panelHeight = extractingAtBeacon ? 148f : 118f;
+            var deploying = route.IsDeploying;
+            var panelHeight = deploying || extractingAtBeacon ? 148f : 118f;
             DrawPanel(new Rect(panelX, panelY, panelWidth, panelHeight), new Color(0.025f, 0.055f, 0.075f, 0.92f));
             DrawPanel(new Rect(panelX, panelY, panelWidth, 4), new Color(0.32f, 0.68f, 0.78f, 0.85f));
             GUI.Label(new Rect(panelX + 18, panelY + 10, panelWidth - 36, 26), "EXPEDITION OBJECTIVES", _statSection);
 
             var map = _director.SelectedMap;
-            var killLine = $"{map.KillObjectiveLabel}  {route.DraugrKills} / {route.RequiredKillObjective}";
-            var shardLine = route.OptionalShardObjective > 0
-                ? $"{map.OptionalPickupLabel}  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
-                : string.Empty;
-            var objectiveBody = killLine;
-            if (shardLine.Length > 0)
-            {
-                objectiveBody += $"\n{shardLine}";
-            }
+            string objectiveBody;
 
-            if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+            if (deploying)
             {
-                if (route.PartyAtExtractionBeacon)
-                {
-                    objectiveBody +=
-                        $"\nEXTRACTING — {route.ExtractionHoldRemaining:0.0}s";
-                }
-                else
-                {
-                    var extractionRemaining = Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed);
-                    objectiveBody += $"\nREACH THE BEACON — {FormatTime(extractionRemaining)} REMAINING";
-                }
+                objectiveBody = BiomeCatalog.ResolveDeploymentCountdownLine(route.DeploymentRemaining);
             }
-            else if (route.CanSpawnBoss() && !route.BossSpawned)
+            else
             {
-                objectiveBody += "\nOBJECTIVES MET — JOTUNN ELIGIBLE";
+                var killLine = $"{map.KillObjectiveLabel}  {route.DraugrKills} / {route.RequiredKillObjective}";
+                var shardLine = route.OptionalShardObjective > 0
+                    ? $"{map.OptionalPickupLabel}  {route.RuneShardsCollected} / {route.OptionalShardObjective}"
+                    : string.Empty;
+                objectiveBody = killLine;
+                if (shardLine.Length > 0)
+                {
+                    objectiveBody += $"\n{shardLine}";
+                }
+
+                if (route.BossKilled && route.CurrentPhase == ExpeditionPhase.Extraction)
+                {
+                    if (route.PartyAtExtractionBeacon)
+                    {
+                        objectiveBody +=
+                            $"\nEXTRACTING — {route.ExtractionHoldRemaining:0.0}s";
+                    }
+                    else
+                    {
+                        var extractionRemaining = Mathf.Max(0f, route.ExtractionDuration - route.ExtractionElapsed);
+                        objectiveBody += $"\nREACH THE BEACON — {FormatTime(extractionRemaining)} REMAINING";
+                    }
+                }
+                else if (route.CanSpawnBoss() && !route.BossSpawned)
+                {
+                    objectiveBody += "\nOBJECTIVES MET — JOTUNN ELIGIBLE";
+                }
             }
 
             GUI.Label(new Rect(panelX + 18, panelY + 36, panelWidth - 36, panelHeight - 44), objectiveBody, _microLeft);
 
-            if (extractingAtBeacon)
+            if (deploying || extractingAtBeacon)
             {
                 var barRect = new Rect(panelX + 18, panelY + panelHeight - 28f, panelWidth - 36, 12f);
+                var progress = deploying ? route.DeploymentProgress : route.ExtractionHoldProgress;
                 DrawPanel(barRect, new Color(0.018f, 0.048f, 0.068f, 1f));
-                var fillRect = new Rect(barRect.x, barRect.y, barRect.width * route.ExtractionHoldProgress, barRect.height);
+                var fillRect = new Rect(barRect.x, barRect.y, barRect.width * progress, barRect.height);
                 DrawPanel(fillRect, PresentationTheme.Accent);
             }
         }
@@ -3675,29 +3798,31 @@ namespace ProjectExpedition
 
         private void DrawRunEndBeat(bool victory)
         {
-            var overlayColor = victory
-                ? new Color(0.01f, 0.04f, 0.06f, 0.58f)
-                : new Color(0.08f, 0.015f, 0.02f, 0.68f);
-            DrawPanel(new Rect(0, 0, 1920, 1080), overlayColor);
-
             var accent = victory
                 ? PresentationTheme.Accent
                 : new Color(0.78f, 0.22f, 0.24f);
-            var badgeText = victory ? "VICTORY" : "DEFEAT";
+            RunModalPresentation.DrawRunOutcomeTint(new Rect(0f, 0f, 1920f, 1080f), victory);
+
             var headline = ResolveRunEndBeatHeadline(victory);
             var subtitle = ResolveRunEndBeatSubtitle(victory);
 
-            GUI.Label(new Rect(0, 300, 1920, 72), badgeText, _campEyebrow);
-            GUI.Label(new Rect(120, 372, 1680, 120), headline, _resultTitle);
-            GUI.Label(new Rect(220, 500, 1480, 72), subtitle, _resultBody);
+            EnsureSurvivorsStyles();
+            RunModalPresentation.DrawRunOutcomeBanner(
+                new Rect(640f, 248f, 640f, 96f),
+                victory,
+                accent,
+                _survivorsHudStyles);
+
+            GUI.Label(new Rect(120f, 368f, 1680f, 120f), headline, _resultTitle);
+            GUI.Label(new Rect(220f, 492f, 1480f, 72f), subtitle, _resultBody);
 
             var barWidth = 420f;
-            var barRect = new Rect((1920f - barWidth) * 0.5f, 610f, barWidth, 8f);
+            var barRect = new Rect((1920f - barWidth) * 0.5f, 590f, barWidth, 8f);
             DrawPanel(barRect, new Color(0.02f, 0.05f, 0.07f, 0.95f));
             var progress = 1f - Mathf.Clamp01(_director.EndBeatRemaining / 2.8f);
             DrawPanel(new Rect(barRect.x, barRect.y, barRect.width * progress, barRect.height), accent);
 
-            GUI.Label(new Rect(0, 650, 1920, 34),
+            GUI.Label(new Rect(0f, 636f, 1920f, 34f),
                 $"{Prompt(BindingAction.Submit)} CONTINUE TO RESULTS", _small);
         }
 
@@ -3741,17 +3866,20 @@ namespace ProjectExpedition
             EnsureSurvivorsStyles();
             var accent = victory
                 ? PresentationTheme.Accent
-                : new Color(0.65f, 0.2f, 0.22f);
+                : new Color(0.78f, 0.22f, 0.24f);
+
             RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
-            var panel = new Rect(460, 120, 1000, 820);
-            RunModalPresentation.DrawResultsShell(panel, _survivorsHudStyles,
-                victory ? "A SAGA IS BORN" : "THE ICE CLAIMS THE EXPEDITION");
+            RunModalPresentation.DrawRunOutcomeTint(new Rect(0f, 0f, 1920f, 1080f), victory);
 
-            var titleY = panel.y + 32f;
-            GUI.Label(new Rect(panel.x + 60, titleY, panel.width - 120, 34),
-                victory ? "VICTORY" : "DEFEAT", _campEyebrow);
+            var panel = new Rect(460f, 120f, 1000f, 820f);
+            RunModalPresentation.DrawResultsShell(
+                panel,
+                _survivorsHudStyles,
+                victory ? "A SAGA IS BORN" : "THE ICE CLAIMS THE EXPEDITION",
+                victory,
+                accent);
 
-            var summaryTop = titleY + 108f;
+            var summaryTop = panel.y + 168f;
             var summary = new Rect(panel.x + 70, summaryTop, panel.width - 140, 168);
             DrawPanel(summary, new Color(0.018f, 0.048f, 0.068f, 1f));
             GUI.Label(new Rect(summary.x + 25, summary.y + 14, summary.width - 50, 25), "EXPEDITION", _micro);
@@ -3787,7 +3915,7 @@ namespace ProjectExpedition
             GUI.Label(new Rect(panel.x + 90, sectionTop, panel.width - 180, 72), message, _resultBody);
             sectionTop += 78f;
 
-            var renownRect = new Rect(panel.x + 70, sectionTop, panel.width - 140, 132);
+            var renownRect = new Rect(panel.x + 70, sectionTop, panel.width - 140, 168);
             DrawPanel(renownRect, new Color(0.018f, 0.048f, 0.068f, 1f));
             DrawBorder(renownRect, accent, 3f);
             GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 12, renownRect.width - 44, 24),
@@ -3801,14 +3929,14 @@ namespace ProjectExpedition
                 var unlock = SharedMetaProgressionModel.FindUnlock(affordableUnlockId);
                 if (unlock.HasValue)
                 {
-                    GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 76, renownRect.width - 44, 48),
+                    GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 78, renownRect.width - 44, 56),
                         $"RETURN TO CAMP → CODEX → unlock {unlock.Value.DisplayName} for {unlock.Value.RenownCost} renown.",
                         _body);
                 }
             }
             else
             {
-                GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 76, renownRect.width - 44, 48),
+                GUI.Label(new Rect(renownRect.x + 22, renownRect.y + 78, renownRect.width - 44, 56),
                     "Return to camp and open the CODEX after you earn enough renown for the next survivor or route.",
                     _body);
             }

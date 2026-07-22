@@ -27,6 +27,8 @@ namespace ProjectExpedition
         public PerformanceMetrics Metrics { get; } = new PerformanceMetrics();
         public bool ShowPerformanceMetrics { get; private set; }
         public bool ShowDevelopmentTuning { get; private set; }
+        public bool IsExpeditionCombatActive =>
+            State == RunState.Playing && !_routeModel.IsDeploying;
         public string FoundationStatus { get; private set; } = "NOT CHECKED";
         public int PendingPlayerCount { get; private set; } = 1;
         public MapDefinition SelectedMap { get; private set; } = ContentCatalog.Maps[0];
@@ -76,6 +78,7 @@ namespace ProjectExpedition
         private const float UltimateGemBurstDuration = 0.95f;
 
         private const float TwinBossSpawnChance = 0.03f;
+        private const float DeploymentAdvanceStepCap = 0.05f;
 
         private Vector2 _gemRepulsionOrigin;
         private float _gemRepulsionRadius;
@@ -162,9 +165,24 @@ namespace ProjectExpedition
             Metrics.Tick(Time.unscaledDeltaTime, _enemyGrid?.QueryCount ?? 0);
             if (LocalInputRouter.MetricsPressed()) ShowPerformanceMetrics = !ShowPerformanceMetrics;
             if (LocalInputRouter.DevelopmentTuningPressed()) ToggleDevelopmentTuning();
+            if (State != RunState.Playing) return;
+
+            if (_routeModel.IsDeploying)
+            {
+                var deploymentStep = Mathf.Min(Time.unscaledDeltaTime, DeploymentAdvanceStepCap);
+                _routeModel.AdvanceDeployment(deploymentStep);
+
+                var deploymentAnnouncement = _routeModel.ConsumeAnnouncement();
+                if (!string.IsNullOrEmpty(deploymentAnnouncement))
+                {
+                    _hud.SetAnnouncement(deploymentAnnouncement, 3.6f);
+                }
+
+                return;
+            }
+
             if (LocalInputRouter.DetailsPressed()) ToggleBuildDetails();
             if (LocalInputRouter.PausePressed()) TogglePause();
-            if (State != RunState.Playing) return;
 
             _runModel.Advance(Time.deltaTime);
             CleanupEnemyList();
@@ -172,7 +190,9 @@ namespace ProjectExpedition
 
             var routeAnnouncement = _routeModel.ConsumeAnnouncement();
             if (!string.IsNullOrEmpty(routeAnnouncement))
+            {
                 _hud.SetAnnouncement(routeAnnouncement, 3.6f);
+            }
 
             if (_routeModel.IsExtractionComplete())
             {
@@ -311,19 +331,24 @@ namespace ProjectExpedition
             ClearExtractionBeacon();
             SpawnRuneShards();
             State = RunState.Playing;
-            var expeditionLabel = playerCount > 1
-                ? $"{SelectedCharacters[0].Name.ToUpperInvariant()} + {SelectedCharacters[1].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}"
-                : $"{SelectedCharacters[0].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}";
             SaveService.RecordLastRunCharacters(
                 SelectedCharacters[0].Id,
                 playerCount > 1 ? SelectedCharacters[1].Id : null);
             DiscoverRunStartCodex(playerCount);
-            _hud.SetAnnouncement(replayingSeed
-                ? $"REPLAYING SEED {RunSeed} — {expeditionLabel}"
-                : expeditionLabel, 3f);
-            var openingRouteAnnouncement = _routeModel.ConsumeAnnouncement();
-            if (!string.IsNullOrEmpty(openingRouteAnnouncement))
-                _hud.SetAnnouncement(openingRouteAnnouncement, 3.6f);
+            var deploymentAnnouncement = _routeModel.ConsumeAnnouncement();
+            if (!string.IsNullOrEmpty(deploymentAnnouncement))
+            {
+                _hud.SetAnnouncement(deploymentAnnouncement, SharedExpeditionRouteModel.DeploymentDuration + 0.6f);
+            }
+            else
+            {
+                var expeditionLabel = playerCount > 1
+                    ? $"{SelectedCharacters[0].Name.ToUpperInvariant()} + {SelectedCharacters[1].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}"
+                    : $"{SelectedCharacters[0].Name.ToUpperInvariant()} — {SelectedMap.Name.ToUpperInvariant()}";
+                _hud.SetAnnouncement(replayingSeed
+                    ? $"REPLAYING SEED {RunSeed} — {expeditionLabel}"
+                    : expeditionLabel, 3f);
+            }
         }
 
         private void CreateArena()

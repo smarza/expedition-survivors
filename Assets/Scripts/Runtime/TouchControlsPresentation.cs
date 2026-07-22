@@ -19,7 +19,8 @@ namespace ProjectExpedition
             TouchInputRouter.BeginFrame();
             TouchInputRouter.SetTouchPlayerIndex(0);
 
-            if (director.State == RunState.Playing || director.State == RunState.Paused)
+            if ((director.State == RunState.Playing && director.IsExpeditionCombatActive) ||
+                director.State == RunState.Paused)
             {
                 DrawGameplayOverlay();
             }

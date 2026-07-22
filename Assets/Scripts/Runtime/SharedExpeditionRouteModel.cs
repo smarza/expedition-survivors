@@ -19,6 +19,7 @@ namespace ProjectExpedition
     /// </summary>
     public sealed class SharedExpeditionRouteModel
     {
+        public const float DeploymentDuration = 3f;
         public const float ExtractionHoldDuration = 2f;
 
         private const float ExtractionBeaconRadius = 3.5f;
@@ -37,6 +38,8 @@ namespace ProjectExpedition
         public float BossSpawnTime { get; private set; }
         public float ExtractionElapsed { get; private set; }
         public float ExtractionHoldElapsed { get; private set; }
+        public bool IsDeploying { get; private set; }
+        public float DeploymentElapsed { get; private set; }
         public bool PartyAtExtractionBeacon { get; private set; }
         public ExtractionCompletionKind ExtractionCompletion { get; private set; }
         public bool BossSpawned { get; private set; }
@@ -51,6 +54,14 @@ namespace ProjectExpedition
         public float ExtractionHoldProgress =>
             ExtractionHoldDuration > 0f
                 ? Mathf.Clamp01(ExtractionHoldElapsed / ExtractionHoldDuration)
+                : 0f;
+
+        public float DeploymentRemaining =>
+            Mathf.Max(0f, DeploymentDuration - DeploymentElapsed);
+
+        public float DeploymentProgress =>
+            DeploymentDuration > 0f
+                ? Mathf.Clamp01(DeploymentElapsed / DeploymentDuration)
                 : 0f;
 
         public int DraugrKills => PrimaryKillCount;
@@ -81,6 +92,8 @@ namespace ProjectExpedition
             OptionalPickupsCollected = 0;
             ExtractionElapsed = 0f;
             ExtractionHoldElapsed = 0f;
+            IsDeploying = true;
+            DeploymentElapsed = 0f;
             PartyAtExtractionBeacon = false;
             ExtractionCompletion = ExtractionCompletionKind.None;
             BossSpawned = false;
@@ -89,12 +102,31 @@ namespace ProjectExpedition
             BossesDefeatedCount = 0;
             _elapsed = 0f;
             CurrentPhase = ExpeditionPhase.Shoreline;
+            QueueAnnouncement(ResolveDeploymentAnnouncement());
+        }
+
+        public void AdvanceDeployment(float deltaTime)
+        {
+            if (!IsDeploying || deltaTime <= 0f)
+            {
+                return;
+            }
+
+            DeploymentElapsed += deltaTime;
+
+            if (DeploymentElapsed < DeploymentDuration)
+            {
+                return;
+            }
+
+            DeploymentElapsed = DeploymentDuration;
+            IsDeploying = false;
             QueueAnnouncement(PhaseAnnouncement(ExpeditionPhase.Shoreline));
         }
 
         public void Advance(float elapsed, Vector2 partyCenter)
         {
-            if (CurrentPhase == ExpeditionPhase.Completed)
+            if (CurrentPhase == ExpeditionPhase.Completed || IsDeploying)
             {
                 return;
             }
@@ -332,6 +364,16 @@ namespace ProjectExpedition
             }
 
             return BiomeCatalog.ResolveExtractionUnderwayAnnouncement(_activeMap.BiomeId);
+        }
+
+        private string ResolveDeploymentAnnouncement()
+        {
+            if (_activeMap == null)
+            {
+                return "RAISING CAMP — THE EXPEDITION BEGINS";
+            }
+
+            return BiomeCatalog.ResolveDeploymentAnnouncement(_activeMap.BiomeId);
         }
 
         private void QueueAnnouncement(string message)

@@ -84,11 +84,76 @@ namespace ProjectExpedition
                 case ItemCategory.Boon:
                     DrawEmblem(center, scale * 0.9f, item.Color);
                     break;
+                case ItemCategory.Gear:
+                    DrawGearIcon(inset, item);
+                    break;
                 default:
                     DrawPanel(inset, new Color(item.Color.r, item.Color.g, item.Color.b, 0.35f));
                     GUI.Label(inset, item.ShortName, SurvivorsStylePresentation.TileNameStyle);
                     break;
             }
+        }
+
+        internal static bool TryResolveGearStatIconKind(UpgradeId effect, out CharacterStatIconKind kind)
+        {
+            switch (effect)
+            {
+                case UpgradeId.MoveSpeed:
+                    kind = CharacterStatIconKind.Speed;
+                    return true;
+                case UpgradeId.MaxHealth:
+                case UpgradeId.SapRegen:
+                case UpgradeId.Heal:
+                case UpgradeId.PersistentHealAura:
+                    kind = CharacterStatIconKind.Health;
+                    return true;
+                case UpgradeId.Armor:
+                case UpgradeId.SiegeKnockback:
+                    kind = CharacterStatIconKind.Armor;
+                    return true;
+                case UpgradeId.Magnet:
+                    kind = CharacterStatIconKind.Magnet;
+                    return true;
+                case UpgradeId.CriticalRunes:
+                case UpgradeId.UltimateDamage:
+                    kind = CharacterStatIconKind.Damage;
+                    return true;
+                case UpgradeId.UltimateCooldown:
+                    kind = CharacterStatIconKind.Cooldown;
+                    return true;
+                case UpgradeId.AxePierce:
+                case UpgradeId.ExtraAxe:
+                case UpgradeId.ExtraOrbit:
+                case UpgradeId.ExtraRadial:
+                    kind = CharacterStatIconKind.Radius;
+                    return true;
+                default:
+                    kind = default;
+                    return false;
+            }
+        }
+
+        private static void DrawGearIcon(Rect rect, ItemDefinition item)
+        {
+            if (TryResolveGearStatIconKind(item.EffectAtLevel(1), out var kind))
+            {
+                CharacterSelectPresentation.DrawStatIcon(rect, kind, item.Color);
+                return;
+            }
+
+            DrawGearAbbreviation(rect, item);
+        }
+
+        private static void DrawGearAbbreviation(Rect rect, ItemDefinition item)
+        {
+            DrawPanel(rect, new Color(item.Color.r, item.Color.g, item.Color.b, 0.35f));
+
+            var shortName = item.ShortName ?? string.Empty;
+            var label = shortName.Length <= 3
+                ? shortName
+                : shortName.Substring(0, 3);
+
+            GUI.Label(rect, label, SurvivorsStylePresentation.TileNameStyle);
         }
 
         private static void DrawRelicFallback(Rect rect, string relicId)

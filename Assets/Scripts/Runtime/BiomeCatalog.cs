@@ -124,5 +124,58 @@ namespace ProjectExpedition
 
             return "EXTRACTION UNDERWAY";
         }
+
+        public static string ResolveDeploymentAnnouncement(string biomeId)
+        {
+            if (biomeId == CanopyId)
+            {
+                return "RAISING CANOPY CAMP — THE EXPEDITION BEGINS";
+            }
+
+            if (biomeId == RelayId)
+            {
+                return "RAISING RELAY CAMP — THE EXPEDITION BEGINS";
+            }
+
+            return "RAISING SHORE CAMP — THE EXPEDITION BEGINS";
+        }
+
+        public static string ResolveDeploymentHeadline(string biomeId)
+        {
+            if (biomeId == CanopyId)
+            {
+                return "RAISING CANOPY CAMP";
+            }
+
+            if (biomeId == RelayId)
+            {
+                return "RAISING RELAY CAMP";
+            }
+
+            return "RAISING SHORE CAMP";
+        }
+
+        public static string ResolveDeploymentDetail(string biomeId)
+        {
+            if (biomeId == CanopyId)
+            {
+                return "SETTING WATCHFIRES AND MAPPING THE GROVE PATH AHEAD";
+            }
+
+            if (biomeId == RelayId)
+            {
+                return "DEPLOYING GEAR AND OPENING THE SUPPLY LINE";
+            }
+
+            return "SECURING SUPPLIES AND SCOUTING THE ROUTE AHEAD";
+        }
+
+        public static string ResolveDeploymentObjectiveLabel(string biomeId)
+        {
+            return "RAISING CAMP";
+        }
+
+        public static string ResolveDeploymentCountdownLine(float remainingSeconds) =>
+            $"EXPEDITION BEGINS IN {remainingSeconds:0.0}s";
     }
 }

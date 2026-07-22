@@ -16,6 +16,8 @@ namespace ProjectExpedition
         public GUIStyle Title;
         public GUIStyle SectionTitle;
         public GUIStyle FooterButton;
+        public GUIStyle RunOutcomeVictory;
+        public GUIStyle RunOutcomeDefeat;
 
         public static SurvivorsHudStyles Create()
         {
@@ -44,7 +46,11 @@ namespace ProjectExpedition
                     42, FontStyle.Bold, SurvivorsStylePresentation.TextGold, TextAnchor.MiddleCenter),
                 SectionTitle = SurvivorsStylePresentation.SectionTitleStyle,
                 FooterButton = SurvivorsStylePresentation.CreateLabelStyle(
-                    18, FontStyle.Bold, SurvivorsStylePresentation.TextLight, TextAnchor.MiddleCenter)
+                    18, FontStyle.Bold, SurvivorsStylePresentation.TextLight, TextAnchor.MiddleCenter),
+                RunOutcomeVictory = SurvivorsStylePresentation.CreateLabelStyle(
+                    54, FontStyle.Bold, SurvivorsStylePresentation.TextGold, TextAnchor.MiddleCenter),
+                RunOutcomeDefeat = SurvivorsStylePresentation.CreateLabelStyle(
+                    54, FontStyle.Bold, new Color(0.94f, 0.30f, 0.32f), TextAnchor.MiddleCenter)
             };
         }
 
