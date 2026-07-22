@@ -5,6 +5,13 @@ namespace ProjectExpedition.Tests
 {
     public sealed class SharedExpeditionRouteModelTests
     {
+        private static void BeginActiveRun(SharedExpeditionRouteModel route, string mapId)
+        {
+            route.Begin(mapId);
+            route.AdvanceDeployment(SharedExpeditionRouteModel.DeploymentDuration);
+            route.ConsumeAnnouncement();
+        }
+
         [Test]
         public void Begin_InitializesScoutObjectivesAndOpeningPhase()
         {
@@ -92,7 +99,7 @@ namespace ProjectExpedition.Tests
         public void Extraction_CompletesAtBeaconOrAfterDuration()
         {
             var route = new SharedExpeditionRouteModel();
-            route.Begin("frostbound.scout");
+            BeginActiveRun(route, "frostbound.scout");
             route.OnEnemyKilled(true, false);
             var beacon = new Vector2(route.ExtractionBeaconX, route.ExtractionBeaconY);
 
@@ -109,7 +116,7 @@ namespace ProjectExpedition.Tests
             Assert.That(route.ExtractionCompletion, Is.EqualTo(ExtractionCompletionKind.BeaconHold));
 
             route = new SharedExpeditionRouteModel();
-            route.Begin("frostbound.scout");
+            BeginActiveRun(route, "frostbound.scout");
             route.OnEnemyKilled(true, false);
             route.Advance(16f, Vector2.zero);
 
@@ -121,7 +128,7 @@ namespace ProjectExpedition.Tests
         public void Extraction_HoldResetsWhenLeavingBeacon()
         {
             var route = new SharedExpeditionRouteModel();
-            route.Begin("frostbound.scout");
+            BeginActiveRun(route, "frostbound.scout");
             route.OnEnemyKilled(true, false);
             var beacon = new Vector2(route.ExtractionBeaconX, route.ExtractionBeaconY);
 
@@ -143,7 +150,7 @@ namespace ProjectExpedition.Tests
         public void Extraction_QueuesUnderwayAnnouncementWhenEnteringBeacon()
         {
             var route = new SharedExpeditionRouteModel();
-            route.Begin("frostbound.scout");
+            BeginActiveRun(route, "frostbound.scout");
             route.OnEnemyKilled(true, false);
             route.ConsumeAnnouncement();
 

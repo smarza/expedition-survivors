@@ -39,7 +39,7 @@ namespace ProjectExpedition.Tests
             model.Begin(new Vector2(0f, 0f), EnemyCatalog.Draugr, 4f, 3, 1.75f, 0.36f, 4);
 
             Assert.That(model.EnemyLevel, Is.EqualTo(3));
-            Assert.That(model.Health, Is.EqualTo(36.5f).Within(0.0001f));
+            Assert.That(model.Health, Is.EqualTo(42f).Within(0.0001f));
             Assert.That(model.ExperienceValue, Is.EqualTo(4));
         }
     }

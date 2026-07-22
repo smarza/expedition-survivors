@@ -12,8 +12,8 @@ namespace ProjectExpedition.Tests
             {
                 ObstacleDefinition.Box(Vector2.zero, new Vector2(2f, 2f))
             };
-            var resolved = SharedMovementCollision.ResolveCircleMovement(
-                new Vector2(-6f, 0f), 0.4f, new Vector2(6f, 0f), obstacles);
+            var resolved = SharedMovementCollision.AdvanceCircleTowardsTarget(
+                new Vector2(-6f, 0f), 0.4f, new Vector2(6f, 0f), 12f, obstacles);
 
             Assert.That(Mathf.Abs(resolved.x), Is.LessThan(6f));
             Assert.That(SharedMovementCollision.OverlapsCircle(obstacles[0], resolved, 0.4f), Is.False);

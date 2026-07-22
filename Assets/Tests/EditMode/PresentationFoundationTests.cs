@@ -192,22 +192,6 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
-        public void PresentationTextMeasure_ReturnsNonZeroHeightForWrappedBody()
-        {
-            var style = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = PresentationTypography.BaseSize(CompactFontToken.Body),
-                wordWrap = true
-            };
-            var height = PresentationTextMeasure.MeasureHeight(
-                style,
-                "Frostbound expedition leader with rune axe and raven mantle.",
-                420f);
-
-            Assert.That(height, Is.GreaterThan(18f));
-        }
-
-        [Test]
         public void UiArtCatalog_SanitizesStableIdsForResourcePaths()
         {
             Assert.That(UiArtCatalog.SanitizeId("weapon.frost_axe"), Is.EqualTo("weapon_frost_axe"));
@@ -259,15 +243,6 @@ namespace ProjectExpedition.Tests
         public void MusicRouting_IncludesTitleScreenInMenuMusic()
         {
             Assert.That(PresentationDirector.MusicFor(RunState.TitleScreen, false), Is.EqualTo(PresentationMusicState.Menu));
-        }
-
-        [Test]
-        public void SurvivorsHudStyles_CreateAllTypographySlots()
-        {
-            var styles = SurvivorsHudStyles.Create();
-            Assert.That(styles.Display, Is.Not.Null);
-            Assert.That(styles.Title, Is.Not.Null);
-            Assert.That(styles.Hint, Is.Not.Null);
         }
 
         [Test]

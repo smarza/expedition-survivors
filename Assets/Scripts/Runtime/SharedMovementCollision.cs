@@ -73,6 +73,31 @@ namespace ProjectExpedition
             }
 
             var desired = currentPosition + travel;
+
+            if (SegmentBlockedByObstacles(currentPosition, desired, radius, obstacles))
+            {
+                var maximumDistance = travel.magnitude;
+                var safeDistance = 0f;
+
+                for (var iteration = 0; iteration < 8; iteration++)
+                {
+                    var candidateDistance = (safeDistance + maximumDistance) * 0.5f;
+                    var candidate = currentPosition + travel.normalized * candidateDistance;
+
+                    if (SegmentBlockedByObstacles(currentPosition, candidate, radius, obstacles))
+                    {
+                        maximumDistance = candidateDistance;
+                    }
+                    else
+                    {
+                        safeDistance = candidateDistance;
+                    }
+                }
+
+                travel = travel.normalized * safeDistance;
+                desired = currentPosition + travel;
+            }
+
             var resolved = ResolveCircleMovement(currentPosition, radius, desired, obstacles);
 
             if ((resolved - currentPosition).sqrMagnitude > MinimumDistanceSquared)

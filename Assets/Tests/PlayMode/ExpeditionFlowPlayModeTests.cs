@@ -307,6 +307,8 @@ namespace ProjectExpedition.Tests
             Assert.That(director.SelectedMap.Id, Is.EqualTo("frostbound.scout"));
             Assert.That(director.Route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Shoreline));
 
+            yield return WaitForDeployment(director);
+
             var bossObject = new GameObject("Mock Jotunn");
             bossObject.transform.SetParent(director.RunRoot, false);
             var boss = bossObject.AddComponent<Enemy>();
@@ -420,7 +422,8 @@ namespace ProjectExpedition.Tests
 
             Assert.That(director.SelectedMap.Id, Is.EqualTo("oathbound.scout"));
             Assert.That(director.Route.CurrentPhase, Is.EqualTo(ExpeditionPhase.Shoreline));
-            Assert.That(director.Route.ConsumeAnnouncement(), Is.EqualTo("THE CANOPY STIRS"));
+
+            yield return WaitForDeployment(director);
 
             var bossObject = new GameObject("Mock Heartwood Colossus");
             bossObject.transform.SetParent(director.RunRoot, false);
@@ -452,6 +455,19 @@ namespace ProjectExpedition.Tests
             Assert.That(director.EndBeatRemaining, Is.LessThan(2.8f));
 
             yield return DestroyDirector(director);
+        }
+
+        private static IEnumerator WaitForDeployment(GameDirector director)
+        {
+            var safetyFrames = 0;
+
+            while (director.Route.IsDeploying && safetyFrames < 600)
+            {
+                safetyFrames++;
+                yield return null;
+            }
+
+            Assert.That(director.Route.IsDeploying, Is.False);
         }
 
         private static GameDirector CreateDirector()

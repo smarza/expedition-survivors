@@ -199,14 +199,19 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
-        public void NextCharacterIndex_WrapsAllFourHeroes()
+        public void NextCharacterIndex_WrapsFullCharacterRoster()
         {
-            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(0, 1, 0), Is.EqualTo(1));
-            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(1, 1, 0), Is.EqualTo(2));
-            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(2, 1, 0), Is.EqualTo(3));
-            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(3, 1, 0), Is.EqualTo(0));
-            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(0, 0, 1), Is.EqualTo(2));
-            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(2, 0, -1), Is.EqualTo(0));
+            var rosterCount = ContentCatalog.Characters.Length;
+            var gridColumns = CharacterSelectPresentation.GridColumns;
+
+            for (var index = 0; index < rosterCount - 1; index++)
+            {
+                Assert.That(SharedMetaProgressionModel.NextCharacterIndex(index, 1, 0), Is.EqualTo(index + 1));
+            }
+
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(rosterCount - 1, 1, 0), Is.EqualTo(0));
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(0, 0, 1), Is.EqualTo(gridColumns));
+            Assert.That(SharedMetaProgressionModel.NextCharacterIndex(gridColumns, 0, -1), Is.EqualTo(0));
         }
 
         [Test]
