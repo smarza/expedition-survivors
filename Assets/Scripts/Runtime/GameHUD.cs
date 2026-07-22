@@ -2561,7 +2561,7 @@ namespace ProjectExpedition
         private void DrawMapSelectDetail(Rect detailRect)
         {
             var map = ContentCatalog.Map(_mapSelection);
-            var unlocked = ContentCatalog.IsMapUnlocked(_mapSelection);
+            var unlocked = SaveService.IsMapUnlocked(_mapSelection);
             DrawMapSelectFooterDetail(
                 detailRect.x,
                 detailRect.y,
