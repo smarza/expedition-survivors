@@ -1327,7 +1327,7 @@ namespace ProjectExpedition
             if (hasSelected)
             {
                 return
-                    $"P{player + 1}  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {Prompt(BindingAction.Back)} DESELECT  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}";
+                    $"P{player + 1}  •  {Prompt(BindingAction.Submit)} READY  •  {Prompt(BindingAction.Back)} DESELECT  •  {LocalInputRouter.AssignmentLabel(player, playerCount)}";
             }
 
             return
@@ -1664,7 +1664,7 @@ namespace ProjectExpedition
                 {
                     DrawVsFooterButton(
                         actionRect,
-                        "CONFIRM",
+                        "READY",
                         canReady,
                         isConfirmed,
                         disabledLabel,
@@ -1807,7 +1807,8 @@ namespace ProjectExpedition
             var hasSelected = _characterSelected[player];
             var isConfirmed = _characterSelected[player];
             var canSelect = unlocked && !hasSelected;
-            var disabledLabel = unlocked ? "SELECT" : "LOCKED";
+            var actionLabel = hasSelected ? "READY" : "SELECT";
+            var disabledLabel = unlocked ? actionLabel : "LOCKED";
 
             var content = new LayoutZone(footerRect).Inset(PresentationSpacing.Space12);
             var portraitRect = new Rect(content.Rect.x, content.Rect.y + 8f, 88f, 88f);
@@ -1830,7 +1831,7 @@ namespace ProjectExpedition
             var actionRect = new Rect(content.Rect.xMax - actionWidth, content.Rect.y + content.Rect.height * 0.5f - 24f, actionWidth, 48f);
             DrawVsFooterButton(
                 actionRect,
-                "SELECT",
+                actionLabel,
                 canSelect,
                 isConfirmed,
                 disabledLabel,
@@ -2943,6 +2944,7 @@ namespace ProjectExpedition
             GameplayHudPresentation.DrawDamageTakenVignette(new Rect(0f, 0f, 1920f, 1080f), _director);
             GameplayHudPresentation.DrawBossProximityVignette(new Rect(0f, 0f, 1920f, 1080f), _director);
             GameplayHudPresentation.DrawDeploymentOverlay(new Rect(0f, 0f, 1920f, 1080f), _director, _survivorsHudStyles);
+            GameplayHudPresentation.DrawDownedPartnerDirectionIndicators(new Rect(0f, 0f, 1920f, 1080f), _director);
         }
 
         private void DrawBuildTrayBottomBar(Rect bottomBar)

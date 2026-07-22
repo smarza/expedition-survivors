@@ -107,7 +107,7 @@ namespace ProjectExpedition
             _filterHint.text = unlockedFilter
                 ? "Showing unlocked survivors only."
                 : "Showing the full roster.";
-            _confirmButton.text = !unlocked ? "LOCKED" : hasSelected ? "CONFIRM" : "SELECT";
+            _confirmButton.text = !unlocked ? "LOCKED" : hasSelected ? "READY" : "SELECT";
             _confirmButton.SetEnabled(unlocked && (!hasSelected || !isReady));
 
             RebuildStats(definition, unlocked);

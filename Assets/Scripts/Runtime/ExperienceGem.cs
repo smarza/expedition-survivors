@@ -94,27 +94,26 @@ namespace ProjectExpedition
 
             transform.Rotate(0f, 0f, 90f * Time.deltaTime);
 
-            var collector = _director.GetNearestLivingPlayer(transform.position);
-            if (collector == null)
-            {
-                return;
-            }
-
-            var delta = (Vector2)collector.transform.position - (Vector2)transform.position;
-            var magnet = collector.MagnetRadius;
-            if (delta.sqrMagnitude < magnet * magnet)
-            {
-                transform.position += (Vector3)(delta.normalized * (4.5f + 10f / Mathf.Max(0.5f, delta.magnitude)) * Time.deltaTime);
-            }
-
-            if (delta.sqrMagnitude < 0.24f)
+            var pickupPosition = (Vector2)transform.position;
+            if (_director.TryResolvePickupCollection(
+                    pickupPosition,
+                    SharedPickupCollectionModel.DefaultCollectionRadiusSqr,
+                    out _))
             {
                 _director.AddExperience(_value);
                 _director.Present(PresentationCue.ExperiencePickup, transform.position, _renderer.color,
                     _value >= 10 ? 0.7f : 0.25f);
                 _director.ReleaseExperienceGem(this);
+                return;
             }
-            else if (_age > 40f)
+
+            if (_director.TryResolvePickupMagnetTarget(pickupPosition, out _, out var magnetDelta))
+            {
+                transform.position += (Vector3)(magnetDelta.normalized *
+                    (4.5f + 10f / Mathf.Max(0.5f, magnetDelta.magnitude)) * Time.deltaTime);
+            }
+
+            if (_age > 40f)
             {
                 _director.ReleaseExperienceGem(this);
             }

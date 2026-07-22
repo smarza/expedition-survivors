@@ -148,23 +148,27 @@ namespace ProjectExpedition
             _lastCollectedDefinition = definition;
             var isActive = isEffectActiveForDefinition != null && isEffectActiveForDefinition(definition.Id);
 
-            if (isActive)
+            if (isActive && definition.CollectWhileActive == LootCollectWhileActive.Discard)
             {
-                if (definition.CollectWhileActive == LootCollectWhileActive.Discard)
-                {
-                    return LootCollectResult.DiscardedWhileActive;
-                }
+                return LootCollectResult.DiscardedWhileActive;
+            }
 
-                if (definition.CollectWhileActive == LootCollectWhileActive.Extend)
-                {
-                    var required = GetRequiredCount(definition);
-                    _counts[definition.Id] = Math.Min(required, GetCount(definition) + 1);
-                    return LootCollectResult.Incremented;
-                }
+            if (isActive && definition.CollectWhileActive == LootCollectWhileActive.Extend)
+            {
+                var required = GetRequiredCount(definition);
+                _counts[definition.Id] = Math.Min(required, GetCount(definition) + 1);
+                return LootCollectResult.Incremented;
             }
 
             var nextCount = GetCount(definition) + 1;
             var activationRequired = GetRequiredCount(definition);
+
+            if (isActive && definition.CollectWhileActive == LootCollectWhileActive.Bank)
+            {
+                _counts[definition.Id] = Math.Min(activationRequired, nextCount);
+                return LootCollectResult.Incremented;
+            }
+
             _counts[definition.Id] = nextCount;
 
             if (nextCount < activationRequired)
@@ -174,6 +178,23 @@ namespace ProjectExpedition
 
             _counts[definition.Id] = 0;
             return LootCollectResult.Activated;
+        }
+
+        public bool TryConsumeBankedActivation(LootEffectDefinition definition)
+        {
+            if (definition == null || string.IsNullOrEmpty(definition.Id))
+            {
+                return false;
+            }
+
+            var activationRequired = GetRequiredCount(definition);
+            if (GetCount(definition) < activationRequired)
+            {
+                return false;
+            }
+
+            _counts[definition.Id] = 0;
+            return true;
         }
 
         private LootEffectDefinition RollDropDefinition(RunRandom random)

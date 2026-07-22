@@ -46,6 +46,7 @@ namespace ProjectExpedition
         public float EndBeatRemaining { get; private set; }
         public RunEndCause EndCause { get; private set; }
         public PresentationDirector Presentation => _presentation;
+        public Camera ExpeditionCamera => _camera;
 
         private Transform _runRoot;
         private Camera _camera;
@@ -55,6 +56,9 @@ namespace ProjectExpedition
         private RunState _settingsReturnState = RunState.TitleScreen;
         private readonly List<RewardOption> _currentRewards = new List<RewardOption>(4);
         private readonly List<Enemy> _spatialScratch = new List<Enemy>(192);
+        private readonly List<Vector2> _pickupPlayerPositionsScratch = new List<Vector2>(2);
+        private readonly List<bool> _pickupPlayerAliveScratch = new List<bool>(2);
+        private readonly List<float> _pickupMagnetRadiiScratch = new List<float>(2);
         private bool _runRecorded;
         private readonly SharedRunModel _runModel = new SharedRunModel();
         private readonly SharedExpeditionRouteModel _routeModel = new SharedExpeditionRouteModel();
@@ -120,6 +124,7 @@ namespace ProjectExpedition
         private void CreateCamera()
         {
             var cameraObject = new GameObject("Expedition Camera");
+            cameraObject.tag = "MainCamera";
             cameraObject.transform.SetParent(transform, false);
             cameraObject.transform.position = new Vector3(0f, 0f, -10f);
             _camera = cameraObject.AddComponent<Camera>();
@@ -202,6 +207,7 @@ namespace ProjectExpedition
 
             AdvancePersistentZones(Time.deltaTime);
             _temporaryEffect.Advance(Time.deltaTime, Players);
+            TryActivateBankedLootEffects();
             HandleTemporaryEffectPresentation();
             _playerHurtFeedback.Advance(Time.deltaTime, Players);
 
@@ -388,13 +394,13 @@ namespace ProjectExpedition
             {
                 for (var i = 0; i < 90; i++)
                 {
-                    var marker = new GameObject(i % 5 == 0 ? "Canopy Leaf" : "Root Shard");
+                    var marker = new GameObject("Canopy Debris");
                     marker.transform.SetParent(_runRoot, false);
                     marker.transform.position = new Vector3(Rng.Range(-38f, 38f), Rng.Range(-38f, 38f), 0f);
                     marker.transform.localScale = Vector3.one * Rng.Range(0.08f, 0.28f);
                     var renderer = marker.AddComponent<SpriteRenderer>();
-                    renderer.sprite = i % 5 == 0 ? RuntimeAssets.Diamond : RuntimeAssets.Circle;
-                    renderer.color = i % 5 == 0
+                    renderer.sprite = RuntimeAssets.Circle;
+                    renderer.color = i % 3 == 0
                         ? new Color(0.28f, 0.52f, 0.24f)
                         : new Color(0.18f, 0.32f, 0.18f);
                     renderer.sortingOrder = -10;
@@ -407,13 +413,13 @@ namespace ProjectExpedition
             {
                 for (var i = 0; i < 90; i++)
                 {
-                    var marker = new GameObject(i % 5 == 0 ? "Signal Scrap" : "Relay Debris");
+                    var marker = new GameObject("Relay Debris");
                     marker.transform.SetParent(_runRoot, false);
                     marker.transform.position = new Vector3(Rng.Range(-38f, 38f), Rng.Range(-38f, 38f), 0f);
                     marker.transform.localScale = Vector3.one * Rng.Range(0.08f, 0.28f);
                     var renderer = marker.AddComponent<SpriteRenderer>();
-                    renderer.sprite = i % 5 == 0 ? RuntimeAssets.Diamond : RuntimeAssets.Circle;
-                    renderer.color = i % 5 == 0
+                    renderer.sprite = RuntimeAssets.Circle;
+                    renderer.color = i % 3 == 0
                         ? new Color(0.62f, 0.48f, 0.22f)
                         : new Color(0.28f, 0.26f, 0.24f);
                     renderer.sortingOrder = -10;
@@ -424,13 +430,15 @@ namespace ProjectExpedition
 
             for (var i = 0; i < 90; i++)
             {
-                var marker = new GameObject(i % 5 == 0 ? "Rune Stone" : "Ice Shard");
+                var marker = new GameObject("Shore Debris");
                 marker.transform.SetParent(_runRoot, false);
                 marker.transform.position = new Vector3(Rng.Range(-38f, 38f), Rng.Range(-38f, 38f), 0f);
                 marker.transform.localScale = Vector3.one * Rng.Range(0.08f, 0.28f);
                 var renderer = marker.AddComponent<SpriteRenderer>();
-                renderer.sprite = i % 5 == 0 ? RuntimeAssets.Diamond : RuntimeAssets.Circle;
-                renderer.color = i % 5 == 0 ? new Color(0.22f, 0.45f, 0.49f) : new Color(0.17f, 0.25f, 0.28f);
+                renderer.sprite = RuntimeAssets.Circle;
+                renderer.color = i % 3 == 0
+                    ? new Color(0.22f, 0.45f, 0.49f)
+                    : new Color(0.17f, 0.25f, 0.28f);
                 renderer.sortingOrder = -10;
             }
         }
@@ -779,11 +787,83 @@ namespace ProjectExpedition
             return nearest;
         }
 
+        public bool TryResolvePickupCollection(Vector2 pickupPosition, float collectionRadiusSqr,
+            out PlayerController collector)
+        {
+            PopulatePickupPlayerScratch();
+            var collectorIndex = SharedPickupCollectionModel.FindCollectingPlayerIndex(
+                pickupPosition,
+                _pickupPlayerPositionsScratch,
+                _pickupPlayerAliveScratch,
+                collectionRadiusSqr);
+            collector = collectorIndex >= 0 && collectorIndex < Players.Count
+                ? Players[collectorIndex]
+                : null;
+            return collector != null;
+        }
+
+        public bool TryResolvePickupMagnetTarget(Vector2 pickupPosition, out PlayerController target,
+            out Vector2 offset)
+        {
+            PopulatePickupPlayerScratch();
+            var targetIndex = SharedPickupCollectionModel.FindMagnetTargetIndex(
+                pickupPosition,
+                _pickupPlayerPositionsScratch,
+                _pickupPlayerAliveScratch,
+                _pickupMagnetRadiiScratch);
+            if (targetIndex < 0 || targetIndex >= Players.Count)
+            {
+                target = null;
+                offset = Vector2.zero;
+                return false;
+            }
+
+            target = Players[targetIndex];
+            offset = _pickupPlayerPositionsScratch[targetIndex] - pickupPosition;
+            return target != null;
+        }
+
+        private void PopulatePickupPlayerScratch()
+        {
+            _pickupPlayerPositionsScratch.Clear();
+            _pickupPlayerAliveScratch.Clear();
+            _pickupMagnetRadiiScratch.Clear();
+
+            for (var i = 0; i < Players.Count; i++)
+            {
+                var player = Players[i];
+                if (player == null)
+                {
+                    _pickupPlayerPositionsScratch.Add(Vector2.zero);
+                    _pickupPlayerAliveScratch.Add(false);
+                    _pickupMagnetRadiiScratch.Add(0f);
+                    continue;
+                }
+
+                _pickupPlayerPositionsScratch.Add(player.transform.position);
+                _pickupPlayerAliveScratch.Add(player.IsAlive);
+                _pickupMagnetRadiiScratch.Add(player.EffectiveMagnetRadius);
+            }
+        }
+
         public Vector2 GroupCenter
         {
             get
             {
                 if (Players.Count == 0) return Vector2.zero;
+
+                var livingSum = Vector2.zero;
+                var livingCount = 0;
+                for (var i = 0; i < Players.Count; i++)
+                {
+                    var player = Players[i];
+                    if (player == null || !player.IsAlive) continue;
+                    livingSum += (Vector2)player.transform.position;
+                    livingCount++;
+                }
+
+                if (livingCount > 0) return livingSum / livingCount;
+
                 var sum = Vector2.zero;
                 var count = 0;
                 for (var i = 0; i < Players.Count; i++)
@@ -792,6 +872,7 @@ namespace ProjectExpedition
                     sum += (Vector2)Players[i].transform.position;
                     count++;
                 }
+
                 return count > 0 ? sum / count : Vector2.zero;
             }
         }
@@ -804,7 +885,7 @@ namespace ProjectExpedition
             for (var i = 0; i < Players.Count; i++)
             {
                 var player = Players[i];
-                if (player == null || player == movingPlayer) continue;
+                if (player == null || player == movingPlayer || !player.IsAlive) continue;
                 otherCenter += (Vector2)player.transform.position;
                 count++;
             }
@@ -975,9 +1056,34 @@ namespace ProjectExpedition
                 return;
             }
 
-            _temporaryEffect.Activate(tracked, collectorPlayerIndex, Players);
-            Present(PresentationCue.LootActivated, GroupCenter, tracked.ThemeColor, 1.6f);
-            _hud.SetAnnouncement($"{tracked.DisplayName.ToUpperInvariant()} ACTIVATED", 2.4f);
+            ActivateLootEffect(tracked, collectorPlayerIndex);
+        }
+
+        private void TryActivateBankedLootEffects()
+        {
+            var definitions = DevelopmentTuningResolver.ResolveAllLootDefinitions();
+            for (var i = 0; i < definitions.Count; i++)
+            {
+                var definition = definitions[i];
+                if (definition == null || _temporaryEffect.IsActive(definition.Id))
+                {
+                    continue;
+                }
+
+                if (!_lootProgress.TryConsumeBankedActivation(definition))
+                {
+                    continue;
+                }
+
+                ActivateLootEffect(definition, 0);
+            }
+        }
+
+        private void ActivateLootEffect(LootEffectDefinition definition, int collectorPlayerIndex)
+        {
+            _temporaryEffect.Activate(definition, collectorPlayerIndex, Players);
+            Present(PresentationCue.LootActivated, GroupCenter, definition.ThemeColor, 1.6f);
+            _hud.SetAnnouncement($"{definition.DisplayName.ToUpperInvariant()} ACTIVATED", 2.4f);
         }
 
         private void HandleTemporaryEffectPresentation()
@@ -1002,9 +1108,18 @@ namespace ProjectExpedition
 
         public void ReleaseLootPickup(LootPickup pickup) => _lootPool.Release(pickup);
 
-        public void OnRuneShardCollected(RuneShardPickup shard)
+        public void OnRuneShardCollected(RuneShardPickup shard, int collectorPlayerIndex)
         {
             _routeModel.OnShardCollected();
+            var map = ActiveMap;
+            var label = string.IsNullOrWhiteSpace(map.OptionalPickupLabel)
+                ? "SHARDS"
+                : map.OptionalPickupLabel;
+            var collected = _routeModel.RuneShardsCollected;
+            var required = _routeModel.OptionalShardObjective;
+            Present(PresentationCue.LootCollected, ResolvePlayerPosition(collectorPlayerIndex),
+                new Color(0.96f, 0.78f, 0.22f), 0.45f);
+            _hud.SetAnnouncement($"+1 {label}  ({collected}/{required})", 1.8f);
             ReleaseRuneShard(shard);
         }
 
@@ -1015,7 +1130,7 @@ namespace ProjectExpedition
             for (var i = 0; i < Players.Count; i++)
                 if (Players[i] != null && Players[i].IsAlive) living++;
             if (living == 0) EndRun(false);
-            else _hud.SetAnnouncement($"{player.HeroName.ToUpperInvariant()} IS DOWN — STAY CLOSE TO REVIVE", 3f);
+            else _hud.SetAnnouncement($"{player.HeroName.ToUpperInvariant()} IS DOWN — FOLLOW ARROW TO REVIVE", 3f);
         }
 
         public void OnPlayerRevived(PlayerController player)
@@ -1538,11 +1653,23 @@ namespace ProjectExpedition
             if (Director == null || Director.Players.Count == 0) return;
             var center = Director.GroupCenter;
             var maximumDistance = 0f;
+            var livingCount = 0;
             for (var i = 0; i < Director.Players.Count; i++)
             {
                 var player = Director.Players[i];
-                if (player == null) continue;
+                if (player == null || !player.IsAlive) continue;
+                livingCount++;
                 maximumDistance = Mathf.Max(maximumDistance, Vector2.Distance(center, player.transform.position));
+            }
+
+            if (livingCount == 0)
+            {
+                for (var i = 0; i < Director.Players.Count; i++)
+                {
+                    var player = Director.Players[i];
+                    if (player == null) continue;
+                    maximumDistance = Mathf.Max(maximumDistance, Vector2.Distance(center, player.transform.position));
+                }
             }
 
             var bossPressure = ResolveBossMenacePressure(center);

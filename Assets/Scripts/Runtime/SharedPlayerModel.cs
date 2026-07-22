@@ -25,6 +25,7 @@ namespace ProjectExpedition
         public const float DefaultReviveDuration = 2.5f;
         public const float DefaultReviveDecayRate = 0.35f;
         public const float DefaultReviveHealthFraction = 0.42f;
+        public const float DefaultReviveRadius = 1.8f;
 
         private const float InitialUltimateCharge = 0.3f;
 

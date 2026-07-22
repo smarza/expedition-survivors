@@ -150,6 +150,7 @@ namespace ProjectExpedition
             TouchControlsPresentation.Draw(director);
             DrawDamageTakenVignette(screen, director);
             DrawBossProximityVignette(screen, director);
+            DrawDownedPartnerDirectionIndicators(screen, director);
         }
 
         public static void DrawDamageTakenVignette(Rect screen, GameDirector director)
@@ -277,6 +278,218 @@ namespace ProjectExpedition
             SurvivorsStylePresentation.DrawPanel(
                 new Rect(screen.xMax - edgeThickness, screen.y, edgeThickness, screen.height),
                 color);
+        }
+
+        public static void DrawDownedPartnerDirectionIndicators(Rect screen, GameDirector director)
+        {
+            if (director == null || director.Players.Count <= 1)
+            {
+                return;
+            }
+
+            var hasLivingPlayer = false;
+            for (var i = 0; i < director.Players.Count; i++)
+            {
+                var player = director.Players[i];
+                if (player != null && player.IsAlive)
+                {
+                    hasLivingPlayer = true;
+                    break;
+                }
+            }
+
+            if (!hasLivingPlayer)
+            {
+                return;
+            }
+
+            var expeditionCamera = director.ExpeditionCamera;
+            if (expeditionCamera == null)
+            {
+                return;
+            }
+
+            const float edgeMargin = 56f;
+            const float arrowSize = 56f;
+            var screenCenter = new Vector2(screen.x + screen.width * 0.5f, screen.y + screen.height * 0.5f);
+            var indicatorBounds = new Rect(
+                screen.x + edgeMargin,
+                screen.y + edgeMargin,
+                screen.width - edgeMargin * 2f,
+                screen.height - edgeMargin * 2f);
+
+            for (var i = 0; i < director.Players.Count; i++)
+            {
+                var downedPlayer = director.Players[i];
+                if (downedPlayer == null || !downedPlayer.IsDowned)
+                {
+                    continue;
+                }
+
+                var nearestLivingDistance = float.MaxValue;
+                PlayerController nearestLivingPlayer = null;
+                for (var j = 0; j < director.Players.Count; j++)
+                {
+                    var livingPlayer = director.Players[j];
+                    if (livingPlayer == null || !livingPlayer.IsAlive)
+                    {
+                        continue;
+                    }
+
+                    var distance = Vector2.Distance(
+                        livingPlayer.transform.position,
+                        downedPlayer.transform.position);
+                    if (distance < nearestLivingDistance)
+                    {
+                        nearestLivingDistance = distance;
+                        nearestLivingPlayer = livingPlayer;
+                    }
+                }
+
+                if (nearestLivingPlayer == null ||
+                    nearestLivingDistance <= SharedPlayerModel.DefaultReviveRadius)
+                {
+                    continue;
+                }
+
+                if (!TryWorldToVirtualScreen(
+                        expeditionCamera,
+                        downedPlayer.transform.position,
+                        screen,
+                        out var targetScreen))
+                {
+                    continue;
+                }
+
+                var centerToTarget = targetScreen - screenCenter;
+                if (centerToTarget.sqrMagnitude < 0.01f)
+                {
+                    continue;
+                }
+
+                var onScreen = indicatorBounds.Contains(targetScreen);
+                var indicatorPosition = onScreen
+                    ? targetScreen
+                    : ClampToScreenEdge(screenCenter, centerToTarget, indicatorBounds);
+
+                var aimDirection = targetScreen - indicatorPosition;
+                if (aimDirection.sqrMagnitude < 1f)
+                {
+                    aimDirection = centerToTarget;
+                }
+
+                var rotationDegrees = Mathf.Atan2(aimDirection.x, -aimDirection.y) * Mathf.Rad2Deg;
+                var pulse = 0.78f + 0.22f * Mathf.Sin(Time.unscaledTime * 5.4f);
+                var arrowColor = downedPlayer.Definition.Color;
+                arrowColor.a = pulse;
+
+                DrawDirectionArrow(indicatorPosition, arrowSize, arrowColor, rotationDegrees);
+                DrawDownedPartnerDistanceLabel(indicatorPosition, arrowSize, nearestLivingDistance, arrowColor);
+            }
+        }
+
+        private static void DrawDownedPartnerDistanceLabel(
+            Vector2 indicatorPosition,
+            float arrowSize,
+            float distanceMeters,
+            Color accentColor)
+        {
+            const float labelWidth = 72f;
+            const float labelHeight = 24f;
+            var labelRect = new Rect(
+                indicatorPosition.x - labelWidth * 0.5f,
+                indicatorPosition.y + arrowSize * 0.46f,
+                labelWidth,
+                labelHeight);
+            var pillRect = new Rect(
+                labelRect.x - 6f,
+                labelRect.y - 2f,
+                labelRect.width + 12f,
+                labelRect.height + 4f);
+
+            SurvivorsStylePresentation.DrawFlatPanel(
+                pillRect,
+                new Color(0.02f, 0.04f, 0.06f, 0.88f),
+                1f,
+                new Color(accentColor.r, accentColor.g, accentColor.b, 0.72f));
+
+            var previousGuiColor = GUI.color;
+            GUI.color = new Color(0.94f, 0.97f, 1f, 0.96f);
+            GUI.Label(labelRect, $"{distanceMeters:0}m");
+            GUI.color = previousGuiColor;
+        }
+
+        private static bool TryWorldToVirtualScreen(
+            Camera camera,
+            Vector3 worldPosition,
+            Rect screen,
+            out Vector2 virtualScreen)
+        {
+            if (camera == null)
+            {
+                virtualScreen = default;
+                return false;
+            }
+
+            var viewport = camera.WorldToViewportPoint(worldPosition);
+            if (viewport.z <= 0f)
+            {
+                virtualScreen = default;
+                return false;
+            }
+
+            virtualScreen = new Vector2(
+                screen.x + viewport.x * screen.width,
+                screen.y + (1f - viewport.y) * screen.height);
+            return true;
+        }
+
+        private static Vector2 ClampToScreenEdge(Vector2 origin, Vector2 direction, Rect bounds)
+        {
+            if (direction.sqrMagnitude < 0.01f)
+            {
+                return bounds.center;
+            }
+
+            var normalizedDirection = direction.normalized;
+            var halfWidth = bounds.width * 0.5f;
+            var halfHeight = bounds.height * 0.5f;
+            var absoluteX = Mathf.Abs(normalizedDirection.x);
+            var absoluteY = Mathf.Abs(normalizedDirection.y);
+            var scale = absoluteX * halfHeight > absoluteY * halfWidth
+                ? halfWidth / Mathf.Max(absoluteX, 0.0001f)
+                : halfHeight / Mathf.Max(absoluteY, 0.0001f);
+
+            return origin + normalizedDirection * scale;
+        }
+
+        private static void DrawDirectionArrow(Vector2 center, float size, Color color, float rotationDegrees)
+        {
+            var haloSize = size * 1.08f;
+            var haloRect = new Rect(
+                center.x - haloSize * 0.5f,
+                center.y - haloSize * 0.5f,
+                haloSize,
+                haloSize);
+            var previousColor = GUI.color;
+            GUI.color = new Color(0.02f, 0.04f, 0.06f, 0.72f);
+            GUI.DrawTexture(haloRect, RuntimeAssets.Circle.texture, ScaleMode.ScaleToFit, true);
+            GUI.color = previousColor;
+
+            var rect = new Rect(center.x - size * 0.5f, center.y - size * 0.5f, size, size);
+            var previousMatrix = GUI.matrix;
+
+            try
+            {
+                GUIUtility.RotateAroundPivot(rotationDegrees, center);
+                GUI.color = color;
+                GUI.DrawTexture(rect, RuntimeAssets.Arrow.texture, ScaleMode.ScaleToFit, true);
+                GUI.color = previousColor;
+            }
+            finally
+            {
+                GUI.matrix = previousMatrix;
+            }
         }
 
         private static void DrawTopStrip(Rect screen, GameDirector director, SurvivorsHudStyles styles, Func<BindingAction, string> prompt)
@@ -654,7 +867,7 @@ namespace ProjectExpedition
             var counterStyle = styles.StatValue;
             counterStyle.normal.textColor = isActive ? theme : labelStyle.normal.textColor;
             var counterText = isActive
-                ? ResolveActiveTimerLabel(effect, definition.Id)
+                ? ResolveActiveCounterLabel(effect, definition.Id, currentCount, required)
                 : $"{currentCount}/{required}";
             GUI.Label(counterRect, counterText, counterStyle);
 
@@ -662,7 +875,7 @@ namespace ProjectExpedition
             var barRight = counterRect.x - 4f;
             var barWidth = Mathf.Max(20f, barRight - barLeft);
             var barRect = new Rect(barLeft, rowRect.y + 9f, barWidth, 6f);
-            var barFill = isActive
+            var barFill = isActive && currentCount <= 0
                 ? ResolveActiveEffectProgressFillForDefinition(effect, definition.Id)
                 : required > 0
                     ? currentCount / (float)required
@@ -687,6 +900,21 @@ namespace ProjectExpedition
                 default:
                     return "LOOT";
             }
+        }
+
+        private static string ResolveActiveCounterLabel(
+            SharedTemporaryEffectModel effect,
+            string definitionId,
+            int currentCount,
+            int required)
+        {
+            var timerLabel = ResolveActiveTimerLabel(effect, definitionId);
+            if (currentCount <= 0)
+            {
+                return timerLabel;
+            }
+
+            return $"{currentCount}/{required} · {timerLabel}";
         }
 
         private static string ResolveActiveTimerLabel(SharedTemporaryEffectModel effect, string definitionId)

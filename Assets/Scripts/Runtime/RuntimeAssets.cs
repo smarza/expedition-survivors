@@ -7,12 +7,14 @@ namespace ProjectExpedition
         private static Sprite _circle;
         private static Sprite _diamond;
         private static Sprite _square;
+        private static Sprite _arrow;
         private static Texture2D _portrait;
         private static Texture2D _white;
 
         public static Sprite Circle => _circle != null ? _circle : (_circle = MakeCircleSprite(64));
         public static Sprite Diamond => _diamond != null ? _diamond : (_diamond = MakeDiamondSprite(48));
         public static Sprite Square => _square != null ? _square : (_square = MakeSquareSprite(32));
+        public static Sprite Arrow => _arrow != null ? _arrow : (_arrow = MakeArrowSprite(48));
         public static Texture2D Portrait
         {
             get
@@ -66,6 +68,30 @@ namespace ProjectExpedition
             for (var i = 0; i < pixels.Length; i++)
             {
                 pixels[i] = fill;
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0, 0, size, size), Vector2.one * 0.5f, size);
+        }
+
+        private static Sprite MakeArrowSprite(int size)
+        {
+            var texture = NewTexture(size, size);
+            var pixels = new Color32[size * size];
+            var center = (size - 1) * 0.5f;
+
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var normalizedX = (x - center) / center;
+                var normalizedY = (center - y) / center;
+                var tipBand = normalizedY >= 0.72f;
+                var shaftBand = normalizedY >= 0.08f && normalizedY < 0.72f;
+                var tipInside = tipBand && Mathf.Abs(normalizedX) <= (1f - normalizedY) * 1.35f;
+                var shaftInside = shaftBand && Mathf.Abs(normalizedX) <= 0.22f;
+                var inside = tipInside || shaftInside;
+                pixels[y * size + x] = inside ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 0);
             }
 
             texture.SetPixels32(pixels);

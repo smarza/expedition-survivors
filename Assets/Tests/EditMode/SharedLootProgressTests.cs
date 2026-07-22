@@ -35,6 +35,35 @@ namespace ProjectExpedition.Tests
         [Test]
         public void OnCollected_DiscardsWhileActiveWhenConfigured()
         {
+            var discardLoot = new LootEffectDefinition(
+                "test.discard_loot",
+                "Discard Loot",
+                UnityEngine.Color.white,
+                0.04f,
+                0.005f,
+                0.08f,
+                10,
+                8f,
+                8f,
+                TemporaryEffectType.Regeneration,
+                LootCollectWhileActive.Discard);
+
+            var progress = new SharedLootProgressModel();
+            progress.Begin(new[] { discardLoot });
+
+            for (var i = 0; i < 10; i++)
+            {
+                progress.OnCollected(discardLoot, _ => false);
+            }
+
+            Assert.That(progress.OnCollected(discardLoot, id => id == discardLoot.Id),
+                Is.EqualTo(LootCollectResult.DiscardedWhileActive));
+            Assert.That(progress.GetCount(discardLoot), Is.Zero);
+        }
+
+        [Test]
+        public void OnCollected_BanksProgressWhileActiveWithoutImmediateActivation()
+        {
             var progress = new SharedLootProgressModel();
             progress.Begin();
 
@@ -43,9 +72,27 @@ namespace ProjectExpedition.Tests
                 progress.OnCollected(LootEffectCatalog.HealingEmbers, _ => false);
             }
 
-            Assert.That(progress.OnCollected(LootEffectCatalog.HealingEmbers, id => id == LootEffectCatalog.HealingEmbers.Id),
-                Is.EqualTo(LootCollectResult.DiscardedWhileActive));
+            Assert.That(progress.OnCollected(LootEffectCatalog.HealingEmbers,
+                    id => id == LootEffectCatalog.HealingEmbers.Id),
+                Is.EqualTo(LootCollectResult.Incremented));
+            Assert.That(progress.GetCount(LootEffectCatalog.HealingEmbers), Is.EqualTo(10));
+        }
+
+        [Test]
+        public void TryConsumeBankedActivation_ConsumesFullProgressWhenEffectIsInactive()
+        {
+            var progress = new SharedLootProgressModel();
+            progress.Begin();
+
+            for (var i = 0; i < 10; i++)
+            {
+                progress.OnCollected(LootEffectCatalog.HealingEmbers,
+                    id => id == LootEffectCatalog.HealingEmbers.Id);
+            }
+
+            Assert.That(progress.TryConsumeBankedActivation(LootEffectCatalog.HealingEmbers), Is.True);
             Assert.That(progress.GetCount(LootEffectCatalog.HealingEmbers), Is.Zero);
+            Assert.That(progress.TryConsumeBankedActivation(LootEffectCatalog.HealingEmbers), Is.False);
         }
 
         [Test]

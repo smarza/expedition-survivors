@@ -89,7 +89,7 @@ namespace ProjectExpedition
             8f,
             8f,
             TemporaryEffectType.Regeneration,
-            LootCollectWhileActive.Discard,
+            LootCollectWhileActive.Bank,
             TemporaryEffectTarget.WholeParty);
 
         public static readonly LootEffectDefinition CriticalFlare = new LootEffectDefinition(
@@ -103,7 +103,7 @@ namespace ProjectExpedition
             8f,
             0.25f,
             TemporaryEffectType.CriticalChance,
-            LootCollectWhileActive.Discard,
+            LootCollectWhileActive.Bank,
             TemporaryEffectTarget.WholeParty);
 
         public static readonly LootEffectDefinition SwiftTrail = new LootEffectDefinition(
@@ -117,7 +117,7 @@ namespace ProjectExpedition
             8f,
             0.46f,
             TemporaryEffectType.MoveSpeed,
-            LootCollectWhileActive.Discard,
+            LootCollectWhileActive.Bank,
             TemporaryEffectTarget.WholeParty);
 
         public static readonly LootEffectDefinition WrathEmbers = new LootEffectDefinition(
@@ -131,7 +131,7 @@ namespace ProjectExpedition
             8f,
             1.25f,
             TemporaryEffectType.DamageBoost,
-            LootCollectWhileActive.Discard,
+            LootCollectWhileActive.Bank,
             TemporaryEffectTarget.WholeParty);
 
         public static readonly LootEffectDefinition AegisVeil = new LootEffectDefinition(
@@ -145,7 +145,7 @@ namespace ProjectExpedition
             6f,
             1f,
             TemporaryEffectType.Invincibility,
-            LootCollectWhileActive.Discard,
+            LootCollectWhileActive.Bank,
             TemporaryEffectTarget.WholeParty);
 
         public static readonly LootEffectDefinition[] All =

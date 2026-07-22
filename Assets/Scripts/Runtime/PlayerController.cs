@@ -14,6 +14,7 @@ namespace ProjectExpedition
         public float MoveSpeed => _model.MoveSpeed;
         public float Armor => _model.Armor;
         public float MagnetRadius => _model.MagnetRadius;
+        public float EffectiveMagnetRadius => _model.EffectiveMagnetRadius;
         public bool IsAlive => _model.IsAlive;
         public bool IsDowned => _model.IsDowned;
         public float ReviveProgress => _model.ReviveProgress;
@@ -160,7 +161,8 @@ namespace ProjectExpedition
             {
                 var other = _director.Players[i];
                 if (other == null || other == this || !other.IsAlive) continue;
-                if (((Vector2)other.transform.position - (Vector2)transform.position).sqrMagnitude <= 1.8f * 1.8f)
+                if (((Vector2)other.transform.position - (Vector2)transform.position).sqrMagnitude <=
+                    SharedPlayerModel.DefaultReviveRadius * SharedPlayerModel.DefaultReviveRadius)
                 {
                     rescuerNearby = true;
                     break;
