@@ -58,20 +58,20 @@ namespace ProjectExpedition.Tests
         {
             var obstacles = new[]
             {
-                ObstacleDefinition.Box(new Vector2(1.5f, 0f), new Vector2(0.5f, 1.6f))
+                ObstacleDefinition.Box(new Vector2(2f, 0f), new Vector2(0.5f, 2f))
             };
             var model = new SharedEnemyModel();
-            var start = new Vector2(-4f, 0f);
+            var start = Vector2.zero;
+            var target = new Vector2(6f, 0f);
             model.Begin(start, EnemyCatalog.Draugr, 1f, 2, 2.5f, 0.36f, 3);
 
-            for (var step = 0; step < 120; step++)
+            for (var step = 0; step < 160; step++)
             {
-                model.AdvanceTowards(new Vector2(6f, 0f), BalanceRules.PlayerCollisionRadius, 0.05f, obstacles);
+                model.AdvanceTowards(target, BalanceRules.PlayerCollisionRadius, 0.05f, obstacles);
             }
 
             Assert.That(model.Position.x, Is.GreaterThan(2.5f));
-            Assert.That(Vector2.Distance(model.Position, new Vector2(6f, 0f)),
-                Is.LessThan(Vector2.Distance(start, new Vector2(6f, 0f))));
+            Assert.That(Vector2.Distance(model.Position, target), Is.LessThan(Vector2.Distance(start, target)));
             Assert.That(SharedMovementCollision.OverlapsCircle(obstacles[0], model.Position, model.Radius),
                 Is.False);
         }
