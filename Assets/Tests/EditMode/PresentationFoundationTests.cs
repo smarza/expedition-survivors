@@ -224,11 +224,28 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
-        public void MapSelectLayoutMetrics_ReserveHeaderFooterSpace()
+        public void MapSelectLayoutMetrics_MatchCharacterSelectStructure()
         {
-            var content = MapSelectLayoutMetrics.ContentRect(new Rect(0f, 0f, 1920f, 1080f));
-            Assert.That(content.y, Is.EqualTo(MapSelectLayoutMetrics.HeaderHeight));
-            Assert.That(content.height, Is.LessThan(1080f - MapSelectLayoutMetrics.HeaderHeight));
+            Assert.That(MapSelectLayoutMetrics.GridColumns, Is.EqualTo(CharacterSelectLayoutMetrics.SoloGridColumns));
+            Assert.That(MapSelectLayoutMetrics.StatsColumnWidth, Is.EqualTo(CharacterSelectLayoutMetrics.StatsColumnWidth));
+            Assert.That(MapSelectLayoutMetrics.FooterHeight, Is.EqualTo(CharacterSelectLayoutMetrics.SoloFooterHeight));
+        }
+
+        [Test]
+        public void MapSelectGrid_MeetsMinimumTileSizeAt1080p()
+        {
+            var innerBodyWidth = 1872f - 24f;
+            var gridWidth = MapSelectLayoutMetrics.GridWidth(innerBodyWidth);
+            var gridHeight = 760f;
+            var mapCount = ContentCatalog.Maps.Length;
+
+            Assert.That(
+                MapSelectLayoutMetrics.MeetsMinimumTileSize(
+                    gridWidth,
+                    gridHeight,
+                    mapCount,
+                    PresentationSpacing.Space12),
+                Is.True);
         }
 
         [Test]

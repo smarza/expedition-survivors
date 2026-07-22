@@ -10,7 +10,7 @@ namespace ProjectExpedition
 
     public static class MapSelectPresentation
     {
-        public const int GridColumns = 2;
+        public const int GridColumns = MapSelectLayoutMetrics.GridColumns;
 
         public static void DrawPreview(Rect rect, MapDefinition definition, bool unlocked, MapPreviewSize size)
         {

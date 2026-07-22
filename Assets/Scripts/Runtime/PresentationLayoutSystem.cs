@@ -196,19 +196,26 @@ namespace ProjectExpedition
 
     public static class MapSelectLayoutMetrics
     {
-        public const float ScreenPadding = 24f;
-        public const float HeaderHeight = 96f;
-        public const float FooterHeight = 88f;
-        public const float PanelGap = 16f;
-        public const float GridWidth = 520f;
-        public const float TileGap = 12f;
-        public const float MinimumTileHeight = 120f;
-        public const int GridColumns = 2;
+        public const float StatsColumnWidth = CharacterSelectLayoutMetrics.StatsColumnWidth;
+        public const float ChallengeColumnWidth = CharacterSelectLayoutMetrics.FilterColumnWidth;
+        public const float FooterHeight = CharacterSelectLayoutMetrics.SoloFooterHeight;
+        public const float HeaderHeight = CharacterSelectLayoutMetrics.SoloHeaderHeight;
+        public const float ScreenPadding = CharacterSelectLayoutMetrics.ScreenPadding;
+        public const float ColumnGap = CharacterSelectLayoutMetrics.ColumnGap;
+        public const float StatRowHeight = CharacterSelectLayoutMetrics.StatRowHeight;
+        public const float GridNameBandHeight = CharacterSelectLayoutMetrics.GridNameBandHeight;
+        public const float MinimumGridTileSize = CharacterSelectLayoutMetrics.MinimumGridTileSize;
+        public const int GridColumns = CharacterSelectLayoutMetrics.SoloGridColumns;
 
-        public static Rect ContentRect(Rect screen) => new Rect(
-            ScreenPadding,
-            HeaderHeight,
-            screen.width - ScreenPadding * 2f,
-            screen.height - HeaderHeight - FooterHeight - ScreenPadding);
+        public static float GridWidth(float innerBodyWidth) =>
+            CharacterSelectLayoutMetrics.SoloGridWidth(innerBodyWidth);
+
+        public static bool MeetsMinimumTileSize(float gridWidth, float gridHeight, int mapCount, float gap)
+        {
+            var rows = Mathf.Max(1, (mapCount + GridColumns - 1) / GridColumns);
+            var tileWidth = (gridWidth - gap * (GridColumns - 1)) / GridColumns;
+            var tileHeight = (gridHeight - gap * (rows - 1)) / rows;
+            return tileWidth >= MinimumGridTileSize && tileHeight >= MinimumGridTileSize;
+        }
     }
 }

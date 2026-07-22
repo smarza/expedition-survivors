@@ -46,12 +46,9 @@ namespace ProjectExpedition
 
     public static class GameHudMapSelectScreen
     {
-        public static void DrawHeader(SurvivorsHudStyles styles)
+        public static void DrawBackground()
         {
             SurvivorsStylePresentation.DrawScreenBackground(new Rect(0f, 0f, 1920f, 1080f));
-            GUI.Label(new Rect(430f, 48f, 1060f, 56f), "CHOOSE THE EXPEDITION", styles.Title);
-            GUI.Label(new Rect(360f, 108f, 1200f, 32f),
-                "Select a route — locked expeditions can be previewed at camp renown cost.", styles.Caption);
         }
     }
 

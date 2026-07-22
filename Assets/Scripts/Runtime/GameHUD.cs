@@ -73,6 +73,8 @@ namespace ProjectExpedition
         private readonly bool[] _characterSelected = new bool[2];
         private readonly bool[] _characterReady = new bool[2];
         private int _mapSelection;
+        private bool _mapSelected;
+        private bool _mapReady;
         private ChallengeTier _challengeTier = ChallengeTier.Standard;
         private ChallengeMutator _mutatorA = ChallengeMutator.None;
         private ChallengeMutator _mutatorB = ChallengeMutator.None;
@@ -380,6 +382,8 @@ namespace ProjectExpedition
         private void AdvanceToMapSelect()
         {
             _mapSelection = SharedMetaProgressionModel.FirstUnlockedMapIndex(SaveService.Data);
+            _mapSelected = false;
+            _mapReady = false;
             LoadChallengePreferences();
             _director.ConfirmCharacters(_characterSelections[0], _characterSelections[1]);
         }
@@ -517,7 +521,7 @@ namespace ProjectExpedition
                     NavigateCue();
                 }
             }
-            else if (horizontal != 0 || vertical != 0)
+            else if (!_mapSelected && (horizontal != 0 || vertical != 0))
             {
                 var previousMap = _mapSelection;
                 _mapSelection = SharedMetaProgressionModel.NextMapIndex(_mapSelection, horizontal, vertical);
@@ -532,8 +536,39 @@ namespace ProjectExpedition
 
             if (LocalInputRouter.MenuSubmitPressed(0, playerCount))
             {
-                TryBeginSelectedMap();
+                if (!_mapSelected)
+                {
+                    TryConfirmMapSelect();
+                }
+                else
+                {
+                    TryConfirmMapReady();
+                }
             }
+        }
+
+        private bool TryConfirmMapSelect()
+        {
+            if (!SaveService.IsMapUnlocked(_mapSelection))
+            {
+                return false;
+            }
+
+            _mapSelected = true;
+            ConfirmCue();
+            return true;
+        }
+
+        private bool TryConfirmMapReady()
+        {
+            if (!_mapSelected)
+            {
+                return false;
+            }
+
+            _mapReady = true;
+            TryBeginSelectedMap();
+            return true;
         }
 
         private void TryBeginSelectedMap()
@@ -1486,7 +1521,7 @@ namespace ProjectExpedition
         {
             var marker = unlocked ? "[x]" : "[ ]";
             var shortName = CompactExpeditionName(map);
-            var duration = map.DurationLabel.Contains("12") ? "LONG" : "SCOUT";
+            var duration = ResolveMapDurationShort(map);
             return $"{marker} {duration} — {shortName}";
         }
 
@@ -2111,53 +2146,146 @@ namespace ProjectExpedition
         private void DrawMapSelect()
         {
             EnsureSurvivorsStyles();
-            GameHudMapSelectScreen.DrawHeader(_survivorsHudStyles);
+            GameHudMapSelectScreen.DrawBackground();
+            DrawMapSelectHeader();
 
-            var content = MapSelectLayoutMetrics.ContentRect(new Rect(0f, 0f, 1920f, 1080f));
-            DrawMapSelectPanel(content);
-            GUI.Label(new Rect(610, 1000, 700, 40), $"{Prompt(BindingAction.Back)} — BACK", _survivorsHudStyles.Hint);
+            const float footerHeight = MapSelectLayoutMetrics.FooterHeight;
+            const float headerBottom = MapSelectLayoutMetrics.ScreenPadding +
+                                       MapSelectLayoutMetrics.HeaderHeight + PresentationSpacing.Space12;
+            var bodyHeight = 1080f - headerBottom - footerHeight - MapSelectLayoutMetrics.ScreenPadding -
+                             PresentationSpacing.Space12;
+            var bodyZone = new LayoutZone(
+                MapSelectLayoutMetrics.ScreenPadding,
+                headerBottom,
+                1920f - MapSelectLayoutMetrics.ScreenPadding * 2f,
+                bodyHeight);
+            DrawFramedPanel(bodyZone.Rect);
+
+            var innerBody = bodyZone.Inset(PresentationSpacing.Space12);
+            var gridWidth = MapSelectLayoutMetrics.GridWidth(innerBody.Rect.width);
+            var columns = innerBody.DivideHorizontal(
+                MapSelectLayoutMetrics.ColumnGap,
+                MapSelectLayoutMetrics.StatsColumnWidth,
+                gridWidth,
+                MapSelectLayoutMetrics.ChallengeColumnWidth);
+
+            DrawMapSelectStatsColumn(columns[0].Rect);
+            DrawMapSelectGrid(columns[1].Rect);
+            DrawMapSelectChallengeColumn(columns[2].Rect);
+
+            var footerTop = bodyZone.Rect.yMax + PresentationSpacing.Space12;
+            var footerZone = new LayoutZone(
+                MapSelectLayoutMetrics.ScreenPadding,
+                footerTop,
+                1920f - MapSelectLayoutMetrics.ScreenPadding * 2f,
+                footerHeight);
+            SurvivorsStylePresentation.DrawFlatPanel(footerZone.Rect, SurvivorsStylePresentation.PanelNavy, 1f);
+            DrawMapSelectFooter(footerZone.Rect);
+
+            var unlocked = SaveService.IsMapUnlocked(_mapSelection);
+            var hintZone = new Rect(320f, footerZone.Rect.yMax + 6f, 1280f, 24f);
+            DrawMapSelectActionHint(hintZone, unlocked, _mapSelected, _mapReady);
         }
 
-        private void DrawMapSelectPanel(Rect panel)
+        private void DrawMapSelectHeader()
         {
-            SurvivorsStylePresentation.DrawFlatPanel(panel, SurvivorsStylePresentation.PanelNavyInset, 1f);
+            var renown = SaveService.AvailableRenown();
+            var headerY = MapSelectLayoutMetrics.ScreenPadding;
+            var headerHeight = MapSelectLayoutMetrics.HeaderHeight;
 
-            var gridRect = new Rect(panel.x + 24f, panel.y + 24f, 480f, 280f);
-            var detailRect = new Rect(
-                gridRect.xMax + 24f,
-                gridRect.y,
-                panel.xMax - gridRect.xMax - 48f,
-                panel.yMax - gridRect.y - 96f);
+            SurvivorsStylePresentation.DrawCoinBadge(
+                new Rect(MapSelectLayoutMetrics.ScreenPadding, headerY, 260f, headerHeight),
+                renown.ToString());
 
-            DrawMapSelectGrid(gridRect);
-            DrawMapSelectDetail(detailRect);
+            GUI.Label(
+                new Rect(360f, headerY, 1200f, headerHeight),
+                "CHOOSE THE EXPEDITION",
+                _vsDisplay);
 
+            var backRect = new Rect(1656f, headerY, 240f, headerHeight);
+            if (SurvivorsStylePresentation.DrawButton(backRect, $"{Prompt(BindingAction.Back)} BACK", SurvivorsButtonKind.Red))
+            {
+                PrepareCharacterSelection(_director.PendingPlayerCount);
+            }
+        }
+
+        private void DrawMapSelectStatsColumn(Rect columnRect)
+        {
             var map = ContentCatalog.Map(_mapSelection);
             var unlocked = SaveService.IsMapUnlocked(_mapSelection);
-            var canBegin = unlocked;
-            var actionY = panel.yMax - 72f;
-            var hintRect = new Rect(panel.x + 24f, actionY - 44f, panel.width - 48f, 36f);
+            var accent = unlocked ? map.GroundColor : new Color(0.25f, 0.28f, 0.32f);
 
+            DrawInsetPanel(columnRect, accent);
+
+            var content = new LayoutZone(columnRect).Inset(PresentationSpacing.Space12);
+            GUI.BeginGroup(content.Rect);
+
+            var localContent = new Rect(0f, 0f, content.Rect.width, content.Rect.height);
+            SurvivorsStylePresentation.DrawSectionHeader(
+                new Rect(localContent.x, localContent.y, localContent.width, 28f),
+                "Mission Brief");
+
+            var cursorY = 36f;
             if (!unlocked)
             {
-                GUI.Label(hintRect, $"P1  •  LOCKED — SPEND RENOWN AT CAMP", _micro);
-            }
-            else
-            {
-                GUI.Label(hintRect,
-                    $"P1  •  ARROWS CHOOSE  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(0, 1)}",
-                    _micro);
+                var lockedHeight = PresentationTextMeasure.ClampHeight(
+                    PresentationTextMeasure.MeasureHeight(
+                        _vsMicro,
+                        "Unlock this route in the CODEX to reveal full mission stats.",
+                        localContent.width),
+                    36f,
+                    localContent.height - 36f);
+                GUI.Label(
+                    new Rect(localContent.x, cursorY, localContent.width, lockedHeight),
+                    "Unlock this route in the CODEX to reveal full mission stats.",
+                    _vsMicro);
+                GUI.EndGroup();
+                return;
             }
 
-            var beginRect = new Rect(panel.x + panel.width * 0.5f - 220f, actionY, 440f, 58f);
-            DrawPrimaryActionButton(
-                beginRect,
-                "BEGIN EXPEDITION",
-                canBegin,
-                false,
-                "LOCKED",
-                PrimaryActionTheme.Select,
-                TryBeginSelectedMap);
+            var rowIndex = 0;
+            cursorY = DrawMapStatRow(localContent, cursorY, rowIndex++, "JOTUNN ARRIVAL",
+                FormatTime(map.BossSpawnTime), accent);
+            cursorY = DrawMapStatRow(localContent, cursorY, rowIndex++, "WEAPON SLOTS",
+                map.WeaponSlots.ToString(), accent);
+            cursorY = DrawMapStatRow(localContent, cursorY, rowIndex++, "GEAR SLOTS",
+                map.GearSlots.ToString(), accent);
+            cursorY = DrawMapStatRow(localContent, cursorY, rowIndex++, map.KillObjectiveLabel,
+                map.RequiredKillObjective.ToString(), accent);
+            cursorY = DrawMapStatRow(localContent, cursorY, rowIndex++, map.OptionalPickupLabel,
+                map.OptionalShardObjective.ToString(), accent);
+            DrawMapStatRow(localContent, cursorY, rowIndex, "DURATION",
+                ResolveMapMissionBriefDuration(map), accent);
+            GUI.EndGroup();
+        }
+
+        private float DrawMapStatRow(
+            Rect contentRect,
+            float cursorY,
+            int rowIndex,
+            string label,
+            string value,
+            Color tint)
+        {
+            var rowHeight = MapSelectLayoutMetrics.StatRowHeight;
+            var rowRect = new Rect(contentRect.x, cursorY, contentRect.width, rowHeight);
+            SurvivorsStylePresentation.DrawAlternatingRowBackground(rowRect, rowIndex);
+
+            var iconRect = new Rect(rowRect.x + 4f, rowRect.y + 3f, 26f, 26f);
+            DrawPanel(iconRect, tint * 0.85f);
+            DrawBorder(iconRect, Color.Lerp(tint, Color.white, 0.35f), 1f);
+
+            const float valuePadding = 4f;
+            const float minimumValueWidth = 92f;
+            const float maximumValueWidth = 128f;
+            var measuredValueWidth = PresentationTextMeasure.MeasureWidth(_vsStatValue, value);
+            var valueWidth = Mathf.Clamp(measuredValueWidth + valuePadding * 2f, minimumValueWidth, maximumValueWidth);
+            var valueRect = new Rect(rowRect.xMax - valueWidth - valuePadding, rowRect.y + 4f, valueWidth, rowHeight - 8f);
+            var labelRect = new Rect(rowRect.x + 36f, rowRect.y + 5f, Mathf.Max(48f, valueRect.x - rowRect.x - 40f), 22f);
+
+            GUI.Label(labelRect, label, _vsMicro);
+            GUI.Label(valueRect, value, _vsStatValue);
+            return cursorY + rowHeight;
         }
 
         private void DrawMapSelectGrid(Rect gridRect)
@@ -2165,149 +2293,311 @@ namespace ProjectExpedition
             var columns = MapSelectPresentation.GridColumns;
             var mapCount = ContentCatalog.Maps.Length;
             var rows = Mathf.Max(1, (mapCount + columns - 1) / columns);
-            var gap = 16f;
-            var tileWidth = (gridRect.width - gap * (columns - 1)) / columns;
-            var tileHeight = (gridRect.height - gap * (rows - 1)) / rows;
+            var gap = PresentationSpacing.Space12;
+            var selectedIndex = _mapSelection;
+
+            DrawInsetPanel(gridRect);
+            SurvivorsStylePresentation.DrawSectionHeader(
+                new Rect(gridRect.x + 12f, gridRect.y + 8f, 140f, 28f),
+                "Routes");
+
+            var innerGrid = new Rect(
+                gridRect.x + 12f,
+                gridRect.y + 32f,
+                gridRect.width - 24f,
+                gridRect.height - 44f);
+            var tileWidth = (innerGrid.width - gap * (columns - 1)) / columns;
+            var maxTileHeight = (innerGrid.height - gap * (rows - 1)) / rows;
+            var tileHeight = Mathf.Min(maxTileHeight, tileWidth * 1.12f);
+            var gridContentHeight = tileHeight * rows + gap * (rows - 1);
+            var gridOffsetY = innerGrid.y + Mathf.Max(0f, (innerGrid.height - gridContentHeight) * 0.5f);
 
             for (var index = 0; index < mapCount; index++)
             {
                 var column = index % columns;
                 var row = index / columns;
                 var tileRect = new Rect(
-                    gridRect.x + column * (tileWidth + gap),
-                    gridRect.y + row * (tileHeight + gap),
+                    innerGrid.x + column * (tileWidth + gap),
+                    gridOffsetY + row * (tileHeight + gap),
                     tileWidth,
                     tileHeight);
-                var map = ContentCatalog.Map(index);
-                var unlocked = SaveService.IsMapUnlocked(index);
-                var isSelected = index == _mapSelection;
-                var tileBackground = isSelected
-                    ? SurvivorsStylePresentation.TileSelected
-                    : SurvivorsStylePresentation.TileBackground;
-
-                SurvivorsStylePresentation.DrawFlatPanel(tileRect, tileBackground, isSelected ? 2f : 1f,
-                    isSelected ? SurvivorsStylePresentation.BorderGoldBright : SurvivorsStylePresentation.BorderGoldDim);
-
-                DrawPanel(new Rect(tileRect.x, tileRect.y, tileRect.width, 4f),
-                    unlocked ? map.GroundColor : new Color(0.25f, 0.28f, 0.32f));
-
-                var previewRect = new Rect(
-                    tileRect.x + 12f,
-                    tileRect.y + 12f,
-                    tileRect.width - 24f,
-                    tileRect.height - 52f);
-                MapSelectPresentation.DrawPreview(previewRect, map, unlocked, MapPreviewSize.Compact);
-
-                if (!unlocked)
-                {
-                    CharacterSelectPresentation.DrawLockBadge(tileRect);
-                }
-
-                var nameRect = new Rect(tileRect.x + 8f, tileRect.yMax - 26f, tileRect.width - 16f, 22f);
-                GUI.Label(nameRect, map.Name.ToUpperInvariant(), unlocked ? _micro : _campLocked);
-
-                if (GUI.Button(tileRect, GUIContent.none, GUIStyle.none))
-                {
-                    _mapSelection = index;
-                    ConfirmCue();
-                }
+                DrawMapSelectTile(tileRect, index, index == selectedIndex);
             }
         }
 
-        private void DrawMapSelectDetail(Rect detailRect)
+        private void DrawMapSelectTile(Rect tileRect, int index, bool isSelected)
         {
-            var map = ContentCatalog.Map(_mapSelection);
-            var unlocked = SaveService.IsMapUnlocked(_mapSelection);
-            var previewSize = 240f;
+            var map = ContentCatalog.Map(index);
+            var unlocked = SaveService.IsMapUnlocked(index);
+            SurvivorsStylePresentation.DrawCharacterTileFrame(tileRect, isSelected, map.GroundColor, unlocked);
 
-            DrawPanel(detailRect, new Color(0.045f, 0.085f, 0.115f, 1f));
-            DrawPanel(new Rect(detailRect.x, detailRect.y, detailRect.width, 5f),
-                unlocked ? map.GroundColor : new Color(0.25f, 0.28f, 0.32f));
+            var nameBandHeight = MapSelectLayoutMetrics.GridNameBandHeight;
+            var nameBand = new Rect(tileRect.x + 3f, tileRect.y + 7f, tileRect.width - 6f, nameBandHeight);
+            DrawPanel(nameBand, SurvivorsStylePresentation.PanelNavyInset);
 
-            var previewRect = new Rect(detailRect.x + 24f, detailRect.y + 24f, previewSize, previewSize);
-            MapSelectPresentation.DrawPreview(previewRect, map, unlocked, MapPreviewSize.Large);
-
-            var textX = previewRect.xMax + 24f;
-            var textWidth = detailRect.xMax - textX - 24f;
-            var textY = detailRect.y + 24f;
-
-            GUI.Label(new Rect(textX, textY, textWidth, 52), map.Name.ToUpperInvariant(), _heading);
-            textY += 56f;
-            GUI.Label(new Rect(textX, textY, textWidth, 30), $"{map.Region}   •   {map.DurationLabel}", _small);
-            textY += 38f;
+            var durationBadgeSize = 28f;
+            var previewRect = new Rect(
+                tileRect.x + 10f,
+                nameBand.yMax + 6f,
+                tileRect.width - 20f,
+                tileRect.yMax - nameBand.yMax - durationBadgeSize - 14f);
+            MapSelectPresentation.DrawPreview(previewRect, map, unlocked, MapPreviewSize.Compact);
 
             if (!unlocked)
             {
-                DrawPanel(new Rect(textX, textY, textWidth, 40f), new Color(0.38f, 0.16f, 0.1f, 0.92f));
-                GUI.Label(new Rect(textX + 12f, textY + 6f, textWidth - 24f, 28f), "NOT YET UNLOCKED", _badge);
-                textY += 52f;
+                CharacterSelectPresentation.DrawLockBadge(tileRect);
+            }
+
+            var durationRect = new Rect(
+                tileRect.xMax - durationBadgeSize - 10f,
+                tileRect.yMax - durationBadgeSize - 8f,
+                durationBadgeSize,
+                durationBadgeSize);
+            DrawPanel(durationRect, SurvivorsStylePresentation.PanelNavyInset);
+            GUI.Label(durationRect, ResolveMapDurationShort(map), _gridBadge);
+
+            var nameText = map.Name.ToUpperInvariant();
+            var nameWidth = nameBand.width - 8f;
+            var nameStyle = unlocked ? SurvivorsStylePresentation.TileNameStyle : _vsMicro;
+            var nameHeight = PresentationTextMeasure.ClampHeight(
+                PresentationTextMeasure.MeasureHeight(nameStyle, nameText, nameWidth),
+                16f,
+                nameBandHeight - 2f);
+            GUI.Label(
+                new Rect(nameBand.x + 4f, nameBand.y + (nameBandHeight - nameHeight) * 0.5f, nameWidth, nameHeight),
+                nameText,
+                nameStyle);
+
+            if (!_mapSelected && GUI.Button(tileRect, GUIContent.none, GUIStyle.none))
+            {
+                _mapSelection = index;
+                SuggestBiomeMutator(map);
+                ConfirmCue();
+            }
+        }
+
+        private void DrawMapSelectChallengeColumn(Rect columnRect)
+        {
+            var map = ContentCatalog.Map(_mapSelection);
+            var unlocked = SaveService.IsMapUnlocked(_mapSelection);
+            var accent = unlocked ? map.GroundColor : new Color(0.25f, 0.28f, 0.32f);
+
+            DrawInsetPanel(columnRect, accent);
+
+            var content = new LayoutZone(columnRect).Inset(PresentationSpacing.Space12);
+            SurvivorsStylePresentation.DrawSectionHeader(
+                new Rect(content.Rect.x, content.Rect.y, content.Rect.width, 28f),
+                "Challenge");
+
+            var profile = BuildSelectedChallengeProfile();
+            var renownMultiplier = SharedChallengeProfileModel.ResolveRenownMultiplier(profile);
+            var labelX = content.Rect.x;
+            var valueX = content.Rect.x + 112f;
+            var valueWidth = content.Rect.xMax - valueX;
+            var rowY = content.Rect.y + 36f;
+
+            if (!unlocked)
+            {
+                GUI.Label(
+                    new Rect(labelX, rowY, content.Rect.width, 72f),
+                    "Challenge options unlock once this route is available.",
+                    _vsMicro);
+                return;
+            }
+
+            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "TIER",
+                _challengeTier == ChallengeTier.Veteran ? "VETERAN" : "STANDARD",
+                _mapChallengeEditing && _challengeFocus == 0);
+            rowY += 34f;
+            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "MUTATOR A",
+                FormatMutatorLabel(_mutatorA),
+                _mapChallengeEditing && _challengeFocus == 1);
+            rowY += 34f;
+            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "MUTATOR B",
+                FormatMutatorLabel(_mutatorB),
+                _mapChallengeEditing && _challengeFocus == 2);
+            rowY += 34f;
+            GUI.Label(
+                new Rect(labelX, rowY, content.Rect.width, 24f),
+                $"RENOWN MULTIPLIER  x{renownMultiplier:0.00}",
+                _vsMicro);
+
+            var editHintY = rowY + 30f;
+            var editHint = _mapChallengeEditing
+                ? "Editing challenge — arrows adjust values."
+                : $"{Prompt(BindingAction.BuildDetails)} to edit challenge.";
+            GUI.Label(new Rect(labelX, editHintY, content.Rect.width, 40f), editHint, _vsMicro);
+        }
+
+        private void DrawMapSelectFooter(Rect footerRect)
+        {
+            var map = ContentCatalog.Map(_mapSelection);
+            var unlocked = SaveService.IsMapUnlocked(_mapSelection);
+            var hasSelected = _mapSelected;
+            var isConfirmed = _mapReady;
+            var canSelect = unlocked && !hasSelected;
+            var canReady = hasSelected && !isConfirmed;
+            var disabledLabel = unlocked ? (hasSelected ? "READY" : "SELECT") : "LOCKED";
+
+            var content = new LayoutZone(footerRect).Inset(PresentationSpacing.Space12);
+            const float previewSize = 128f;
+            const float regionBoxSize = 88f;
+            const float footerBlockHeight = previewSize;
+            var blockTop = content.Rect.y + (content.Rect.height - footerBlockHeight) * 0.5f;
+            var previewRect = new Rect(content.Rect.x, blockTop, previewSize, previewSize);
+            MapSelectPresentation.DrawPreview(previewRect, map, unlocked, MapPreviewSize.Large);
+
+            var regionTop = blockTop + (previewSize - regionBoxSize) * 0.5f;
+            var regionBox = new Rect(previewRect.xMax + 16f, regionTop, regionBoxSize, regionBoxSize);
+            SurvivorsStylePresentation.DrawFlatPanel(regionBox, SurvivorsStylePresentation.PanelNavyInset, 1f);
+            MapSelectPresentation.DrawPreview(
+                SurvivorsStylePresentation.InsetRect(regionBox, 4f),
+                map,
+                unlocked,
+                MapPreviewSize.Compact);
+
+            var textX = regionBox.xMax + 18f;
+            var actionWidth = 228f;
+            var textWidth = content.Rect.xMax - textX - actionWidth - 8f;
+            DrawMapSelectFooterDetail(textX, content.Rect.y + 12f, textWidth, content.Rect.yMax, map, unlocked);
+
+            var actionRect = new Rect(content.Rect.xMax - actionWidth, content.Rect.y + content.Rect.height * 0.5f - 32f, actionWidth, 64f);
+            if (!hasSelected)
+            {
+                DrawVsFooterButton(
+                    actionRect,
+                    "SELECT",
+                    canSelect,
+                    false,
+                    disabledLabel,
+                    SurvivorsButtonKind.Green,
+                    () => TryConfirmMapSelect());
+            }
+            else
+            {
+                DrawVsFooterButton(
+                    actionRect,
+                    "CONFIRM",
+                    canReady,
+                    isConfirmed,
+                    disabledLabel,
+                    SurvivorsButtonKind.Green,
+                    () => TryConfirmMapReady());
+            }
+
+            var regionCaptionRect = new Rect(regionBox.x, regionBox.yMax + 6f, regionBox.width, 16f);
+            GUI.Label(regionCaptionRect, map.Region.ToUpperInvariant(), _vsMicro);
+        }
+
+        private void DrawMapSelectFooterDetail(
+            float textX,
+            float textY,
+            float textWidth,
+            float detailBottom,
+            MapDefinition map,
+            bool unlocked)
+        {
+            var nameHeight = PresentationTextMeasure.ClampHeight(
+                PresentationTextMeasure.MeasureHeight(_vsDisplay, map.Name.ToUpperInvariant(), textWidth),
+                24f,
+                48f);
+            GUI.Label(new Rect(textX, textY, textWidth, nameHeight), map.Name.ToUpperInvariant(), _vsDisplay);
+            textY += nameHeight + 2f;
+
+            var roleLine = $"{map.Region}   •   {map.DurationLabel}";
+            var roleHeight = PresentationTextMeasure.ClampHeight(
+                PresentationTextMeasure.MeasureHeight(_vsCaption, roleLine, textWidth),
+                18f,
+                28f);
+            GUI.Label(new Rect(textX, textY, textWidth, roleHeight), roleLine, _vsCaption);
+            textY += roleHeight + 8f;
+
+            if (!unlocked)
+            {
+                DrawPanel(new Rect(textX, textY, textWidth, 28f), new Color(0.38f, 0.16f, 0.1f, 0.92f));
+                GUI.Label(new Rect(textX + 10f, textY + 4f, textWidth - 20f, 20f), "NOT YET UNLOCKED", _badge);
+                textY += 34f;
 
                 var teaser = string.IsNullOrWhiteSpace(map.LockedPreviewLine)
-                    ? $"{map.Region} — {map.DurationLabel}"
+                    ? roleLine
                     : map.LockedPreviewLine;
-                GUI.Label(new Rect(textX, textY, textWidth, 70f), teaser, _body);
-                textY += 78f;
+                var teaserHeight = PresentationTextMeasure.ClampHeight(
+                    PresentationTextMeasure.MeasureHeight(_vsBody, teaser, textWidth),
+                    24f,
+                    detailBottom - textY - 8f);
+                GUI.Label(new Rect(textX, textY, textWidth, teaserHeight), teaser, _vsBody);
+                textY += teaserHeight + 8f;
 
                 var cost = ResolveUnlockCost(map.Id);
                 var available = SaveService.AvailableRenown();
                 var shortfall = Mathf.Max(0, cost - available);
                 var purchaseHint = shortfall > 0
-                    ? $"Unlock at the Frostbound Camp CODEX for {cost} Renown.\nYou have {available} available — need {shortfall} more."
-                    : $"Unlock at the Frostbound Camp CODEX for {cost} Renown.\nYou have {available} available — return to camp to unlock.";
-                GUI.Label(new Rect(textX, textY, textWidth, 96f), purchaseHint, _campLocked);
-                textY += 104f;
-
-                var hiddenRect = new Rect(textX, textY, textWidth, 110f);
-                DrawPanel(hiddenRect, new Color(0.025f, 0.065f, 0.087f, 1f));
-                DrawPanel(new Rect(hiddenRect.x, hiddenRect.y, 5f, hiddenRect.height), new Color(0.35f, 0.38f, 0.42f));
-                GUI.Label(new Rect(hiddenRect.x + 18f, hiddenRect.y + 12f, hiddenRect.width - 36f, hiddenRect.height - 24f),
-                    "JOTUNN ARRIVAL  ???\n\nWEAPON SLOTS  ???   GEAR SLOTS  ???\n\nOBJECTIVES  ???", _campLocked);
+                    ? $"Unlock at camp CODEX for {cost} Renown — need {shortfall} more."
+                    : $"Unlock at camp CODEX for {cost} Renown — you have enough to unlock.";
+                var purchaseHeight = PresentationTextMeasure.ClampHeight(
+                    PresentationTextMeasure.MeasureHeight(_vsMicro, purchaseHint, textWidth),
+                    22f,
+                    detailBottom - textY - 8f);
+                GUI.Label(new Rect(textX, textY, textWidth, purchaseHeight), purchaseHint, _campLocked);
                 return;
             }
 
-            GUI.Label(new Rect(textX, textY, textWidth, 90f), map.Description, _body);
-            textY += 98f;
-            GUI.Label(new Rect(textX, textY, textWidth, 28f), $"JOTUNN ARRIVAL  {FormatTime(map.BossSpawnTime)}", _small);
-            textY += 34f;
-            GUI.Label(new Rect(textX, textY, textWidth, 28f),
-                $"WEAPON SLOTS {map.WeaponSlots}   GEAR SLOTS {map.GearSlots}", _small);
-            textY += 34f;
-            GUI.Label(new Rect(textX, textY, textWidth, 28f),
-                $"{map.KillObjectiveLabel} {map.RequiredKillObjective}   {map.OptionalPickupLabel} {map.OptionalShardObjective}",
-                _small);
-            textY += 34f;
-            DrawMapChallengeOptions(new Rect(textX, textY, textWidth, 148f));
+            var descriptionHeight = PresentationTextMeasure.ClampHeight(
+                PresentationTextMeasure.MeasureHeight(_vsBody, map.Description, textWidth),
+                32f,
+                detailBottom - textY - 8f);
+            GUI.Label(new Rect(textX, textY, textWidth, descriptionHeight), map.Description, _vsBody);
         }
 
-        private void DrawMapChallengeOptions(Rect rect)
+        private void DrawMapSelectActionHint(Rect hintRect, bool unlocked, bool hasSelected, bool isConfirmed)
         {
-            DrawPanel(rect, new Color(0.025f, 0.065f, 0.087f, 1f));
-            DrawPanel(new Rect(rect.x, rect.y, 5f, rect.height), PresentationTheme.Accent);
+            GUI.Label(hintRect, BuildMapSelectHint(unlocked, hasSelected, isConfirmed), _vsHint);
+        }
 
-            var labelX = rect.x + 18f;
-            var valueX = rect.x + 190f;
-            var valueWidth = rect.width - 208f;
-            var rowY = rect.y + 12f;
-            var profile = BuildSelectedChallengeProfile();
-            var renownMultiplier = SharedChallengeProfileModel.ResolveRenownMultiplier(profile);
+        private string BuildMapSelectHint(bool unlocked, bool hasSelected, bool isConfirmed)
+        {
+            var playerCount = _director.PendingPlayerCount;
 
-            GUI.Label(new Rect(labelX, rowY, 160f, 24f), "CHALLENGE", _statSection);
-            rowY += 30f;
+            if (isConfirmed)
+            {
+                return "P1 READY";
+            }
 
-            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "TIER",
-                _challengeTier == ChallengeTier.Veteran ? "VETERAN" : "STANDARD",
-                _mapChallengeEditing && _challengeFocus == 0);
-            rowY += 30f;
-            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "MUTATOR A",
-                FormatMutatorLabel(_mutatorA),
-                _mapChallengeEditing && _challengeFocus == 1);
-            rowY += 30f;
-            DrawChallengeOptionRow(labelX, valueX, valueWidth, rowY, "MUTATOR B",
-                FormatMutatorLabel(_mutatorB),
-                _mapChallengeEditing && _challengeFocus == 2);
-            rowY += 30f;
-            GUI.Label(new Rect(labelX, rowY, valueWidth + valueX - labelX, 24f),
-                $"RENOWN MULTIPLIER  x{renownMultiplier:0.00}", _small);
+            if (!unlocked)
+            {
+                return "P1  •  LOCKED — SPEND RENOWN AT CAMP";
+            }
+
+            if (hasSelected)
+            {
+                return
+                    $"P1  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} CONFIRM  •  {LocalInputRouter.AssignmentLabel(0, playerCount)}";
+            }
+
+            return
+                $"P1  •  ARROWS CHOOSE  •  {Prompt(BindingAction.BuildDetails)} CHALLENGE  •  {Prompt(BindingAction.Submit)} SELECT  •  {LocalInputRouter.AssignmentLabel(0, playerCount)}";
+        }
+
+        private static string ResolveMapDurationShort(MapDefinition map)
+        {
+            if (map == null)
+            {
+                return string.Empty;
+            }
+
+            var minutes = Mathf.Max(1, Mathf.RoundToInt(map.Duration / 60f));
+            return minutes >= 10 ? "LONG" : "SCOUT";
+        }
+
+        private static string ResolveMapMissionBriefDuration(MapDefinition map)
+        {
+            if (map == null)
+            {
+                return string.Empty;
+            }
+
+            var minutes = Mathf.Max(1, Mathf.RoundToInt(map.Duration / 60f));
+            return $"{ResolveMapDurationShort(map)} · {minutes} MIN";
         }
 
         private void DrawChallengeOptionRow(float labelX, float valueX, float valueWidth, float rowY,
@@ -2320,8 +2610,11 @@ namespace ProjectExpedition
                 DrawBorder(rowRect, PresentationTheme.Accent, 2f);
             }
 
-            GUI.Label(new Rect(labelX, rowY, 150f, 24f), label, _micro);
-            GUI.Label(new Rect(valueX, rowY, valueWidth, 24f), value, selected ? _badge : _small);
+            var labelRect = new Rect(rowRect.x + 8f, rowRect.y, valueX - rowRect.x - 12f, rowRect.height);
+            var valueRect = new Rect(valueX, rowRect.y, valueWidth, rowRect.height);
+
+            GUI.Label(labelRect, label, _compactStatLabel);
+            GUI.Label(valueRect, value, selected ? _vsStatValue : _compactStatValue);
         }
 
         private static readonly ChallengeMutator[] MutatorCycleOrder =
@@ -4322,6 +4615,8 @@ namespace ProjectExpedition
             _vsMicro.clipping = TextClipping.Overflow;
             _vsStatValue = SurvivorsStylePresentation.CreateLabelStyle(
                 13, FontStyle.Bold, SurvivorsStylePresentation.StatPositive, TextAnchor.MiddleRight);
+            _vsStatValue.wordWrap = false;
+            _vsStatValue.clipping = TextClipping.Overflow;
             _vsConfirmedLabel = SurvivorsStylePresentation.CreateLabelStyle(
                 24, FontStyle.Bold, new Color(0.78f, 0.98f, 0.84f), TextAnchor.MiddleCenter);
             _vsHint = SurvivorsStylePresentation.CreateLabelStyle(

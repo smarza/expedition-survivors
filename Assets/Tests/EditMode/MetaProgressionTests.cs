@@ -223,10 +223,11 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
-        public void NextMapIndex_WrapsBothMaps()
+        public void NextMapIndex_AdvancesHorizontallyInFourColumnGrid()
         {
             Assert.That(SharedMetaProgressionModel.NextMapIndex(0, 1, 0), Is.EqualTo(1));
-            Assert.That(SharedMetaProgressionModel.NextMapIndex(1, 1, 0), Is.EqualTo(0));
+            Assert.That(SharedMetaProgressionModel.NextMapIndex(3, 1, 0), Is.EqualTo(4));
+            Assert.That(SharedMetaProgressionModel.NextMapIndex(0, -1, 0), Is.EqualTo(5));
         }
 
         [Test]
