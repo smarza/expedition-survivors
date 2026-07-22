@@ -402,8 +402,11 @@ namespace ProjectExpedition
         public static int ExperienceToNext(int currentLevel, int playerCount) =>
             DevelopmentTuningResolver.ExperienceToNext(currentLevel, playerCount);
 
-        public static float UltimateCooldown(float baseCooldown, int cooldownUpgrades) =>
-            DevelopmentTuningResolver.UltimateCooldown(baseCooldown, cooldownUpgrades);
+        public static float UltimateCooldown(float baseCooldown, int cooldownUpgrades)
+        {
+            var tunedCooldown = DevelopmentTuningResolver.UltimateCooldown(baseCooldown, cooldownUpgrades);
+            return Mathf.Max(28f, tunedCooldown);
+        }
 
         public static int ComputeEnemyLevel(int playerLevel, bool boss, bool elite) =>
             DevelopmentTuningResolver.ComputeEnemyLevel(playerLevel, boss, elite);

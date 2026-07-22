@@ -639,8 +639,13 @@ namespace ProjectExpedition
 
             var enemyLevel = BalanceRules.ComputeEnemyLevel(_runModel.Level, boss, elite);
             var effectiveDifficulty = BalanceRules.ResolveEffectiveDifficulty(timeDifficulty, enemyLevel);
-            var position = _obstacleLayout.ResolveSpawnPosition(GroupCenter, Rng,
-                SharedSpawnModel.MinimumSpawnDistance, SharedSpawnModel.MaximumSpawnDistance, 0.36f);
+            var position = _obstacleLayout.ResolveSpawnPosition(
+                GroupCenter,
+                Rng,
+                SharedSpawnModel.MinimumSpawnDistance,
+                SharedSpawnModel.MaximumSpawnDistance,
+                0.36f,
+                SharedSpawnModel.CalculateSpawnPosition);
             var enemy = _enemyPool.Get(position);
             enemy.Initialize(this, effectiveDifficulty, enemyLevel, boss, elite);
             Enemies.Add(enemy);
@@ -670,7 +675,13 @@ namespace ProjectExpedition
 
             var enemyLevel = BalanceRules.ComputeEnemyLevel(_runModel.Level, true, false);
             var effectiveDifficulty = BalanceRules.ResolveEffectiveDifficulty(timeDifficulty, enemyLevel);
-            var position = _obstacleLayout.ResolveSpawnPosition(GroupCenter, Rng, 13.5f, 16.5f, 0.85f);
+            var position = _obstacleLayout.ResolveSpawnPosition(
+                GroupCenter,
+                Rng,
+                13.5f,
+                16.5f,
+                0.85f,
+                SharedSpawnModel.CalculateSpawnPosition);
             var enemy = _enemyPool.Get(position);
             enemy.Initialize(this, effectiveDifficulty, enemyLevel, true, false);
             Enemies.Add(enemy);

@@ -76,16 +76,29 @@ namespace ProjectExpedition
         public Vector2 ResolveSpawnPosition(Vector2 groupCenter, RunRandom random, float minimumDistance,
             float maximumDistance, float entityRadius, int maximumAttempts = 12)
         {
+            return ResolveSpawnPosition(groupCenter, random, minimumDistance, maximumDistance, entityRadius,
+                SharedSpawnModel.CalculateSpawnPosition, maximumAttempts);
+        }
+
+        public Vector2 ResolveSpawnPosition(Vector2 groupCenter, RunRandom random, float minimumDistance,
+            float maximumDistance, float entityRadius, Func<Vector2, float, float, Vector2> calculateSpawnPosition,
+            int maximumAttempts = 12)
+        {
             if (random == null)
             {
                 throw new ArgumentNullException(nameof(random));
+            }
+
+            if (calculateSpawnPosition == null)
+            {
+                throw new ArgumentNullException(nameof(calculateSpawnPosition));
             }
 
             for (var attempt = 0; attempt < maximumAttempts; attempt++)
             {
                 var angle = random.Range(0f, Mathf.PI * 2f);
                 var distance = random.Range(minimumDistance, maximumDistance);
-                var candidate = SharedSpawnModel.CalculateSpawnPosition(groupCenter, angle, distance);
+                var candidate = calculateSpawnPosition(groupCenter, angle, distance);
 
                 if (!OverlapsCircle(candidate, entityRadius))
                 {
@@ -93,8 +106,7 @@ namespace ProjectExpedition
                 }
             }
 
-            return SharedSpawnModel.CalculateSpawnPosition(groupCenter, random.Range(0f, Mathf.PI * 2f),
-                minimumDistance);
+            return calculateSpawnPosition(groupCenter, random.Range(0f, Mathf.PI * 2f), minimumDistance);
         }
     }
 

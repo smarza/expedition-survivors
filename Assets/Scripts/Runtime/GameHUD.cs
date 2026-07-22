@@ -2558,6 +2558,19 @@ namespace ProjectExpedition
             GUI.Label(regionCaptionRect, map.Region.ToUpperInvariant(), _vsMicro);
         }
 
+        private void DrawMapSelectDetail(Rect detailRect)
+        {
+            var map = ContentCatalog.Map(_mapSelection);
+            var unlocked = ContentCatalog.IsMapUnlocked(_mapSelection);
+            DrawMapSelectFooterDetail(
+                detailRect.x,
+                detailRect.y,
+                detailRect.width,
+                detailRect.yMax,
+                map,
+                unlocked);
+        }
+
         private void DrawMapSelectFooterDetail(
             float textX,
             float textY,
@@ -2846,6 +2859,8 @@ namespace ProjectExpedition
                     $"{FormatTime(_director.Elapsed)} / {FormatTime(_director.SelectedMap.Duration)}  •  {timerText}", _vsMicro);
                 GUI.Label(new Rect(topStrip.x + topStrip.width * 0.5f, topStrip.y + 8f, topStrip.width * 0.48f, 20f),
                     $"KILLS {_director.Kills}  •  RENOWN {_director.RunRenown}  •  ENEMIES {_director.Enemies.Count}", _vsMicro);
+                GUI.Label(new Rect(topStrip.x + 12f, topStrip.y + 28f, topStrip.width - 24f, 14f),
+                    $"ULTIMATE {Prompt(BindingAction.Ultimate)}   •   PAUSE {Prompt(BindingAction.Pause)}", _micro);
             }
 
             var playerStripTop = topStrip.yMax + 8f;
