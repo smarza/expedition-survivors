@@ -61,7 +61,7 @@ namespace ProjectExpedition.Tests
                 ObstacleDefinition.Box(new Vector2(0f, 0f), new Vector2(0.45f, 1.8f))
             };
             var model = new SharedEnemyModel();
-            model.Begin(new Vector2(-4f, 0f), EnemyCatalog.Draugr, 1f, 2, 2.5f, 0.36f, 3);
+            model.Begin(new Vector2(-4f, 2.5f), EnemyCatalog.Draugr, 1f, 2, 2.5f, 0.36f, 3);
 
             for (var step = 0; step < 120; step++)
             {
@@ -69,6 +69,7 @@ namespace ProjectExpedition.Tests
             }
 
             Assert.That(model.Position.x, Is.GreaterThan(2.5f));
+            Assert.That(model.Position.y, Is.LessThan(2.5f));
             Assert.That(SharedMovementCollision.OverlapsCircle(obstacles[0], model.Position, model.Radius),
                 Is.False);
         }
