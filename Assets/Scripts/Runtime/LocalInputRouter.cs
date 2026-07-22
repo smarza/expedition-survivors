@@ -137,7 +137,40 @@ namespace ProjectExpedition
                 return true;
             }
 
+            for (var i = 0; i < Gamepad.all.Count; i++)
+            {
+                var gamepad = Gamepad.all[i];
+
+                if (gamepad.selectButton.wasPressedThisFrame && gamepad.rightShoulder.isPressed)
+                {
+                    MarkGamepad(gamepad);
+                    return true;
+                }
+            }
+
             return false;
+        }
+
+        public static int AnyMenuShoulderTabPressed()
+        {
+            for (var i = 0; i < Gamepad.all.Count; i++)
+            {
+                var gamepad = Gamepad.all[i];
+
+                if (gamepad.leftShoulder.wasPressedThisFrame)
+                {
+                    MarkGamepad(gamepad);
+                    return -1;
+                }
+
+                if (gamepad.rightShoulder.wasPressedThisFrame)
+                {
+                    MarkGamepad(gamepad);
+                    return 1;
+                }
+            }
+
+            return 0;
         }
 
         public static int MenuHorizontalPressed(int playerIndex, int playerCount)
@@ -324,6 +357,17 @@ namespace ProjectExpedition
 
         private static Gamepad AssignedGamepad(int playerIndex) =>
             playerIndex >= 0 && playerIndex < AssignedDeviceIds.Length ? FindGamepad(AssignedDeviceIds[playerIndex]) : null;
+
+        public static Gamepad ResolveAssignedGamepad(int playerIndex, int playerCount)
+        {
+            RefreshAssignments(playerCount);
+            if (playerCount <= 1)
+            {
+                return MostRecentlyActiveGamepad();
+            }
+
+            return AssignedGamepad(playerIndex);
+        }
 
         private static Gamepad FindGamepad(int deviceId)
         {

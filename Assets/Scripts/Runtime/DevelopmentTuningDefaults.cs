@@ -40,6 +40,14 @@ namespace ProjectExpedition
                 ReviveDuration = SharedPlayerModel.DefaultReviveDuration,
                 ReviveDecayRate = SharedPlayerModel.DefaultReviveDecayRate,
                 ReviveHealthFraction = SharedPlayerModel.DefaultReviveHealthFraction,
+                PlayerContactKnockback = 0.35f,
+                PlayerBossContactKnockback = 0.55f,
+                PlayerBossSlamKnockback = 0.9f,
+                PlayerBossChargeKnockbackMultiplier = 1.2f,
+                PlayerHurtTraumaBase = 0.12f,
+                PlayerHurtTraumaHeavyBonus = 0.18f,
+                PlayerHurtVignetteScale = 1f,
+                PlayerLowHealthThreshold = 0.3f,
                 VeteranHealthMultiplier = SharedChallengeProfileModel.DefaultVeteranHealthMultiplier,
                 VeteranSpawnRateMultiplier = SharedChallengeProfileModel.DefaultVeteranSpawnRateMultiplier,
                 SwarmSurgeGroupBonus = SharedChallengeProfileModel.DefaultSwarmSurgeGroupBonus,
@@ -118,6 +126,15 @@ namespace ProjectExpedition
             profile.ReviveDuration = Mathf.Max(0.1f, profile.ReviveDuration);
             profile.ReviveDecayRate = Mathf.Clamp01(profile.ReviveDecayRate);
             profile.ReviveHealthFraction = Mathf.Clamp01(profile.ReviveHealthFraction);
+            profile.PlayerContactKnockback = Mathf.Max(0f, profile.PlayerContactKnockback);
+            profile.PlayerBossContactKnockback = Mathf.Max(0f, profile.PlayerBossContactKnockback);
+            profile.PlayerBossSlamKnockback = Mathf.Max(0f, profile.PlayerBossSlamKnockback);
+            profile.PlayerBossChargeKnockbackMultiplier =
+                Mathf.Max(0.01f, profile.PlayerBossChargeKnockbackMultiplier);
+            profile.PlayerHurtTraumaBase = Mathf.Max(0f, profile.PlayerHurtTraumaBase);
+            profile.PlayerHurtTraumaHeavyBonus = Mathf.Max(0f, profile.PlayerHurtTraumaHeavyBonus);
+            profile.PlayerHurtVignetteScale = Mathf.Max(0f, profile.PlayerHurtVignetteScale);
+            profile.PlayerLowHealthThreshold = Mathf.Clamp01(profile.PlayerLowHealthThreshold);
             profile.VeteranHealthMultiplier = Mathf.Max(0.01f, profile.VeteranHealthMultiplier);
             profile.VeteranSpawnRateMultiplier = Mathf.Max(0.01f, profile.VeteranSpawnRateMultiplier);
             profile.SwarmSurgeGroupBonus = Mathf.Max(0f, profile.SwarmSurgeGroupBonus);

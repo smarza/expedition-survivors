@@ -18,6 +18,12 @@ namespace ProjectExpedition
             SurvivorsStylePresentation.DrawCoinBadge(ledgerRect, ledgerLabel);
         }
 
+        public static bool DrawBackToTitleButton(Rect screen, string label)
+        {
+            var backRect = new Rect(screen.xMax - 320f, screen.y + 34f, 240f, 56f);
+            return SurvivorsStylePresentation.DrawButton(backRect, label, SurvivorsButtonKind.Red);
+        }
+
         public static void DrawNavButton(Rect rect, string label, bool selected, bool highlight, Action onClick)
         {
             if (highlight)

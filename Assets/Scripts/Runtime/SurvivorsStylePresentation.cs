@@ -263,13 +263,14 @@ namespace ProjectExpedition
         public static bool DrawTouchable(Rect rect, System.Action onPress = null)
         {
             var pressed = GUI.Button(rect, GUIContent.none, GUIStyle.none);
+            var tapped = TouchInputRouter.RectTapped(rect);
 
-            if (pressed && onPress != null)
+            if ((pressed || tapped) && onPress != null)
             {
                 onPress();
             }
 
-            return pressed || TouchInputRouter.RectTapped(rect);
+            return pressed || tapped;
         }
 
         public static bool DrawVsFooterButton(Rect rect, string label, SurvivorsButtonKind kind, bool selected = false)
@@ -284,6 +285,31 @@ namespace ProjectExpedition
         }
 
         public static SurvivorsHudStyles CreateHudStyles() => SurvivorsHudStyles.Create();
+
+        public static void DrawVerticalGradient(Rect rect, Color top, Color bottom)
+        {
+            var steps = Mathf.Max(4, Mathf.CeilToInt(rect.height / 8f));
+            var stepHeight = rect.height / steps;
+
+            for (var step = 0; step < steps; step++)
+            {
+                var t = step / (float)Mathf.Max(1, steps - 1);
+                var color = Color.Lerp(top, bottom, t);
+                DrawPanel(new Rect(rect.x, rect.y + step * stepHeight, rect.width, stepHeight + 1f), color);
+            }
+        }
+
+        public static void DrawShadowedLabel(Rect rect, string text, GUIStyle style, Color shadowColor, float shadowOffsetPixels = 2f)
+        {
+            var shadowStyle = new GUIStyle(style);
+            SetTextColor(shadowStyle, shadowColor);
+
+            GUI.Label(
+                new Rect(rect.x + shadowOffsetPixels, rect.y + shadowOffsetPixels, rect.width, rect.height),
+                text,
+                shadowStyle);
+            GUI.Label(rect, text, style);
+        }
 
         public static void DrawPanel(Rect rect, Color color)
         {

@@ -54,6 +54,27 @@ namespace ProjectExpedition.Tests
         }
 
         [Test]
+        public void Damage_AppliesKnockbackAwayFromSource()
+        {
+            var model = StartedModel();
+            var start = new Vector2(2f, 0f);
+            var result = model.TakeDamage(5f, 0.8f, Vector2.zero, start, null, out var resolved);
+
+            Assert.That(result, Is.EqualTo(PlayerDamageResult.Damaged));
+            Assert.That(resolved.x, Is.GreaterThan(start.x));
+            Assert.That(resolved.y, Is.EqualTo(start.y).Within(0.0001f));
+        }
+
+        [Test]
+        public void Damage_KnockbackRespectsImmunityFrames()
+        {
+            var model = StartedModel();
+
+            Assert.That(model.TakeDamage(1f), Is.EqualTo(PlayerDamageResult.Damaged));
+            Assert.That(model.TakeDamage(1f, 1f, Vector2.zero, Vector2.zero, null, out _), Is.EqualTo(PlayerDamageResult.Ignored));
+        }
+
+        [Test]
         public void Damage_AppliesArmorMinimumDamageAndKnockdownExactlyOnce()
         {
             var model = StartedModel();

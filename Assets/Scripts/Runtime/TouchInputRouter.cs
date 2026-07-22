@@ -11,6 +11,7 @@ namespace ProjectExpedition
         private static bool _pausePressed;
         private static bool _detailsPressed;
         private static bool _submitPressed;
+        private static bool _devTuningPressed;
         private static int _touchPlayerIndex;
 
         public static bool IsTouchActive
@@ -50,6 +51,7 @@ namespace ProjectExpedition
             _pausePressed = false;
             _detailsPressed = false;
             _submitPressed = false;
+            _devTuningPressed = false;
         }
 
         public static void SetVirtualStick(Vector2 value)
@@ -65,6 +67,7 @@ namespace ProjectExpedition
         public static void PressPause() => _pausePressed = true;
         public static void PressDetails() => _detailsPressed = true;
         public static void PressSubmit() => _submitPressed = true;
+        public static void PressDevTuning() => _devTuningPressed = true;
 
         public static void SetTouchPlayerIndex(int playerIndex) => _touchPlayerIndex = playerIndex;
 
@@ -113,6 +116,17 @@ namespace ProjectExpedition
         public static bool TouchDetailsPressed()
         {
             if (!IsTouchActive || !_detailsPressed)
+            {
+                return false;
+            }
+
+            LocalInputRouter.MarkTouch();
+            return true;
+        }
+
+        public static bool TouchDevTuningPressed()
+        {
+            if (!IsTouchActive || !_devTuningPressed)
             {
                 return false;
             }

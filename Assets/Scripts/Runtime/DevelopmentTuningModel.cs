@@ -43,6 +43,15 @@ namespace ProjectExpedition
         public float ReviveDecayRate = 0.35f;
         public float ReviveHealthFraction = 0.42f;
 
+        public float PlayerContactKnockback = 0.35f;
+        public float PlayerBossContactKnockback = 0.55f;
+        public float PlayerBossSlamKnockback = 0.9f;
+        public float PlayerBossChargeKnockbackMultiplier = 1.2f;
+        public float PlayerHurtTraumaBase = 0.12f;
+        public float PlayerHurtTraumaHeavyBonus = 0.18f;
+        public float PlayerHurtVignetteScale = 1f;
+        public float PlayerLowHealthThreshold = 0.3f;
+
         public float VeteranHealthMultiplier = 1.25f;
         public float VeteranSpawnRateMultiplier = 0.85f;
         public float SwarmSurgeGroupBonus = 1f;
@@ -178,6 +187,7 @@ namespace ProjectExpedition
         public DevelopmentTuningTab Tab = DevelopmentTuningTab.Loot;
         public int Selection;
         public int ContentIndex;
+        public int ContentScrollOffset;
     }
 
     public readonly struct DevelopmentTuningFieldDescriptor

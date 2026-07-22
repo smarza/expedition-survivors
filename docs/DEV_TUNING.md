@@ -4,9 +4,18 @@ Hidden development overlay for balancing loot, spawn pressure, XP curves, player
 
 ## Access
 
-- Press **F4** at any time to open or close the overlay.
-- There is no menu entry; the shortcut is intentionally hidden.
+- Press **F4** on keyboard to open or close the overlay.
+- Press **R1 + View/Select** on gamepad (mirrors the F3 metrics chord on L1 + View/Select).
+- Tap the **DEV** button at the top-right when touch controls are available.
+- There is no menu entry; the shortcuts are intentionally hidden.
 - While open, simulation time is paused (`Time.timeScale = 0`).
+
+Inside the panel:
+
+- **L1 / R1** (shoulder buttons) switch tabs.
+- Tab headers are clickable/tappable for mouse and touch.
+- Long tab lists scroll automatically as you move selection with **UP/DOWN**; a counter appears when scrolling is active.
+- Footer actions (Export, Reset, Apply, Close) stay pinned inside the panel frame.
 
 ## Tabs
 

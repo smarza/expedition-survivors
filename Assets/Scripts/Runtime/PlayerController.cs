@@ -153,7 +153,7 @@ namespace ProjectExpedition
             }
             if (_model.AdvanceRevival(rescuerNearby, Time.deltaTime))
             {
-                _presentation.ShowHit();
+                _presentation.ShowReviveSuccess();
                 _director.OnPlayerRevived(this);
                 return;
             }
@@ -161,15 +161,39 @@ namespace ProjectExpedition
 
         public void TakeDamage(float rawDamage)
         {
+            TakeDamage(rawDamage, DevelopmentTuningResolver.PlayerContactKnockback, transform.position,
+                PlayerHurtHitKind.Contact);
+        }
+
+        public void TakeDamage(float rawDamage, float knockback, Vector2 source, PlayerHurtHitKind hitKind)
+        {
             var damage = SharedChallengeProfileModel.ApplyPlayerDamageTakenMultiplier(
                 rawDamage, _director.SelectedChallenge);
-            var result = _model.TakeDamage(damage);
-            if (result == PlayerDamageResult.Ignored) return;
-            _presentation.ShowHit();
-            _director.Present(PresentationCue.Impact, transform.position, _heroColor, 0.55f);
+            var currentPosition = (Vector2)transform.position;
+            var healthBefore = _model.Health;
+            var result = _model.TakeDamage(
+                damage,
+                knockback,
+                source,
+                currentPosition,
+                _director.ObstacleLayout.Obstacles,
+                out var resolvedPosition);
+
+            if (result == PlayerDamageResult.Ignored)
+            {
+                return;
+            }
+
+            transform.position = _director.ConstrainToCoopRange(this, resolvedPosition);
+            var healthFractionBefore = healthBefore / Mathf.Max(1f, _model.MaxHealth);
+            _director.PresentPlayerHurt(this, damage, source, hitKind, healthFractionBefore);
             if (result == PlayerDamageResult.Downed)
+            {
                 _director.OnPlayerDowned(this);
+            }
         }
+
+        public void PresentDamageTaken(Vector2 source) => _presentation?.ShowDamageTaken(source);
 
         public void PresentAttack(Vector2 direction) => _presentation?.ShowAttack(direction);
 

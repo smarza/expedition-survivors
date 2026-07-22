@@ -109,6 +109,7 @@ namespace ProjectExpedition
         public float UiScale = 1f;
         public bool HighContrast;
         public bool ReducedFlashes;
+        public bool EnableHaptics = true;
         public bool ShowEnemyLevelLabels = true;
         public bool ShowTemporaryEffectGlow = true;
         public float ScreenShake = 0.7f;

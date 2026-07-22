@@ -81,6 +81,9 @@ namespace ProjectExpedition
         private float _gemRepulsionRadius;
         private float _gemRepulsionUntil;
         private float _developmentTuningPreviousTimeScale = 1f;
+        private readonly PlayerHurtFeedbackTracker _playerHurtFeedback = new PlayerHurtFeedbackTracker();
+
+        public PlayerHurtFeedbackTracker PlayerHurtFeedback => _playerHurtFeedback;
 
         public int ActiveProjectiles => _projectilePool?.ActiveCount ?? 0;
         public int ActiveGems => _gemPool?.ActiveCount ?? 0;
@@ -180,6 +183,7 @@ namespace ProjectExpedition
             AdvancePersistentZones(Time.deltaTime);
             _temporaryEffect.Advance(Time.deltaTime, Players);
             HandleTemporaryEffectPresentation();
+            _playerHurtFeedback.Advance(Time.deltaTime, Players);
 
             if (!_routeModel.BossKilled)
             {
@@ -298,6 +302,7 @@ namespace ProjectExpedition
             _spawnModel.Begin();
             _lootProgress.Begin();
             _temporaryEffect.Clear(Players);
+            _playerHurtFeedback.Reset();
             _persistentZones.Clear();
             _runRecorded = false;
             _warlordEliteSpawned = false;
@@ -1162,6 +1167,12 @@ namespace ProjectExpedition
             Time.timeScale = 1f;
         }
 
+        public void ReturnToTitleScreen()
+        {
+            Time.timeScale = 1f;
+            State = RunState.TitleScreen;
+        }
+
         public void ReturnToMenu()
         {
             Time.timeScale = 1f;
@@ -1283,6 +1294,32 @@ namespace ProjectExpedition
         public void Present(PresentationCue cue, Vector2 position, Color color, float scale = 1f) =>
             _presentation?.Notify(cue, position, color, scale);
 
+        public void PresentPlayerHurt(
+            PlayerController player,
+            float damage,
+            Vector2 source,
+            PlayerHurtHitKind hitKind,
+            float healthFractionBeforeDamage)
+        {
+            if (player == null)
+            {
+                return;
+            }
+
+            var damageRatio = damage / Mathf.Max(1f, player.MaxHealth);
+            var severity = PlayerHurtSeverity.Resolve(damageRatio, hitKind);
+            player.PresentDamageTaken(source);
+            _playerHurtFeedback.RegisterHit(player.PlayerIndex, healthFractionBeforeDamage, damageRatio, severity);
+            _presentation?.NotifyPlayerHurt(
+                player.transform.position,
+                severity.VfxScale,
+                severity.Trauma,
+                severity.Pitch,
+                player.PlayerIndex,
+                Players.Count,
+                severity);
+        }
+
         public void AddCameraTrauma(float amount) => _cameraFollow?.AddTrauma(amount);
 
         public float DistanceToNearestLivingPlayer(Vector2 position)
@@ -1355,8 +1392,11 @@ namespace ProjectExpedition
                     continue;
                 }
 
-                player.TakeDamage(damage);
-                Present(PresentationCue.Impact, playerPosition, new Color(1f, 0.28f, 0.14f), 1.1f);
+                player.TakeDamage(
+                    damage,
+                    DevelopmentTuningResolver.PlayerBossSlamKnockback,
+                    center,
+                    PlayerHurtHitKind.BossSlam);
             }
         }
 

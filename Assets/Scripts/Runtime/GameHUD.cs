@@ -222,6 +222,13 @@ namespace ProjectExpedition
                 return;
             }
 
+            if (LocalInputRouter.MenuBackPressed())
+            {
+                _director.ReturnToTitleScreen();
+                _campView = CampView.Menu;
+                return;
+            }
+
             var direction = LocalInputRouter.AnyMenuHorizontalPressed();
             if (direction != 0)
             {
@@ -239,6 +246,13 @@ namespace ProjectExpedition
 
         private void UpdateCampOnboarding()
         {
+            if (LocalInputRouter.MenuBackPressed())
+            {
+                _director.ReturnToTitleScreen();
+                _campView = CampView.Menu;
+                return;
+            }
+
             if (LocalInputRouter.AnyMenuSubmitPressed())
             {
                 _onboardingStep++;
@@ -572,20 +586,20 @@ namespace ProjectExpedition
                 _director.CloseSettings();
                 return;
             }
-            const int itemCount = 19;
+            const int itemCount = 20;
             var vertical = LocalInputRouter.AnyMenuVerticalPressed();
             if (vertical != 0) { _settingsSelection = Wrap(_settingsSelection + vertical, itemCount); NavigateCue(); }
             var horizontal = LocalInputRouter.AnyMenuHorizontalPressed();
-            if (horizontal != 0 && _settingsSelection < 8) AdjustSetting(_settingsSelection, horizontal);
+            if (horizontal != 0 && _settingsSelection < 9) AdjustSetting(_settingsSelection, horizontal);
             if (!LocalInputRouter.AnyMenuSubmitPressed()) return;
-            if (_settingsSelection >= 8 && _settingsSelection < 17)
-                LocalInputRouter.BeginRebind(RebindableActions[_settingsSelection - 8]);
-            else if (_settingsSelection == 17)
+            if (_settingsSelection >= 9 && _settingsSelection < 18)
+                LocalInputRouter.BeginRebind(RebindableActions[_settingsSelection - 9]);
+            else if (_settingsSelection == 18)
             {
                 PresentationPreferences.ResetToDefaults();
                 ConfirmCue();
             }
-            else if (_settingsSelection == 18) _director.CloseSettings();
+            else if (_settingsSelection == 19) _director.CloseSettings();
         }
 
         private static void AdjustSetting(int index, int direction)
@@ -606,6 +620,7 @@ namespace ProjectExpedition
                     if (nextTouch > 2) nextTouch = 0;
                     data.TouchControls = (TouchControlsMode)nextTouch;
                     break;
+                case 8: data.EnableHaptics = !data.EnableHaptics; break;
             }
             PresentationPreferences.Save();
         }
@@ -672,6 +687,8 @@ namespace ProjectExpedition
                 GUI.Label(new Rect(470, 939, 980, 50), _announcement, _center);
             }
 
+            DrawDevelopmentTuningTouchOpener();
+
             if (_director.ShowDevelopmentTuning)
             {
                 EnsureSurvivorsStyles();
@@ -705,6 +722,22 @@ namespace ProjectExpedition
             }
         }
 
+        private void DrawDevelopmentTuningTouchOpener()
+        {
+            if (_director.ShowDevelopmentTuning || !TouchInputRouter.ShouldShowOverlay)
+            {
+                return;
+            }
+
+            EnsureSurvivorsStyles();
+            var openerRect = new Rect(1768f, 18f, 124f, 48f);
+
+            if (SurvivorsStylePresentation.DrawButton(openerRect, "DEV", SurvivorsButtonKind.Blue))
+            {
+                _director.ToggleDevelopmentTuning();
+            }
+        }
+
         private static readonly string[] KnownRelicIds =
         {
             "relic.jotunn_echo", "relic.jotunn_echo_warden",
@@ -729,8 +762,16 @@ namespace ProjectExpedition
             var campLeader = SaveService.ResolveCampLeader();
 
             EnsureSurvivorsStyles();
-            CampPresentation.DrawShell(new Rect(0f, 0f, 1920f, 1080f), _survivorsHudStyles,
+            var screen = new Rect(0f, 0f, 1920f, 1080f);
+            CampPresentation.DrawShell(screen, _survivorsHudStyles,
                 $"RENOWN  {SaveService.AvailableRenown()}  —  SPEND AT CODEX");
+
+            if (CampPresentation.DrawBackToTitleButton(screen, $"{Prompt(BindingAction.Back)} TITLE"))
+            {
+                ConfirmCue();
+                _director.ReturnToTitleScreen();
+                _campView = CampView.Menu;
+            }
 
             var campPanel = new Rect(80, 200, 1760, 598);
             SurvivorsStylePresentation.DrawFlatPanel(campPanel, SurvivorsStylePresentation.PanelNavy, 1f);
@@ -760,7 +801,7 @@ namespace ProjectExpedition
             DrawCampNavButton(new Rect(1040, 862, 280, 88), "CODEX", 2, _highlightCodexButton);
             DrawCampNavButton(new Rect(1345, 862, 280, 88), "SETTINGS", 3);
             GUI.Label(new Rect(430, 962, 1195, 55),
-                $"←→ CAMP MENU   •   {Prompt(BindingAction.Submit)} SELECT   •   OPEN CODEX TO SPEND RENOWN", _small);
+                $"←→ CAMP MENU   •   {Prompt(BindingAction.Submit)} SELECT   •   {Prompt(BindingAction.Back)} TITLE", _small);
 
             if (_campView == CampView.Onboarding)
             {
@@ -2453,9 +2494,21 @@ namespace ProjectExpedition
                 var healthColor = GameplayHudPresentation.ResolveHealthBarColor(i,
                     _director, i == 0 ? new Color(0.28f, 0.68f, 0.88f) : new Color(0.9f, 0.48f, 0.2f));
                 var healthBarTop = GameplayHudLayoutMetrics.PlayerHealthBarTop(row.y);
-                DrawBar(new Rect(row.x + 10f, healthBarTop, row.width - 20f, GameplayHudLayoutMetrics.BarHeight),
-                    player.Health / player.MaxHealth,
-                    healthColor, healthLabel, _micro);
+                var healthFill = player.Health / player.MaxHealth;
+                var ghostFill = _director.PlayerHurtFeedback.ResolveGhostHealthFraction(i);
+                var damagePulse = _director.PlayerHurtFeedback.ResolveHealthBarPulse(i);
+                var lowHealth = !player.IsDowned &&
+                    healthFill <= DevelopmentTuningResolver.PlayerLowHealthThreshold;
+                GameplayHudPresentation.DrawPlayerHealthBar(
+                    new Rect(row.x + 10f, healthBarTop, row.width - 20f, GameplayHudLayoutMetrics.BarHeight),
+                    healthFill,
+                    ghostFill,
+                    damagePulse,
+                    lowHealth,
+                    healthColor,
+                    healthLabel,
+                    _micro,
+                    DrawPanel);
 
                 var ultimateFill = player.UltimateReady ? 1f : 1f - player.UltimateRemaining / Mathf.Max(1f, player.UltimateCooldown);
                 var ultimateLabel = player.UltimateReady ? $"{player.UltimateName.ToUpperInvariant()} — READY"
@@ -2482,6 +2535,7 @@ namespace ProjectExpedition
             DrawFirstRunHints();
             if (_director.ShowPerformanceMetrics) DrawPerformancePanel();
             TouchControlsPresentation.Draw(_director);
+            GameplayHudPresentation.DrawDamageTakenVignette(new Rect(0f, 0f, 1920f, 1080f), _director);
             GameplayHudPresentation.DrawBossProximityVignette(new Rect(0f, 0f, 1920f, 1080f), _director);
         }
 
@@ -3254,13 +3308,14 @@ namespace ProjectExpedition
             GUI.Label(new Rect(160, 195, 710, 45), "ACCESSIBILITY & AUDIO", _heading);
             GUI.Label(new Rect(1050, 195, 710, 45), "KEYBOARD — PLAYER 1", _heading);
 
-            var labels = new[] { "UI SCALE", "HIGH CONTRAST", "REDUCED FLASHES", "SCREEN SHAKE", "MASTER", "MUSIC", "SFX", "TOUCH CONTROLS" };
+            var labels = new[] { "UI SCALE", "HIGH CONTRAST", "REDUCED FLASHES", "SCREEN SHAKE", "MASTER", "MUSIC", "SFX", "TOUCH CONTROLS", "HAPTICS" };
             var values = new[]
             {
                 $"{data.UiScale * 100f:0}%", data.HighContrast ? "ON" : "OFF",
                 data.ReducedFlashes ? "ON" : "OFF", $"{data.ScreenShake * 100f:0}%",
                 $"{data.MasterVolume * 100f:0}%", $"{data.MusicVolume * 100f:0}%",
-                $"{data.SfxVolume * 100f:0}%", data.TouchControls.ToString().ToUpperInvariant()
+                $"{data.SfxVolume * 100f:0}%", data.TouchControls.ToString().ToUpperInvariant(),
+                data.EnableHaptics ? "ON" : "OFF"
             };
             for (var i = 0; i < labels.Length; i++)
             {
@@ -3275,7 +3330,7 @@ namespace ProjectExpedition
 
             for (var i = 0; i < RebindableActions.Length; i++)
             {
-                var selection = i + 8;
+                var selection = i + 9;
                 var rect = new Rect(1045, 255 + i * 62, 720, 48);
                 DrawSelection(new Rect(rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10), _settingsSelection == selection);
                 DrawPanel(rect, new Color(0.018f, 0.05f, 0.07f, 1f));
@@ -3289,13 +3344,13 @@ namespace ProjectExpedition
                 }
             }
 
-            DrawSelection(new Rect(580, 925, 350, 85), _settingsSelection == 17);
+            DrawSelection(new Rect(580, 925, 350, 85), _settingsSelection == 18);
             if (GUI.Button(new Rect(590, 935, 330, 65), "RESTORE DEFAULTS", _button))
             {
-                _settingsSelection = 17;
+                _settingsSelection = 18;
                 PresentationPreferences.ResetToDefaults();
             }
-            DrawSelection(new Rect(990, 925, 350, 85), _settingsSelection == 18);
+            DrawSelection(new Rect(990, 925, 350, 85), _settingsSelection == 19);
             if (GUI.Button(new Rect(1000, 935, 330, 65), "BACK", _button)) _director.CloseSettings();
             GUI.Label(new Rect(520, 1010, 880, 35),
                 $"{Prompt(BindingAction.MoveUp)} {Prompt(BindingAction.MoveDown)} NAVIGATE   •   LEFT/RIGHT ADJUST   •   {Prompt(BindingAction.Back)} BACK", _micro);

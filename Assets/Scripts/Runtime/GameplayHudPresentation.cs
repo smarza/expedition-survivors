@@ -114,7 +114,102 @@ namespace ProjectExpedition
             }
 
             TouchControlsPresentation.Draw(director);
+            DrawDamageTakenVignette(screen, director);
             DrawBossProximityVignette(screen, director);
+        }
+
+        public static void DrawDamageTakenVignette(Rect screen, GameDirector director)
+        {
+            if (director?.PlayerHurtFeedback == null)
+            {
+                return;
+            }
+
+            var strength = 0f;
+            for (var i = 0; i < director.Players.Count; i++)
+            {
+                strength = Mathf.Max(strength, director.PlayerHurtFeedback.ResolveVignetteStrength(i));
+            }
+
+            if (strength <= 0.01f)
+            {
+                return;
+            }
+
+            if (PresentationPreferences.Data.ReducedFlashes)
+            {
+                strength *= 0.55f;
+            }
+
+            var alpha = strength * 0.52f;
+            var color = new Color(0.42f, 0.04f, 0.03f, alpha);
+            var edgeThickness = Mathf.Lerp(24f, 88f, strength);
+
+            SurvivorsStylePresentation.DrawPanel(new Rect(screen.x, screen.y, screen.width, edgeThickness), color);
+            SurvivorsStylePresentation.DrawPanel(
+                new Rect(screen.x, screen.yMax - edgeThickness, screen.width, edgeThickness),
+                color);
+            SurvivorsStylePresentation.DrawPanel(new Rect(screen.x, screen.y, edgeThickness, screen.height), color);
+            SurvivorsStylePresentation.DrawPanel(
+                new Rect(screen.xMax - edgeThickness, screen.y, edgeThickness, screen.height),
+                color);
+        }
+
+        public static void DrawPlayerHealthBar(
+            Rect rect,
+            float fill,
+            float ghostFill,
+            float damagePulse,
+            bool lowHealth,
+            Color fillColor,
+            string label,
+            GUIStyle labelStyle,
+            System.Action<Rect, Color> drawPanel)
+        {
+            const float inset = 2f;
+            drawPanel?.Invoke(rect, new Color(0.02f, 0.035f, 0.045f, 1f));
+
+            var clampedFill = Mathf.Clamp01(fill);
+            var clampedGhost = Mathf.Clamp01(Mathf.Max(clampedFill, ghostFill));
+            var ghostWidth = Mathf.Max(0f, (rect.width - inset * 2f) * clampedGhost);
+            if (ghostWidth > 0f)
+            {
+                drawPanel?.Invoke(
+                    new Rect(rect.x + inset, rect.y + inset, ghostWidth, rect.height - inset * 2f),
+                    new Color(fillColor.r * 0.55f, fillColor.g * 0.35f, fillColor.b * 0.35f, 0.72f));
+            }
+
+            var fillWidth = Mathf.Max(0f, (rect.width - inset * 2f) * clampedFill);
+            if (fillWidth > 0f)
+            {
+                var barColor = fillColor;
+                if (damagePulse > 0.01f)
+                {
+                    var pulseStrength = damagePulse * (PresentationPreferences.Data.ReducedFlashes ? 0.45f : 0.85f);
+                    barColor = Color.Lerp(fillColor, new Color(1f, 0.28f, 0.22f), pulseStrength);
+                }
+                else if (lowHealth)
+                {
+                    var heartbeat = 0.55f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 5.2f)) * 0.45f;
+                    if (PresentationPreferences.Data.ReducedFlashes)
+                    {
+                        heartbeat = 0.7f;
+                    }
+
+                    barColor = Color.Lerp(fillColor, new Color(0.92f, 0.22f, 0.18f), heartbeat * 0.55f);
+                }
+
+                drawPanel?.Invoke(
+                    new Rect(rect.x + inset, rect.y + inset, fillWidth, rect.height - inset * 2f),
+                    barColor);
+            }
+
+            if (string.IsNullOrEmpty(label))
+            {
+                return;
+            }
+
+            GUI.Label(rect, label, labelStyle);
         }
 
         public static void DrawBossProximityVignette(Rect screen, GameDirector director)

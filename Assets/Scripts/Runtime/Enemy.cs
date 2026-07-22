@@ -492,7 +492,17 @@ namespace ProjectExpedition
 
             if ((result & EnemyAdvanceResult.ContactTriggered) != 0)
             {
-                target.TakeDamage(ContactDamage * contactMultiplier);
+                var knockback = Boss
+                    ? DevelopmentTuningResolver.PlayerBossContactKnockback
+                    : DevelopmentTuningResolver.PlayerContactKnockback;
+                var hitKind = Boss ? PlayerHurtHitKind.BossContact : PlayerHurtHitKind.Contact;
+
+                if (Boss && _bossPhase == BossCombatPhase.Charging)
+                {
+                    knockback *= DevelopmentTuningResolver.PlayerBossChargeKnockbackMultiplier;
+                }
+
+                target.TakeDamage(ContactDamage * contactMultiplier, knockback, Position, hitKind);
                 if (Boss)
                 {
                     _director.Present(PresentationCue.Impact, Position, new Color(1f, 0.22f, 0.12f), Radius * 1.85f);

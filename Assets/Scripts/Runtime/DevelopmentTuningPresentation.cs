@@ -7,6 +7,22 @@ namespace ProjectExpedition
     {
         private const int TabRowIndex = 0;
         private const int FirstFieldRowIndex = 1;
+        private const float PanelX = 80f;
+        private const float PanelY = 48f;
+        private const float PanelWidth = 1760f;
+        private const float PanelHeight = 920f;
+        private const float RowHeight = 58f;
+        private const float RowLabelWidth = 520f;
+        private const float RowValueWidth = 360f;
+        private const float RowAdjustButtonWidth = 54f;
+        private const float RowAdjustButtonHeight = 46f;
+        private const float RowAdjustButtonGap = 12f;
+        private const float ContentTopOffset = 130f;
+        private const float FooterButtonWidth = 720f;
+        private const float FooterButtonHeight = 48f;
+        private const float FooterButtonSpacing = 6f;
+        private const float FooterBlockPadding = 12f;
+        private const float FooterHintHeight = 24f;
 
         public static void Update(GameDirector director, DevelopmentTuningUiState state)
         {
@@ -21,6 +37,13 @@ namespace ProjectExpedition
             var maxSelection = rowCount - 1;
             var includeApplyRow = director.State == RunState.Playing;
 
+            var shoulderTab = LocalInputRouter.AnyMenuShoulderTabPressed();
+
+            if (shoulderTab != 0)
+            {
+                SelectTab(state, ShiftTab(state.Tab, shoulderTab));
+            }
+
             if (vertical != 0)
             {
                 state.Selection = Mathf.Clamp(state.Selection + vertical, 0, maxSelection);
@@ -30,9 +53,7 @@ namespace ProjectExpedition
             {
                 if (state.Selection == TabRowIndex)
                 {
-                    state.Tab = ShiftTab(state.Tab, horizontal);
-                    state.Selection = FirstFieldRowIndex;
-                    state.ContentIndex = 0;
+                    SelectTab(state, ShiftTab(state.Tab, horizontal));
                 }
                 else if (IsContentPickerRow(state))
                 {
@@ -64,6 +85,8 @@ namespace ProjectExpedition
             {
                 director.CloseDevelopmentTuning();
             }
+
+            EnsureContentScrollVisible(director, state, includeApplyRow);
         }
 
         public static void Draw(
@@ -83,16 +106,24 @@ namespace ProjectExpedition
             }
 
             RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
-            var panel = new Rect(80f, 48f, 1760f, 920f);
-            RunModalPresentation.DrawSettingsShell(panel, styles, "DEVELOPMENT TUNING — F4");
+            var panel = PanelRect();
+            var includeApplyRow = director.State == RunState.Playing;
+            RunModalPresentation.DrawSettingsShell(panel, styles, "DEVELOPMENT TUNING");
 
             DrawTabStrip(panel, state, rowTitle, drawPanel, drawSelection);
-            DrawFieldRows(director, panel, state, button, rowTitle, rowValue, drawPanel, drawSelection);
-            DrawFooter(director, panel, state, button, rowTitle, drawPanel, drawSelection);
+            DrawFieldRows(director, panel, state, includeApplyRow, button, rowTitle, rowValue, drawPanel,
+                drawSelection, micro);
+            DrawFooter(director, panel, state, includeApplyRow, rowTitle, drawPanel, drawSelection, micro);
+        }
 
-            GUI.Label(new Rect(220f, 1010f, 1480f, 32f),
-                "F4 TOGGLE  •  UP/DOWN NAVIGATE  •  LEFT/RIGHT ADJUST  •  EXPORT COPIES JSON  •  ESC CLOSE",
-                micro);
+        private static Rect PanelRect() => new Rect(PanelX, PanelY, PanelWidth, PanelHeight);
+
+        private static void SelectTab(DevelopmentTuningUiState state, DevelopmentTuningTab tab)
+        {
+            state.Tab = tab;
+            state.Selection = FirstFieldRowIndex;
+            state.ContentIndex = 0;
+            state.ContentScrollOffset = 0;
         }
 
         private static void DrawTabStrip(
@@ -105,16 +136,28 @@ namespace ProjectExpedition
             var tabs = (DevelopmentTuningTab[])Enum.GetValues(typeof(DevelopmentTuningTab));
             var tabWidth = (panel.width - 40f) / tabs.Length;
             var y = panel.y + 72f;
+            var tabLabelStyle = new GUIStyle(rowTitle)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Overflow
+            };
 
             for (var i = 0; i < tabs.Length; i++)
             {
+                var tab = tabs[i];
                 var rect = new Rect(panel.x + 20f + i * tabWidth, y, tabWidth - 6f, 42f);
-                var selected = state.Selection == TabRowIndex && state.Tab == tabs[i];
+                var selected = state.Selection == TabRowIndex && state.Tab == tab;
                 drawSelection(new Rect(rect.x - 2f, rect.y - 2f, rect.width + 4f, rect.height + 4f), selected);
-                drawPanel(rect, state.Tab == tabs[i]
+                drawPanel(rect, state.Tab == tab
                     ? new Color(0.09f, 0.18f, 0.22f, 1f)
                     : new Color(0.03f, 0.06f, 0.08f, 1f));
-                GUI.Label(rect, TabLabel(tabs[i]), rowTitle);
+
+                if (SurvivorsStylePresentation.DrawTouchable(rect, () => SelectTab(state, tab)))
+                {
+                    state.Selection = TabRowIndex;
+                }
+
+                GUI.Label(rect, TabLabel(tab), tabLabelStyle);
             }
         }
 
@@ -122,74 +165,117 @@ namespace ProjectExpedition
             GameDirector director,
             Rect panel,
             DevelopmentTuningUiState state,
+            bool includeApplyRow,
             GUIStyle button,
             GUIStyle rowTitle,
             GUIStyle rowValue,
             Action<Rect, Color> drawPanel,
-            Action<Rect, bool> drawSelection)
+            Action<Rect, bool> drawSelection,
+            GUIStyle micro)
         {
-            var startY = panel.y + 130f;
-            var rowHeight = 58f;
-            var scalarIndex = 0;
-            var lastFieldRow = CountRows(director, state.Tab) - FooterRowCount(director.State == RunState.Playing);
+            var viewport = ContentViewport(panel, includeApplyRow);
+            var contentFieldCount = ContentFieldRowCount(state.Tab);
+            var visibleRows = VisibleContentRows(viewport);
+            var scrollOffset = Mathf.Clamp(state.ContentScrollOffset, 0,
+                Mathf.Max(0, contentFieldCount - visibleRows));
 
-            for (var rowIndex = FirstFieldRowIndex; rowIndex < lastFieldRow; rowIndex++)
+            drawPanel(viewport, new Color(0.025f, 0.055f, 0.075f, 0.92f));
+
+            var rowRectWidth = viewport.width - 24f;
+            var scalarIndex = 0;
+
+            for (var rowIndex = FirstFieldRowIndex; rowIndex < FirstFieldRowIndex + contentFieldCount; rowIndex++)
             {
-                var y = startY + (rowIndex - FirstFieldRowIndex) * rowHeight;
+                var displayIndex = rowIndex - FirstFieldRowIndex - scrollOffset;
+                var isVisible = displayIndex >= 0 && displayIndex < visibleRows;
 
                 if (UsesContentPicker(state.Tab) && rowIndex == FirstFieldRowIndex)
                 {
-                    DrawAdjustableRow(panel, y, rowHeight, ContentPickerLabel(state), ContentPickerValue(state),
-                        state, -1, state.Selection == rowIndex, button, rowTitle, rowValue, drawPanel,
-                        drawSelection, false);
+                    if (isVisible)
+                    {
+                        var rowRect = ContentRowRect(viewport, displayIndex, rowRectWidth);
+
+                        DrawAdjustableRow(rowRect, ContentPickerLabel(state), ContentPickerValue(state),
+                            state, -1, state.Selection == rowIndex, button, rowTitle, rowValue, drawPanel,
+                            drawSelection, false);
+                    }
+
                     continue;
                 }
 
-                DrawAdjustableRow(panel, y, rowHeight, ScalarLabel(state, scalarIndex),
-                    ScalarValue(state, scalarIndex), state, scalarIndex, state.Selection == rowIndex, button,
-                    rowTitle, rowValue, drawPanel, drawSelection, IsToggleField(state.Tab, scalarIndex));
+                if (isVisible)
+                {
+                    var rowRect = ContentRowRect(viewport, displayIndex, rowRectWidth);
+
+                    DrawAdjustableRow(rowRect, ScalarLabel(state, scalarIndex), ScalarValue(state, scalarIndex),
+                        state, scalarIndex, state.Selection == rowIndex, button, rowTitle, rowValue, drawPanel,
+                        drawSelection, IsToggleField(state.Tab, scalarIndex));
+                }
+
                 scalarIndex++;
             }
+
+            if (contentFieldCount > visibleRows)
+            {
+                var selectedContentIndex = Mathf.Clamp(state.Selection - FirstFieldRowIndex, 0, contentFieldCount - 1);
+                var scrollHint = new Rect(viewport.x + 20f, viewport.yMax - 22f, viewport.width - 40f, 20f);
+                GUI.Label(scrollHint,
+                    $"{selectedContentIndex + 1} / {contentFieldCount}  •  UP/DOWN SCROLL",
+                    micro);
+            }
+        }
+
+        private static Rect ContentRowRect(Rect viewport, int displayIndex, float rowRectWidth)
+        {
+            var y = viewport.y + displayIndex * RowHeight;
+            return new Rect(viewport.x + 12f, y, rowRectWidth, RowHeight - 6f);
         }
 
         private static void DrawFooter(
             GameDirector director,
             Rect panel,
             DevelopmentTuningUiState state,
-            GUIStyle button,
+            bool includeApplyRow,
             GUIStyle rowTitle,
             Action<Rect, Color> drawPanel,
-            Action<Rect, bool> drawSelection)
+            Action<Rect, bool> drawSelection,
+            GUIStyle micro)
         {
-            var includeApplyRow = director.State == RunState.Playing;
             var rowCount = CountRows(director, state.Tab);
             var exportIndex = FooterExportIndex(rowCount, includeApplyRow);
             var resetIndex = FooterResetIndex(rowCount, includeApplyRow);
             var applyIndex = rowCount - 2;
             var closeIndex = rowCount - 1;
-            var y = panel.y + 130f + (exportIndex - FirstFieldRowIndex) * 58f;
+            var footerTop = panel.yMax - FooterBlockHeight(includeApplyRow) + FooterBlockPadding;
+            var buttonLeft = panel.x + (panel.width - FooterButtonWidth) * 0.5f;
+            var y = footerTop;
 
-            DrawFooterButton(panel, y, "EXPORT TO CLIPBOARD", state.Selection == exportIndex, button, rowTitle,
-                drawPanel, drawSelection, new Color(0.1f, 0.2f, 0.32f, 1f),
-                () => ConfirmClipboardExport(director));
-            y += 58f;
+            DrawFooterButton(new Rect(buttonLeft, y, FooterButtonWidth, FooterButtonHeight),
+                "EXPORT TO CLIPBOARD", state.Selection == exportIndex, rowTitle, drawPanel, drawSelection,
+                new Color(0.1f, 0.2f, 0.32f, 1f), () => ConfirmClipboardExport(director));
+            y += FooterButtonHeight + FooterButtonSpacing;
 
-            DrawFooterButton(panel, y, "RESET TO DEFAULTS", state.Selection == resetIndex, button, rowTitle,
-                drawPanel, drawSelection, new Color(0.45f, 0.12f, 0.14f, 1f),
-                () => DevelopmentTuningService.ResetToDefaults());
-            y += 58f;
+            DrawFooterButton(new Rect(buttonLeft, y, FooterButtonWidth, FooterButtonHeight),
+                "RESET TO DEFAULTS", state.Selection == resetIndex, rowTitle, drawPanel, drawSelection,
+                new Color(0.45f, 0.12f, 0.14f, 1f), () => DevelopmentTuningService.ResetToDefaults());
+            y += FooterButtonHeight + FooterButtonSpacing;
 
             if (includeApplyRow)
             {
-                DrawFooterButton(panel, y, "APPLY TO RUN", state.Selection == applyIndex, button, rowTitle,
-                    drawPanel, drawSelection, new Color(0.12f, 0.28f, 0.18f, 1f),
-                    () => director.ApplyDevelopmentTuningToActiveRun());
-                y += 58f;
+                DrawFooterButton(new Rect(buttonLeft, y, FooterButtonWidth, FooterButtonHeight),
+                    "APPLY TO RUN", state.Selection == applyIndex, rowTitle, drawPanel, drawSelection,
+                    new Color(0.12f, 0.28f, 0.18f, 1f), () => director.ApplyDevelopmentTuningToActiveRun());
+                y += FooterButtonHeight + FooterButtonSpacing;
             }
 
-            DrawFooterButton(panel, y, "CLOSE", state.Selection == closeIndex, button, rowTitle, drawPanel,
-                drawSelection, new Color(0.45f, 0.12f, 0.14f, 1f),
-                () => director.CloseDevelopmentTuning());
+            DrawFooterButton(new Rect(buttonLeft, y, FooterButtonWidth, FooterButtonHeight),
+                "CLOSE", state.Selection == closeIndex, rowTitle, drawPanel, drawSelection,
+                new Color(0.45f, 0.12f, 0.14f, 1f), () => director.CloseDevelopmentTuning());
+
+            GUI.Label(
+                new Rect(panel.x + 40f, panel.yMax - FooterHintHeight - 6f, panel.width - 80f, FooterHintHeight),
+                "F4 / R1+VIEW OPEN  •  L1/R1 TABS  •  UP/DOWN NAVIGATE  •  LEFT/RIGHT ADJUST  •  TOUCH DEV (TOP-RIGHT)  •  ESC CLOSE",
+                micro);
         }
 
         private static void ConfirmClipboardExport(GameDirector director)
@@ -207,9 +293,7 @@ namespace ProjectExpedition
         }
 
         private static void DrawAdjustableRow(
-            Rect panel,
-            float y,
-            float rowHeight,
+            Rect rect,
             string label,
             string value,
             DevelopmentTuningUiState state,
@@ -222,14 +306,36 @@ namespace ProjectExpedition
             Action<Rect, bool> drawSelection,
             bool toggleOnly)
         {
-            var rect = new Rect(panel.x + 24f, y, panel.width - 48f, rowHeight - 6f);
             drawSelection(new Rect(rect.x - 4f, rect.y - 4f, rect.width + 8f, rect.height + 8f), selected);
             drawPanel(rect, new Color(0.018f, 0.05f, 0.07f, 1f));
-            GUI.Label(new Rect(rect.x + 18f, rect.y, 620f, rect.height), label, rowTitle);
+            GUI.Label(new Rect(rect.x + 18f, rect.y, RowLabelWidth, rect.height), label, rowTitle);
+
+            var valueStyle = new GUIStyle(rowValue)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Overflow,
+                wordWrap = false
+            };
 
             if (!toggleOnly)
             {
-                if (GUI.Button(new Rect(rect.x + rect.width - 170f, rect.y + 6f, 54f, 46f), "−", button))
+                var plusRect = new Rect(
+                    rect.xMax - RowAdjustButtonGap - RowAdjustButtonWidth,
+                    rect.y + 6f,
+                    RowAdjustButtonWidth,
+                    RowAdjustButtonHeight);
+                var valueRect = new Rect(
+                    plusRect.x - RowAdjustButtonGap - RowValueWidth,
+                    rect.y,
+                    RowValueWidth,
+                    rect.height);
+                var minusRect = new Rect(
+                    valueRect.x - RowAdjustButtonGap - RowAdjustButtonWidth,
+                    rect.y + 6f,
+                    RowAdjustButtonWidth,
+                    RowAdjustButtonHeight);
+
+                if (GUI.Button(minusRect, "−", button))
                 {
                     if (fieldIndex >= 0)
                     {
@@ -241,9 +347,9 @@ namespace ProjectExpedition
                     }
                 }
 
-                GUI.Label(new Rect(rect.x + rect.width - 300f, rect.y, 120f, rect.height), value, rowValue);
+                GUI.Label(valueRect, value, valueStyle);
 
-                if (GUI.Button(new Rect(rect.x + rect.width - 108f, rect.y + 6f, 54f, 46f), "+", button))
+                if (GUI.Button(plusRect, "+", button))
                 {
                     if (fieldIndex >= 0)
                     {
@@ -257,32 +363,102 @@ namespace ProjectExpedition
             }
             else
             {
-                GUI.Label(new Rect(rect.x + rect.width - 220f, rect.y, 200f, rect.height), value, rowValue);
+                var toggleValueRect = new Rect(
+                    rect.xMax - RowValueWidth - RowAdjustButtonGap,
+                    rect.y,
+                    RowValueWidth,
+                    rect.height);
+                GUI.Label(toggleValueRect, value, valueStyle);
             }
         }
 
         private static void DrawFooterButton(
-            Rect panel,
-            float y,
+            Rect rect,
             string label,
             bool selected,
-            GUIStyle button,
             GUIStyle rowTitle,
             Action<Rect, Color> drawPanel,
             Action<Rect, bool> drawSelection,
             Color background,
             Action onClick)
         {
-            var rect = new Rect(panel.x + 520f, y, 720f, 52f);
+            var labelStyle = new GUIStyle(rowTitle)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                clipping = TextClipping.Overflow,
+                wordWrap = false
+            };
+
             drawSelection(new Rect(rect.x - 4f, rect.y - 4f, rect.width + 8f, rect.height + 8f), selected);
             drawPanel(rect, background);
+            SurvivorsStylePresentation.DrawTouchable(rect, onClick);
+            GUI.Label(rect, label, labelStyle);
+        }
 
-            if (GUI.Button(rect, label, button))
+        private static Rect ContentViewport(Rect panel, bool includeApplyRow)
+        {
+            var top = panel.y + ContentTopOffset;
+            var height = panel.height - ContentTopOffset - FooterBlockHeight(includeApplyRow);
+            return new Rect(panel.x + 12f, top, panel.width - 24f, height);
+        }
+
+        private static float FooterBlockHeight(bool includeApplyRow)
+        {
+            var buttonCount = FooterRowCount(includeApplyRow);
+            return FooterBlockPadding * 2f
+                + buttonCount * FooterButtonHeight
+                + (buttonCount - 1) * FooterButtonSpacing
+                + FooterHintHeight;
+        }
+
+        private static int VisibleContentRows(Rect viewport)
+        {
+            return Mathf.Max(1, Mathf.FloorToInt(viewport.height / RowHeight));
+        }
+
+        private static int ContentFieldRowCount(DevelopmentTuningTab tab)
+        {
+            var count = ScalarFieldCount(tab);
+
+            if (UsesContentPicker(tab))
             {
-                onClick?.Invoke();
+                count++;
             }
 
-            GUI.Label(new Rect(rect.x + 18f, rect.y + 10f, rect.width - 36f, 32f), label, rowTitle);
+            return count;
+        }
+
+        private static void EnsureContentScrollVisible(
+            GameDirector director,
+            DevelopmentTuningUiState state,
+            bool includeApplyRow)
+        {
+            var viewport = ContentViewport(PanelRect(), includeApplyRow);
+            var contentFieldCount = ContentFieldRowCount(state.Tab);
+            var visibleRows = VisibleContentRows(viewport);
+            var maxScroll = Mathf.Max(0, contentFieldCount - visibleRows);
+
+            if (contentFieldCount <= visibleRows)
+            {
+                state.ContentScrollOffset = 0;
+                return;
+            }
+
+            if (state.Selection >= FirstFieldRowIndex && state.Selection < FirstFieldRowIndex + contentFieldCount)
+            {
+                var contentIndex = state.Selection - FirstFieldRowIndex;
+
+                if (contentIndex < state.ContentScrollOffset)
+                {
+                    state.ContentScrollOffset = contentIndex;
+                }
+                else if (contentIndex >= state.ContentScrollOffset + visibleRows)
+                {
+                    state.ContentScrollOffset = contentIndex - visibleRows + 1;
+                }
+            }
+
+            state.ContentScrollOffset = Mathf.Clamp(state.ContentScrollOffset, 0, maxScroll);
         }
 
         private static int CountRows(GameDirector director, DevelopmentTuningTab tab)
@@ -352,7 +528,7 @@ namespace ProjectExpedition
                 case DevelopmentTuningTab.Loot: return 7;
                 case DevelopmentTuningTab.Spawn: return 7;
                 case DevelopmentTuningTab.Experience: return 11;
-                case DevelopmentTuningTab.Player: return 7;
+                case DevelopmentTuningTab.Player: return 15;
                 case DevelopmentTuningTab.Challenge: return 8;
                 case DevelopmentTuningTab.Maps: return 9;
                 case DevelopmentTuningTab.Heroes: return 6;
@@ -511,6 +687,14 @@ namespace ProjectExpedition
                         case 4: return "REVIVE DURATION";
                         case 5: return "REVIVE DECAY RATE";
                         case 6: return "REVIVE HEALTH FRACTION";
+                        case 7: return "CONTACT KNOCKBACK";
+                        case 8: return "BOSS CONTACT KNOCKBACK";
+                        case 9: return "BOSS SLAM KNOCKBACK";
+                        case 10: return "BOSS CHARGE KNOCKBACK MULT";
+                        case 11: return "HURT TRAUMA BASE";
+                        case 12: return "HURT TRAUMA HEAVY BONUS";
+                        case 13: return "HURT VIGNETTE SCALE";
+                        case 14: return "LOW HEALTH THRESHOLD";
                         default: return string.Empty;
                     }
                 case DevelopmentTuningTab.Challenge:
@@ -637,6 +821,14 @@ namespace ProjectExpedition
                         case 4: return FormatFloat(profile.ReviveDuration, 2);
                         case 5: return FormatPercent(profile.ReviveDecayRate);
                         case 6: return FormatPercent(profile.ReviveHealthFraction);
+                        case 7: return FormatFloat(profile.PlayerContactKnockback, 2);
+                        case 8: return FormatFloat(profile.PlayerBossContactKnockback, 2);
+                        case 9: return FormatFloat(profile.PlayerBossSlamKnockback, 2);
+                        case 10: return FormatFloat(profile.PlayerBossChargeKnockbackMultiplier, 2);
+                        case 11: return FormatFloat(profile.PlayerHurtTraumaBase, 2);
+                        case 12: return FormatFloat(profile.PlayerHurtTraumaHeavyBonus, 2);
+                        case 13: return FormatFloat(profile.PlayerHurtVignetteScale, 2);
+                        case 14: return FormatPercent(profile.PlayerLowHealthThreshold);
                         default: return string.Empty;
                     }
                 case DevelopmentTuningTab.Challenge:
@@ -964,6 +1156,14 @@ namespace ProjectExpedition
                 case 4: profile.ReviveDuration = Step(profile.ReviveDuration, 0.1f, direction, 0.1f, 20f); break;
                 case 5: profile.ReviveDecayRate = Step(profile.ReviveDecayRate, 0.01f, direction, 0f, 1f); break;
                 case 6: profile.ReviveHealthFraction = Step(profile.ReviveHealthFraction, 0.01f, direction, 0.01f, 1f); break;
+                case 7: profile.PlayerContactKnockback = Step(profile.PlayerContactKnockback, 0.05f, direction, 0f, 5f); break;
+                case 8: profile.PlayerBossContactKnockback = Step(profile.PlayerBossContactKnockback, 0.05f, direction, 0f, 5f); break;
+                case 9: profile.PlayerBossSlamKnockback = Step(profile.PlayerBossSlamKnockback, 0.05f, direction, 0f, 5f); break;
+                case 10: profile.PlayerBossChargeKnockbackMultiplier = Step(profile.PlayerBossChargeKnockbackMultiplier, 0.05f, direction, 0.01f, 5f); break;
+                case 11: profile.PlayerHurtTraumaBase = Step(profile.PlayerHurtTraumaBase, 0.02f, direction, 0f, 2f); break;
+                case 12: profile.PlayerHurtTraumaHeavyBonus = Step(profile.PlayerHurtTraumaHeavyBonus, 0.02f, direction, 0f, 2f); break;
+                case 13: profile.PlayerHurtVignetteScale = Step(profile.PlayerHurtVignetteScale, 0.05f, direction, 0f, 5f); break;
+                case 14: profile.PlayerLowHealthThreshold = Step(profile.PlayerLowHealthThreshold, 0.01f, direction, 0.05f, 1f); break;
             }
         }
 

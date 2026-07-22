@@ -165,10 +165,46 @@ namespace ProjectExpedition
 
         public PlayerDamageResult TakeDamage(float rawDamage)
         {
-            if (!IsAlive || InvulnerabilityRemaining > 0f) return PlayerDamageResult.Ignored;
+            return TakeDamage(rawDamage, 0f, Vector2.zero, Vector2.zero, null, out _);
+        }
+
+        public PlayerDamageResult TakeDamage(
+            float rawDamage,
+            float knockback,
+            Vector2 source,
+            Vector2 currentPosition,
+            IReadOnlyList<ObstacleDefinition> obstacles,
+            out Vector2 resolvedPosition)
+        {
+            resolvedPosition = currentPosition;
+            if (!IsAlive || InvulnerabilityRemaining > 0f)
+            {
+                return PlayerDamageResult.Ignored;
+            }
+
             Health -= Mathf.Max(1f, rawDamage - EffectiveArmor);
             InvulnerabilityRemaining = DevelopmentTuningResolver.DamageImmunityDuration;
-            if (Health > 0f) return PlayerDamageResult.Damaged;
+
+            if (knockback > 0f)
+            {
+                var away = currentPosition - source;
+                if (away.sqrMagnitude <= 0.0001f)
+                {
+                    away = Vector2.up;
+                }
+
+                var knockbackDelta = away.normalized * knockback;
+                resolvedPosition = SharedMovementCollision.ResolveCircleKnockback(
+                    currentPosition,
+                    DevelopmentTuningResolver.PlayerCollisionRadius,
+                    knockbackDelta,
+                    obstacles);
+            }
+
+            if (Health > 0f)
+            {
+                return PlayerDamageResult.Damaged;
+            }
 
             Health = 0f;
             IsDowned = true;

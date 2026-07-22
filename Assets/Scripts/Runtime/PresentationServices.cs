@@ -19,6 +19,7 @@ namespace ProjectExpedition
         LevelUp,
         PlayerDowned,
         PlayerRevived,
+        PlayerHurt,
         Victory,
         Defeat,
         BossSpawn,
@@ -42,6 +43,7 @@ namespace ProjectExpedition
         private CameraFollow _cameraFollow;
         private PresentationAudioMixer _audio;
         private PresentationVfxPool _vfx;
+        private PresentationHaptics _haptics;
         private PresentationMusicState _musicState;
 
         public int ActiveVfx => _vfx != null ? _vfx.ActiveCount : 0;
@@ -54,6 +56,7 @@ namespace ProjectExpedition
             _cameraFollow = cameraFollow;
             _audio = gameObject.AddComponent<PresentationAudioMixer>();
             _vfx = gameObject.AddComponent<PresentationVfxPool>();
+            _haptics = gameObject.AddComponent<PresentationHaptics>();
             SetMusicState(PresentationMusicState.Menu);
         }
 
@@ -85,11 +88,23 @@ namespace ProjectExpedition
 
         public void Notify(PresentationCue cue, Vector2 position, Color color, float scale = 1f)
         {
-            if (cue != PresentationCue.ProjectileTrail) _audio?.Play(cue);
+            if (cue != PresentationCue.ProjectileTrail)
+            {
+                _audio?.Play(cue);
+            }
+
             if (cue == PresentationCue.Navigate || cue == PresentationCue.Confirm ||
-                cue == PresentationCue.Back || cue == PresentationCue.LevelUp) return;
+                cue == PresentationCue.Back || cue == PresentationCue.LevelUp)
+            {
+                return;
+            }
+
             _vfx?.Emit(cue, position, color, scale);
-            if (_cameraFollow == null) return;
+            if (_cameraFollow == null)
+            {
+                return;
+            }
+
             switch (cue)
             {
                 case PresentationCue.Impact: _cameraFollow.AddTrauma(0.08f); break;
@@ -99,6 +114,15 @@ namespace ProjectExpedition
                 case PresentationCue.Victory: _cameraFollow.AddTrauma(0.35f); break;
                 case PresentationCue.Defeat: _cameraFollow.AddTrauma(0.4f); break;
             }
+        }
+
+        public void NotifyPlayerHurt(Vector2 position, float scale, float trauma, float pitch, int playerIndex, int playerCount, PlayerHurtSeverity severity)
+        {
+            var color = new Color(1f, 0.24f, 0.12f);
+            _audio?.Play(PresentationCue.PlayerHurt, pitch);
+            _vfx?.Emit(PresentationCue.PlayerHurt, position, color, scale);
+            _cameraFollow?.AddTrauma(trauma);
+            _haptics?.Pulse(playerIndex, playerCount, severity.HapticLow, severity.HapticHigh, severity.HapticDuration);
         }
 
         private void Update()
@@ -141,6 +165,7 @@ namespace ProjectExpedition
                 case PresentationCue.Defeat: return 16;
                 case PresentationCue.LevelUp:
                 case PresentationCue.PlayerRevived:
+                case PresentationCue.PlayerHurt:
                 case PresentationCue.RavenGuard: return 48;
                 case PresentationCue.Impact:
                 case PresentationCue.EnemyDefeated: return 96;
@@ -246,18 +271,39 @@ namespace ProjectExpedition
             _music.Play();
         }
 
-        public void Play(PresentationCue cue)
+        public void Play(PresentationCue cue, float pitch = 1f)
         {
-            if (!_audioReady) return;
-            if (!_unlocked) _unlocked = HasInteraction();
-            if (!_unlocked || _voices[0] == null) return;
+            if (!_audioReady)
+            {
+                return;
+            }
+
+            if (!_unlocked)
+            {
+                _unlocked = HasInteraction();
+            }
+
+            if (!_unlocked || _voices[0] == null)
+            {
+                return;
+            }
+
             var priority = PresentationMix.Priority(cue);
             var selected = -1;
             var weakestPriority = -1;
             for (var i = 0; i < _voices.Length; i++)
             {
-                if (_voices[i] == null) continue;
-                if (!_voices[i].isPlaying) { selected = i; break; }
+                if (_voices[i] == null)
+                {
+                    continue;
+                }
+
+                if (!_voices[i].isPlaying)
+                {
+                    selected = i;
+                    break;
+                }
+
                 var activePriority = PresentationMix.Priority(_voiceCues[i]);
                 if (activePriority > weakestPriority && priority < activePriority)
                 {
@@ -265,12 +311,21 @@ namespace ProjectExpedition
                     selected = i;
                 }
             }
-            if (selected < 0) return;
-            if (_sfxClips[(int)cue] == null) return;
+
+            if (selected < 0)
+            {
+                return;
+            }
+
+            if (_sfxClips[(int)cue] == null)
+            {
+                return;
+            }
+
             _voiceCues[selected] = cue;
             _voices[selected].priority = priority;
             _voices[selected].clip = _sfxClips[(int)cue];
-            _voices[selected].pitch = 1f;
+            _voices[selected].pitch = Mathf.Clamp(pitch, 0.5f, 1.5f);
             _voices[selected].Play();
         }
 
@@ -367,12 +422,18 @@ namespace ProjectExpedition
             _color = color;
             _scale = Mathf.Max(0.1f, scale);
             _duration = cue == PresentationCue.Ultimate || cue == PresentationCue.Victory ||
-                        cue == PresentationCue.BossSpawn ? 0.7f : 0.24f;
-            if (PresentationPreferences.Data.ReducedFlashes) _duration *= 0.72f;
+                        cue == PresentationCue.BossSpawn ? 0.7f :
+                        cue == PresentationCue.PlayerHurt ? 0.28f : 0.24f;
+            if (PresentationPreferences.Data.ReducedFlashes)
+            {
+                _duration *= 0.72f;
+            }
+
             _age = 0f;
             _renderer.sprite = cue == PresentationCue.Ultimate || cue == PresentationCue.RavenGuard ||
                                cue == PresentationCue.BossSpawn
-                ? RuntimeAssets.Circle : RuntimeAssets.Diamond;
+                ? RuntimeAssets.Circle
+                : cue == PresentationCue.PlayerHurt ? RuntimeAssets.Circle : RuntimeAssets.Diamond;
             transform.localScale = Vector3.zero;
             transform.rotation = Quaternion.identity;
         }
@@ -382,8 +443,9 @@ namespace ProjectExpedition
             _age += Time.unscaledDeltaTime;
             var progress = Mathf.Clamp01(_age / Mathf.Max(0.01f, _duration));
             var eased = 1f - (1f - progress) * (1f - progress);
-            var start = _cue == PresentationCue.Impact ? 0.12f : 0.2f;
-            var end = _cue == PresentationCue.Ultimate || _cue == PresentationCue.BossSpawn ? 6f : 1.1f;
+            var start = _cue == PresentationCue.Impact || _cue == PresentationCue.PlayerHurt ? 0.12f : 0.2f;
+            var end = _cue == PresentationCue.Ultimate || _cue == PresentationCue.BossSpawn ? 6f :
+                _cue == PresentationCue.PlayerHurt ? 1.35f : 1.1f;
             transform.localScale = Vector3.one * Mathf.Lerp(start, end, eased) * _scale;
             transform.Rotate(0f, 0f, 420f * Time.unscaledDeltaTime);
             var maximumAlpha = PresentationPreferences.Data.ReducedFlashes ? 0.24f : 0.58f;
@@ -397,6 +459,102 @@ namespace ProjectExpedition
             _owner = null;
             _age = 0f;
             transform.localScale = Vector3.zero;
+        }
+    }
+
+    public sealed class PresentationHaptics : MonoBehaviour
+    {
+        private struct ActiveRumble
+        {
+            public Gamepad Gamepad;
+            public float Remaining;
+        }
+
+        private readonly ActiveRumble[] _activeRumbles = new ActiveRumble[4];
+        private int _activeRumbleCount;
+
+        public void Pulse(int playerIndex, int playerCount, float lowMotor, float highMotor, float durationSeconds)
+        {
+            if (!PresentationPreferences.Data.EnableHaptics || durationSeconds <= 0f)
+            {
+                return;
+            }
+
+            var gamepad = LocalInputRouter.ResolveAssignedGamepad(playerIndex, playerCount);
+            if (gamepad == null)
+            {
+                return;
+            }
+
+            gamepad.SetMotorSpeeds(Mathf.Clamp01(lowMotor), Mathf.Clamp01(highMotor));
+            AddRumble(gamepad, durationSeconds);
+        }
+
+        private void Update()
+        {
+            if (_activeRumbleCount <= 0)
+            {
+                return;
+            }
+
+            var deltaTime = Time.unscaledDeltaTime;
+            for (var i = _activeRumbleCount - 1; i >= 0; i--)
+            {
+                var rumble = _activeRumbles[i];
+                if (rumble.Gamepad == null)
+                {
+                    RemoveRumbleAt(i);
+                    continue;
+                }
+
+                rumble.Remaining -= deltaTime;
+                if (rumble.Remaining > 0f)
+                {
+                    _activeRumbles[i] = rumble;
+                    continue;
+                }
+
+                rumble.Gamepad.SetMotorSpeeds(0f, 0f);
+                RemoveRumbleAt(i);
+            }
+        }
+
+        private void AddRumble(Gamepad gamepad, float durationSeconds)
+        {
+            for (var i = 0; i < _activeRumbleCount; i++)
+            {
+                if (_activeRumbles[i].Gamepad != gamepad)
+                {
+                    continue;
+                }
+
+                _activeRumbles[i] = new ActiveRumble
+                {
+                    Gamepad = gamepad,
+                    Remaining = Mathf.Max(_activeRumbles[i].Remaining, durationSeconds)
+                };
+                return;
+            }
+
+            if (_activeRumbleCount >= _activeRumbles.Length)
+            {
+                return;
+            }
+
+            _activeRumbles[_activeRumbleCount++] = new ActiveRumble
+            {
+                Gamepad = gamepad,
+                Remaining = durationSeconds
+            };
+        }
+
+        private void RemoveRumbleAt(int index)
+        {
+            _activeRumbleCount--;
+            if (index < _activeRumbleCount)
+            {
+                _activeRumbles[index] = _activeRumbles[_activeRumbleCount];
+            }
         }
     }
 

@@ -4,13 +4,20 @@ namespace ProjectExpedition
 {
     public sealed class HeroPresentation : MonoBehaviour
     {
+        private static readonly Color HurtFlashColor = new Color(1f, 0.28f, 0.16f);
+        private static readonly Color InvulnerabilityFlashColor = new Color(0.42f, 0.82f, 1f);
+        private static readonly Color ReviveFlashColor = new Color(0.52f, 0.92f, 0.82f);
+
         private SpriteRenderer _body;
         private SpriteRenderer _rune;
         private Color _baseColor;
-        private float _hitTimer;
+        private float _hurtTimer;
+        private float _reviveTimer;
         private float _attackTimer;
         private float _ultimateTimer;
+        private float _staggerTimer;
         private Vector2 _facing = Vector2.right;
+        private Vector2 _staggerDirection = Vector2.right;
         private int _playerIndex;
 
         public void Initialize(SpriteRenderer body, SpriteRenderer rune, Color baseColor,
@@ -36,18 +43,30 @@ namespace ProjectExpedition
 
         public void Tick(Vector2 movement, bool invulnerable, bool downed, float deltaTime)
         {
-            _hitTimer = Mathf.Max(0f, _hitTimer - deltaTime);
+            _hurtTimer = Mathf.Max(0f, _hurtTimer - deltaTime);
+            _reviveTimer = Mathf.Max(0f, _reviveTimer - deltaTime);
             _attackTimer = Mathf.Max(0f, _attackTimer - deltaTime);
+            _staggerTimer = Mathf.Max(0f, _staggerTimer - deltaTime);
             _ultimateTimer = Mathf.Max(0f, _ultimateTimer - Time.unscaledDeltaTime);
-            if (movement.sqrMagnitude > 0.02f) _facing = movement.normalized;
+            if (movement.sqrMagnitude > 0.02f)
+            {
+                _facing = movement.normalized;
+            }
+
             var breathing = downed ? 0f : Mathf.Sin(Time.time * 4.2f + _playerIndex) * 0.018f;
             var attack = _attackTimer > 0f ? Mathf.Sin((_attackTimer / 0.18f) * Mathf.PI) * 0.12f : 0f;
             transform.localScale = new Vector3(0.78f + breathing + attack, 0.78f - breathing + attack, 1f);
+
             var lean = downed ? -82f : Mathf.Clamp(-_facing.x * 7f, -7f, 7f);
+            if (_staggerTimer > 0f && !downed)
+            {
+                var staggerStrength = _staggerTimer / 0.12f;
+                lean += -_staggerDirection.x * 14f * staggerStrength;
+            }
+
             transform.rotation = Quaternion.Euler(0f, 0f, lean);
-            var flash = _hitTimer > 0f || invulnerable || _ultimateTimer > 0f;
-            _body.color = flash && !PresentationPreferences.Data.ReducedFlashes
-                ? Color.white : (downed ? Color.Lerp(new Color(0.12f, 0.15f, 0.17f), _baseColor, 0.35f) : _baseColor);
+            _body.color = ResolveBodyColor(invulnerable, downed);
+
             if (_rune != null)
             {
                 var pulse = 0.18f + Mathf.Sin(Time.unscaledTime * 6f) * 0.035f;
@@ -56,15 +75,79 @@ namespace ProjectExpedition
             }
         }
 
-        public void ShowHit() => _hitTimer = PresentationPreferences.Data.ReducedFlashes ? 0.035f : 0.09f;
+        public void ShowDamageTaken(Vector2 source)
+        {
+            var reduced = PresentationPreferences.Data.ReducedFlashes;
+            _hurtTimer = reduced ? 0.05f : 0.12f;
+            _staggerTimer = reduced ? 0.06f : 0.12f;
+
+            var away = ((Vector2)transform.position - source);
+            if (away.sqrMagnitude > 0.01f)
+            {
+                _staggerDirection = away.normalized;
+            }
+            else
+            {
+                _staggerDirection = -_facing;
+            }
+        }
+
+        public void ShowReviveSuccess()
+        {
+            _reviveTimer = PresentationPreferences.Data.ReducedFlashes ? 0.04f : 0.1f;
+        }
+
+        public void ShowHit() => ShowReviveSuccess();
 
         public void ShowAttack(Vector2 direction)
         {
-            if (direction.sqrMagnitude > 0.01f) _facing = direction.normalized;
+            if (direction.sqrMagnitude > 0.01f)
+            {
+                _facing = direction.normalized;
+            }
+
             _attackTimer = 0.18f;
         }
 
         public void ShowUltimate() => _ultimateTimer = 0.75f;
+
+        private Color ResolveBodyColor(bool invulnerable, bool downed)
+        {
+            if (downed)
+            {
+                return Color.Lerp(new Color(0.12f, 0.15f, 0.17f), _baseColor, 0.35f);
+            }
+
+            if (_hurtTimer > 0f)
+            {
+                var strength = PresentationPreferences.Data.ReducedFlashes ? 0.55f : 0.82f;
+                return Color.Lerp(_baseColor, HurtFlashColor, strength * (_hurtTimer / 0.12f));
+            }
+
+            if (_reviveTimer > 0f)
+            {
+                var strength = PresentationPreferences.Data.ReducedFlashes ? 0.45f : 0.72f;
+                return Color.Lerp(_baseColor, ReviveFlashColor, strength * (_reviveTimer / 0.1f));
+            }
+
+            if (_ultimateTimer > 0f)
+            {
+                return Color.Lerp(_baseColor, Color.white, 0.35f);
+            }
+
+            if (invulnerable)
+            {
+                var pulse = 0.45f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 8f)) * 0.25f;
+                if (PresentationPreferences.Data.ReducedFlashes)
+                {
+                    pulse = 0.55f;
+                }
+
+                return Color.Lerp(_baseColor, InvulnerabilityFlashColor, pulse * 0.42f);
+            }
+
+            return _baseColor;
+        }
 
         private void BuildHaldorSilhouette()
         {

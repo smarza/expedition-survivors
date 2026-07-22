@@ -146,6 +146,22 @@ namespace ProjectExpedition
 
         public static float ReviveHealthFraction => Profile.ReviveHealthFraction;
 
+        public static float PlayerContactKnockback => Profile.PlayerContactKnockback;
+
+        public static float PlayerBossContactKnockback => Profile.PlayerBossContactKnockback;
+
+        public static float PlayerBossSlamKnockback => Profile.PlayerBossSlamKnockback;
+
+        public static float PlayerBossChargeKnockbackMultiplier => Profile.PlayerBossChargeKnockbackMultiplier;
+
+        public static float PlayerHurtTraumaBase => Profile.PlayerHurtTraumaBase;
+
+        public static float PlayerHurtTraumaHeavyBonus => Profile.PlayerHurtTraumaHeavyBonus;
+
+        public static float PlayerHurtVignetteScale => Profile.PlayerHurtVignetteScale;
+
+        public static float PlayerLowHealthThreshold => Profile.PlayerLowHealthThreshold;
+
         public static float VeteranHealthMultiplier => Profile.VeteranHealthMultiplier;
 
         public static float VeteranSpawnRateMultiplier => Profile.VeteranSpawnRateMultiplier;

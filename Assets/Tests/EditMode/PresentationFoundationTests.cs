@@ -85,6 +85,8 @@ namespace ProjectExpedition.Tests
                 Is.LessThan(PresentationMix.Priority(PresentationCue.AxeThrow)));
             Assert.That(PresentationMix.Priority(PresentationCue.PlayerDowned),
                 Is.LessThan(PresentationMix.Priority(PresentationCue.Navigate)));
+            Assert.That(PresentationMix.Priority(PresentationCue.PlayerHurt),
+                Is.LessThan(PresentationMix.Priority(PresentationCue.Impact)));
         }
 
         [Test]
