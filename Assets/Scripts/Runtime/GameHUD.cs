@@ -3730,16 +3730,35 @@ namespace ProjectExpedition
         {
             RunModalPresentation.DrawModalBackground(new Rect(0f, 0f, 1920f, 1080f));
             EnsureSurvivorsStyles();
-            var panel = new Rect(120f, 80f, 1680f, 880f);
-            RunModalPresentation.DrawSettingsShell(panel, _survivorsHudStyles, "PRESENTATION & CONTROLS");
-            GUI.Label(new Rect(410, 145, 1100, 40),
+
+            const float shellX = 120f;
+            const float shellY = 80f;
+            const float shellWidth = 1680f;
+            const float shellHeight = 880f;
+            const float columnTop = 175f;
+            const float columnHeight = 680f;
+            const float leftColumnX = 120f;
+            const float rightColumnX = 1010f;
+            const float columnWidth = 790f;
+            const float leftRowStartY = 250f;
+            const float leftRowPitch = 66f;
+            const float leftRowHeight = 56f;
+            const float bindingRowStartY = 250f;
+            const float bindingRowPitch = 58f;
+            const float bindingRowHeight = 44f;
+            const float footerButtonY = 880f;
+            const float footerHintY = 952f;
+
+            var shell = new Rect(shellX, shellY, shellWidth, shellHeight);
+            RunModalPresentation.DrawSettingsShell(shell, _survivorsHudStyles, "PRESENTATION & CONTROLS");
+            GUI.Label(new Rect(410f, 145f, 1100f, 40f),
                 "ACCESSIBILITY, AUDIO, TOUCH CONTROLS AND P1 KEYBOARD BINDINGS", _small);
 
             var data = PresentationPreferences.Data;
-            DrawPanel(new Rect(120, 175, 790, 710), new Color(0.035f, 0.08f, 0.108f, 1f));
-            DrawPanel(new Rect(1010, 175, 790, 710), new Color(0.035f, 0.08f, 0.108f, 1f));
-            GUI.Label(new Rect(160, 195, 710, 45), "ACCESSIBILITY & AUDIO", _heading);
-            GUI.Label(new Rect(1050, 195, 710, 45), "KEYBOARD — PLAYER 1", _heading);
+            DrawPanel(new Rect(leftColumnX, columnTop, columnWidth, columnHeight), new Color(0.035f, 0.08f, 0.108f, 1f));
+            DrawPanel(new Rect(rightColumnX, columnTop, columnWidth, columnHeight), new Color(0.035f, 0.08f, 0.108f, 1f));
+            GUI.Label(new Rect(160f, 195f, 710f, 45f), "ACCESSIBILITY & AUDIO", _heading);
+            GUI.Label(new Rect(1050f, 195f, 710f, 45f), "KEYBOARD — PLAYER 1", _heading);
 
             var labels = new[] { "UI SCALE", "HIGH CONTRAST", "REDUCED FLASHES", "SCREEN SHAKE", "MASTER", "MUSIC", "SFX", "TOUCH CONTROLS", "HAPTICS" };
             var values = new[]
@@ -3750,42 +3769,62 @@ namespace ProjectExpedition
                 $"{data.SfxVolume * 100f:0}%", data.TouchControls.ToString().ToUpperInvariant(),
                 data.EnableHaptics ? "ON" : "OFF"
             };
+
             for (var i = 0; i < labels.Length; i++)
             {
-                var rect = new Rect(155, 270 + i * 78, 720, 62);
-                DrawSelection(new Rect(rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10), _settingsSelection == i);
+                var rect = new Rect(155f, leftRowStartY + i * leftRowPitch, 720f, leftRowHeight);
+                DrawSelection(new Rect(rect.x - 5f, rect.y - 5f, rect.width + 10f, rect.height + 10f), _settingsSelection == i);
                 DrawPanel(rect, new Color(0.018f, 0.05f, 0.07f, 1f));
-                GUI.Label(new Rect(rect.x + 18, rect.y, 300, rect.height), labels[i], _cardTitle);
-                if (GUI.Button(new Rect(rect.x + 355, rect.y + 8, 54, 46), "−", _button)) { _settingsSelection = i; AdjustSetting(i, -1); }
-                GUI.Label(new Rect(rect.x + 420, rect.y, 210, rect.height), values[i], _center);
-                if (GUI.Button(new Rect(rect.x + 645, rect.y + 8, 54, 46), "+", _button)) { _settingsSelection = i; AdjustSetting(i, 1); }
+                GUI.Label(new Rect(rect.x + 18f, rect.y, 300f, rect.height), labels[i], _cardTitle);
+
+                if (GUI.Button(new Rect(rect.x + 355f, rect.y + 6f, 54f, 44f), "−", _button))
+                {
+                    _settingsSelection = i;
+                    AdjustSetting(i, -1);
+                }
+
+                GUI.Label(new Rect(rect.x + 420f, rect.y, 210f, rect.height), values[i], _center);
+
+                if (GUI.Button(new Rect(rect.x + 645f, rect.y + 6f, 54f, 44f), "+", _button))
+                {
+                    _settingsSelection = i;
+                    AdjustSetting(i, 1);
+                }
             }
 
             for (var i = 0; i < RebindableActions.Length; i++)
             {
                 var selection = i + 9;
-                var rect = new Rect(1045, 255 + i * 62, 720, 48);
-                DrawSelection(new Rect(rect.x - 5, rect.y - 5, rect.width + 10, rect.height + 10), _settingsSelection == selection);
+                var rect = new Rect(1045f, bindingRowStartY + i * bindingRowPitch, 720f, bindingRowHeight);
+                DrawSelection(new Rect(rect.x - 5f, rect.y - 5f, rect.width + 10f, rect.height + 10f), _settingsSelection == selection);
                 DrawPanel(rect, new Color(0.018f, 0.05f, 0.07f, 1f));
-                GUI.Label(new Rect(rect.x + 15, rect.y, 315, rect.height), BindingLabel(RebindableActions[i]), _small);
+                GUI.Label(new Rect(rect.x + 15f, rect.y, 315f, rect.height), BindingLabel(RebindableActions[i]), _small);
                 var capture = LocalInputRouter.IsRebinding && LocalInputRouter.PendingBinding == RebindableActions[i];
                 var value = capture ? "PRESS ANY KEY…" : InputBindingProfile.Display(data.Keyboard.Get(RebindableActions[i]));
-                if (GUI.Button(new Rect(rect.x + 350, rect.y + 4, 350, 40), value, _button))
+
+                if (GUI.Button(new Rect(rect.x + 350f, rect.y + 2f, 350f, bindingRowHeight - 4f), value, _button))
                 {
                     _settingsSelection = selection;
                     LocalInputRouter.BeginRebind(RebindableActions[i]);
                 }
             }
 
-            DrawSelection(new Rect(580, 925, 350, 85), _settingsSelection == 18);
-            if (GUI.Button(new Rect(590, 935, 330, 65), "RESTORE DEFAULTS", _button))
+            DrawSelection(new Rect(580f, footerButtonY - 10f, 350f, 80f), _settingsSelection == 18);
+
+            if (GUI.Button(new Rect(590f, footerButtonY, 330f, 60f), "RESTORE DEFAULTS", _button))
             {
                 _settingsSelection = 18;
                 PresentationPreferences.ResetToDefaults();
             }
-            DrawSelection(new Rect(990, 925, 350, 85), _settingsSelection == 19);
-            if (GUI.Button(new Rect(1000, 935, 330, 65), "BACK", _button)) _director.CloseSettings();
-            GUI.Label(new Rect(520, 1010, 880, 35),
+
+            DrawSelection(new Rect(990f, footerButtonY - 10f, 350f, 80f), _settingsSelection == 19);
+
+            if (GUI.Button(new Rect(1000f, footerButtonY, 330f, 60f), "BACK", _button))
+            {
+                _director.CloseSettings();
+            }
+
+            GUI.Label(new Rect(520f, footerHintY, 880f, 35f),
                 $"{Prompt(BindingAction.MoveUp)} {Prompt(BindingAction.MoveDown)} NAVIGATE   •   LEFT/RIGHT ADJUST   •   {Prompt(BindingAction.Back)} BACK", _micro);
         }
 
@@ -4656,6 +4695,7 @@ namespace ProjectExpedition
             var buttonText = new Color(0.025f, 0.065f, 0.085f);
             _button = new GUIStyle(GUI.skin.button)
             {
+                font = SurvivorsStylePresentation.GetUiFont(),
                 fontSize = PresentationTheme.FontSize(23),
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
@@ -4673,6 +4713,7 @@ namespace ProjectExpedition
             var selectButtonText = new Color(0.04f, 0.08f, 0.1f);
             _selectActionButton = new GUIStyle(GUI.skin.button)
             {
+                font = SurvivorsStylePresentation.GetUiFont(),
                 fontSize = PresentationTheme.FontSize(24),
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
@@ -4691,6 +4732,7 @@ namespace ProjectExpedition
             var readyButtonText = new Color(0.03f, 0.1f, 0.06f);
             _readyActionButton = new GUIStyle(GUI.skin.button)
             {
+                font = SurvivorsStylePresentation.GetUiFont(),
                 fontSize = PresentationTheme.FontSize(24),
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
@@ -4790,6 +4832,7 @@ namespace ProjectExpedition
         {
             var style = new GUIStyle(GUI.skin.label)
             {
+                font = SurvivorsStylePresentation.GetUiFont(),
                 fontSize = PresentationTheme.FontSize(size),
                 fontStyle = fontStyle,
                 alignment = anchor,

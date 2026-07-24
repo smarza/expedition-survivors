@@ -10,11 +10,15 @@ PlayerSettings:
   productName: Project Expedition
   defaultScreenWidth: 1920
   defaultScreenHeight: 1080
+  defaultScreenWidthWeb: 1920
+  defaultScreenHeightWeb: 1080
   runInBackground: 1
   resizableWindow: 1
   usePlayerLog: 1
   activeInputHandler: 1
   webGLDecompressionFallback: 1
+  webGLMemorySize: 512
+  webGLTemplate: PROJECT:ProjectExpedition
   m_BuildTargetBatching:
   - m_BuildTarget: Standalone
     m_StaticBatching: 1

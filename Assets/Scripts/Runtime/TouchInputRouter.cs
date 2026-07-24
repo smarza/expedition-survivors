@@ -36,12 +36,24 @@ namespace ProjectExpedition
             {
                 var mode = PresentationPreferences.Data.TouchControls;
 
-                if (mode == TouchControlsMode.Off)
+                if (mode == TouchControlsMode.Off || Touchscreen.current == null)
                 {
                     return false;
                 }
 
-                return Touchscreen.current != null;
+                if (mode == TouchControlsMode.On)
+                {
+                    return true;
+                }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+                if (!Application.isMobilePlatform)
+                {
+                    return IsTouchActive;
+                }
+#endif
+
+                return IsTouchActive;
             }
         }
 

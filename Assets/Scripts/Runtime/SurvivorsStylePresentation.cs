@@ -257,7 +257,9 @@ namespace ProjectExpedition
             var border = new Color(fill.r * 0.55f, fill.g * 0.55f, fill.b * 0.55f, 1f);
             DrawPanel(rect, fill);
             DrawBorder(rect, border, 2f);
-            return GUI.Button(rect, label, _transparentButtonStyle);
+            GUI.Label(rect, label, _transparentButtonStyle);
+
+            return DrawTouchable(rect);
         }
 
         public static bool DrawTouchable(Rect rect, System.Action onPress = null)
@@ -330,6 +332,16 @@ namespace ProjectExpedition
         public static Rect InsetRect(Rect rect, float padding) =>
             new Rect(rect.x + padding, rect.y + padding, rect.width - padding * 2f, rect.height - padding * 2f);
 
+        public static Font GetUiFont()
+        {
+            if (_uiFont != null)
+            {
+                return _uiFont;
+            }
+
+            return ResolveUiFont();
+        }
+
         private static Font ResolveUiFont()
         {
             if (_uiFont != null)
@@ -338,12 +350,37 @@ namespace ProjectExpedition
             }
 
             _uiFont = Resources.Load<Font>("Fonts/UiPixel");
+
             if (_uiFont != null)
             {
                 return _uiFont;
             }
 
-            _uiFont = Font.CreateDynamicFontFromOSFont(new[] { "Consolas", "Courier New", "Lucida Console", "Monospace" }, 16);
+#if UNITY_WEBGL && !UNITY_EDITOR
+            _uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            if (_uiFont != null)
+            {
+                return _uiFont;
+            }
+
+            _uiFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+            if (_uiFont != null)
+            {
+                return _uiFont;
+            }
+#endif
+
+            _uiFont = Font.CreateDynamicFontFromOSFont(
+                new[] { "Consolas", "Courier New", "Lucida Console", "Monospace" }, 16);
+
+            if (_uiFont != null)
+            {
+                return _uiFont;
+            }
+
+            _uiFont = GUI.skin != null ? GUI.skin.font : null;
             return _uiFont;
         }
 
